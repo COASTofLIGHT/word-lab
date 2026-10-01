@@ -76,6 +76,8 @@
   .tiles li.similar { --c: #C9C3EA; } /* Similar but Different: lavender */
   .tiles li.odd { --c: #C7DE9F; } /* Odd One Out: leaf green */
   .tiles li.bbs { --c: #F0C2D3; } /* Because, But, So: rose pink */
+  .tiles li.complete { --c: #C9C3EA; } /* Complete the Sentence: lavender */
+  .tiles li.sandwich { --c: #C7DE9F; } /* Word Sandwich: leaf green */
 
   .tiles a {
     display: flex;
@@ -118,11 +120,11 @@
 
   <!--
     To add a page: copy one <li> block, then change the href, title and description.
-    Set the <li> class to its level (a1, a2, b1 or b2) or its activity colour (similar, odd or bbs).
+    Set the <li> class to its level (a1, a2, b1 or b2) or its activity colour (similar, odd, bbs, complete or sandwich).
     A new activity needs its own class here and a matching colour line in the style section.
   -->
   <ul class="tiles">
-      <li class="similar">
+    <li class="similar">
       <a href="similar-but-different.html">
         <span class="title">Similar but Different</span>
         <span class="about">How are they similar and different?</span>
@@ -140,7 +142,13 @@
         <span class="about">Finish the sentence three ways.</span>
       </a>
     </li>
-    <li class="bbs">
+    <li class="complete">
+      <a href="complete-the-sentence.html">
+        <span class="title">Complete the Sentence</span>
+        <span class="about">Maybe with a twist.</span>
+      </a>
+    </li>
+    <li class="sandwich">
       <a href="word-sandwich.html">
         <span class="title">Word Sandwich</span>
         <span class="about">Think of a word.</span>
@@ -182,7 +190,6 @@
         <span class="about">Create sentences with random language points.</span>
       </a>
     </li>
-  
   </ul>
 </main>
 </body>
