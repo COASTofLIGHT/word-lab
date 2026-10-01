@@ -66,12 +66,6 @@
     list-style: none;
   }
 
-  /* One row per level on wider screens: wordlist on the left,
-     sentence builder on the right. */
-  @media (min-width: 640px) {
-    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
   /* Level colours: warm for A, cool for B. Give each <li> its level class. */
   .tiles li.a1 { --c: #F2D9A6; } /* A1: sand yellow */
   .tiles li.a2 { --c: #F4B5A0; } /* A2: coral orange */
@@ -128,6 +122,30 @@
     A new activity needs its own class here and a matching colour line in the style section.
   -->
   <ul class="tiles">
+      <li class="similar">
+      <a href="similar-but-different.html">
+        <span class="title">Similar but Different</span>
+        <span class="about">How are they similar and different?</span>
+      </a>
+    </li>
+    <li class="odd">
+      <a href="odd-one-out.html">
+        <span class="title">Odd One Out</span>
+        <span class="about">Which word is different, and why?</span>
+      </a>
+    </li>
+    <li class="bbs">
+      <a href="because-but-so.html">
+        <span class="title">Because, But, So</span>
+        <span class="about">Finish the sentence three ways.</span>
+      </a>
+    </li>
+    <li class="bbs">
+      <a href="word-sandwich.html">
+        <span class="title">Word Sandwich</span>
+        <span class="about">Think of a word.</span>
+      </a>
+    </li>
     <li class="a1">
       <a href="a1-wordlist.html">
         <span class="title">A1 wordlist</span>
@@ -164,30 +182,7 @@
         <span class="about">Create sentences with random language points.</span>
       </a>
     </li>
-    <li class="similar">
-      <a href="similar-but-different.html">
-        <span class="title">Similar but Different</span>
-        <span class="about">How are they similar and different?</span>
-      </a>
-    </li>
-    <li class="odd">
-      <a href="odd-one-out.html">
-        <span class="title">Odd One Out</span>
-        <span class="about">Which word is different, and why?</span>
-      </a>
-    </li>
-    <li class="bbs">
-      <a href="because-but-so.html">
-        <span class="title">Because, But, So</span>
-        <span class="about">Finish the sentence three ways.</span>
-      </a>
-    </li>
-    <li class="bbs">
-      <a href="word-sandwich.html">
-        <span class="title">Word Sandwich</span>
-        <span class="about">Think of a word.</span>
-      </a>
-    </li>
+  
   </ul>
 </main>
 </body>
