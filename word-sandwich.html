@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Sandwich</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --panel: #F9FBFB;
+    --line: rgba(16, 48, 58, 0.14);
+    --bread: #F2D9A6;   /* sand: the start and end slices */
+    --crust: #DDB677;   /* toasted edge on the slices */
+    --filling: #C7DE9F; /* leaf green: the middle of the word */
+    --lilac: #C9C3EA;   /* Start or end? tile */
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --big: "Atkinson Hyperlegible", var(--font);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0; min-height: 100%;
+    background: var(--mist); color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+  main {
+    max-width: 960px; margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    display: flex; flex-direction: column; gap: 0.8rem;
+  }
+  button { font-family: var(--font); color: var(--ink); }
+  button:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  .back { align-self: flex-start; color: var(--ink-soft); font-size: 0.95rem; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .hint { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 1.05rem; min-height: 1.4em; }
+
+  /* Segmented pickers */
+  .row { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; align-items: center; }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  legend { float: left; margin-right: 8px; color: var(--ink-soft); font-size: 0.95rem; }
+  .seg { position: relative; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span {
+    display: inline-block; padding: 8px 15px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 1rem;
+  }
+  .seg input:checked + span { background: var(--ink); color: var(--mist); border-color: var(--ink); }
+  .seg input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .modes .seg span { font-size: 1.05rem; font-weight: 700; padding: 10px 18px; }
+
+  section[hidden] { display: none; }
+  section { display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .context {
+    margin: 0; font-size: clamp(1.2rem, 2.6vw, 1.6rem); font-weight: 700; text-align: center;
+  }
+
+  /* Big chunk tiles */
+  .chunk {
+    font-family: var(--big); font-weight: 700;
+    font-size: clamp(3rem, 11vw, 7.5rem); line-height: 1;
+    border-radius: 1.1rem; padding: 0.35em 0.45em;
+    display: grid; place-items: center; text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .chunk.start, .chunk.end { background: var(--bread); box-shadow: inset 0 0 0 4px var(--crust); }
+  .chunk.any { background: var(--lilac); }
+  .chunk.off { background: var(--panel); color: var(--line); border: 3px dashed var(--line); }
+
+  .build {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: clamp(0.4rem, 2vw, 1rem);
+    align-items: stretch; min-height: clamp(140px, 28vh, 300px);
+  }
+  .gap {
+    font-family: var(--big); font-weight: 700; font-size: clamp(2.4rem, 8vw, 5rem);
+    color: var(--ink); display: grid; place-items: center; letter-spacing: 0.05em;
+    background: var(--filling); border-radius: 1.1rem; padding: 0 0.3em;
+  }
+
+  /* Start or end? */
+
+  .solo { min-height: clamp(140px, 28vh, 300px); }
+  .sides { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 2vw, 1.1rem); }
+  .side {
+    border: 0; cursor: pointer; border-radius: 0.9rem; min-height: 64px;
+    font-size: 1.5rem; font-weight: 800;
+  }
+  .side.start, .side.end { background: var(--bread); box-shadow: inset 0 0 0 3px var(--crust); }
+  .side:hover:not(:disabled) { filter: brightness(0.96); }
+  .side:disabled { cursor: default; }
+  .side.right { box-shadow: inset 0 0 0 6px var(--ink); }
+  .side.right, .side.wrong { transition: opacity 150ms; }
+  .side.wrong { opacity: 0.45; }
+
+  .result { margin: 0; text-align: center; font-size: clamp(1.1rem, 2.4vw, 1.35rem); min-height: 2.6em; }
+  #bWord { min-height: 2.8rem; display: grid; place-items: center; }
+
+  .controls { display: flex; gap: 0.8rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .next {
+    border: 0; cursor: pointer; border-radius: 0.9rem; background: var(--ink); color: var(--mist);
+    font-size: 1.4rem; font-weight: 800; padding: 12px 34px; min-height: 56px;
+  }
+  .next:hover { background: #1B4652; }
+  .buttons { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
+  .show {
+    border: 2px solid var(--ink); cursor: pointer; border-radius: 0.9rem; background: var(--panel);
+    font-size: 1.2rem; font-weight: 700; padding: 10px 22px; min-height: 56px;
+  }
+  .show:hover { background: #fff; }
+  #bWord b { font-family: var(--big); font-size: clamp(1.8rem, 5vw, 2.6rem); letter-spacing: 0.01em; }
+  #bWord .s, #bWord .e { background: var(--bread); border-radius: 0.3em; padding: 0 0.08em; }
+  #bWord .m { background: var(--filling); border-radius: 0.3em; padding: 0 0.04em; }
+  .score { color: var(--ink-soft); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .score b { color: var(--ink); }
+
+  footer { color: var(--ink-soft); font-size: 0.85rem; }
+
+  @media (max-width: 520px) {
+    .build { grid-template-columns: 1fr; grid-template-rows: auto auto auto; min-height: 0; }
+    .gap { font-size: 2rem; }
+    .chunk { font-size: clamp(2.6rem, 16vw, 4rem); }
+    .solo { min-height: 120px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">&larr; Word Lab</a>
+
+  <header>
+    <h1>Word Sandwich</h1>
+    <p class="hint" id="hint"></p>
+  </header>
+
+  <fieldset class="modes">
+    <label class="seg"><input type="radio" name="mode" value="build" checked><span>Build a word</span></label>
+    <label class="seg"><input type="radio" name="mode" value="position"><span>Start or end?</span></label>
+  </fieldset>
+
+  <!-- 1. Build a word -->
+  <section id="build">
+    <div class="row">
+      <fieldset>
+        <legend>Show</legend>
+        <label class="seg"><input type="radio" name="parts" value="both" checked><span>Start and end</span></label>
+        <label class="seg"><input type="radio" name="parts" value="start"><span>Start only</span></label>
+        <label class="seg"><input type="radio" name="parts" value="end"><span>End only</span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Level</legend>
+        <label class="seg"><input type="radio" name="len" value="easy" checked><span>Easy</span></label>
+        <label class="seg"><input type="radio" name="len" value="medium"><span>Medium</span></label>
+        <label class="seg"><input type="radio" name="len" value="hard"><span>Hard</span></label>
+      </fieldset>
+    </div>
+    <div class="build">
+      <div class="chunk start" id="bStart"></div>
+      <div class="gap" aria-hidden="true">…</div>
+      <div class="chunk end" id="bEnd"></div>
+    </div>
+    <div class="buttons">
+      <button class="show" type="button" id="bShow">Show a word</button>
+      <button class="next" type="button" id="bNext">Next</button>
+    </div>
+    <p class="result" id="bWord" aria-live="polite"></p>
+  </section>
+
+  <!-- 2. Start or end? -->
+  <section id="position" hidden>
+    <div class="chunk any solo" id="pChunk"></div>
+    <div class="sides">
+      <button class="side start" type="button" data-side="start">Start</button>
+      <button class="side end" type="button" data-side="end">End</button>
+    </div>
+    <p class="result" id="pResult"></p>
+    <div class="controls">
+      <span class="score">Score <b id="pScore">0</b> / <b id="pTotal">0</b></span>
+      <button class="next" type="button" id="pNext">Next</button>
+    </div>
+  </section>
+
+  <footer>Data: the Scrabble dictionary, from a chart by Neil Kaye (@neilrkaye). Percentages are the share of all words in that dictionary, including plurals and other forms.</footer>
+</main>
+
+<script>
+(function () {
+  /* ---------- Data from the chart (% of words) ---------- */
+
+  const START = {
+    1: { s:11.4, c:9, p:8.7, d:5.9, a:5.9, m:5.6, r:5.4, b:5.4, t:5.2, e:4.1, f:3.8, h:3.8, i:3.5, u:3.4,
+         g:3.3, o:3.2, l:2.9, n:2.3, w:2.1, v:1.6, k:1.2, j:0.8, q:0.5, z:0.4, y:0.4, x:0.1 },
+    2: { co:3.3, re:3.3, un:2.7, in:2.2, de:2.1, pr:2, di:1.9, ca:1.7, su:1.6, st:1.6, pa:1.5, ma:1.4,
+         mi:1.4, ch:1.3, tr:1.3, pe:1.2, po:1.2, ba:1.1, mo:1.1, se:1.1, sp:1, be:1, an:1, sc:1, me:1, sa:0.9 },
+    3: { dis:1, con:1, pre:0.9, pro:0.8, mis:0.6, int:0.6, out:0.6, sub:0.6, non:0.6, par:0.5, per:0.5,
+         tra:0.5, com:0.5, ant:0.5, for:0.4, rec:0.4, res:0.4, tri:0.4, und:0.4, car:0.4, cha:0.4, sup:0.4,
+         str:0.4, imp:0.3, mon:0.3 },
+    4: { over:0.8, anti:0.3, para:0.2, tran:0.2, comp:0.2, cont:0.2, mono:0.2, poly:0.2, cons:0.2,
+         fore:0.2, disc:0.2, pres:0.2, auto:0.1, mult:0.1, phot:0.1, post:0.1 },
+    5: { inter:0.4, super:0.3, under:0.3, trans:0.2, micro:0.2, hyper:0.2, count:0.2, photo:0.1, multi:0.1, hydro:0.1 }
+  };
+
+  const END = {
+    1: { s:38.3, e:10.2, d:9, g:7.3, y:7.1, r:5.1, t:4.8, n:4.4, l:3.1, c:2.2, a:2, m:1.7, h:1.2, k:0.8,
+         o:0.7, p:0.6, i:0.6, w:0.2, x:0.2, f:0.2, u:0.1, b:0.1, z:0.1, v:0, j:0, q:0 },
+    2: { es:13, ed:7.5, ng:7.1, er:4, rs:4, ns:3.3, ts:3.2, ly:3.2, ss:2.2, ic:2.1, on:2.1, al:2, st:2,
+         le:1.8, te:1.6, as:1.5, gs:1.5, us:1.4, ms:1.4, ls:1.3, ds:1.3, nt:1.1, se:1, ty:1, ry:0.9, ne:0.9 },
+    3: { ing:7, ers:3.1, ses:3, ies:2.8, ess:2.1, ons:1.9, ion:1.6, ted:1.5, tes:1.3, ngs:1.3, ble:1.1,
+         ous:1, est:1, sts:0.9, ate:0.9, lly:0.9, les:0.8, tic:0.8, nts:0.8, ity:0.8, nes:0.8, ist:0.8,
+         ier:0.8, sed:0.7, led:0.7, ent:0.7 },
+    4: { ness:1.5, sses:1.5, ions:1.5, tion:1.4, ting:1.3, ings:1.2, able:0.9, ties:0.8, ally:0.7, ists:0.7,
+         ling:0.7, ates:0.7, sing:0.7, ated:0.7, iest:0.7, ters:0.6, ring:0.6, ries:0.6, ises:0.6, isms:0.6,
+         ical:0.5, ents:0.5, ised:0.5, ning:0.5, zing:0.4, ized:0.4 },
+    5: { esses:1.3, tions:1.2, ation:1.1, ities:0.6, ating:0.5, ising:0.4, cally:0.4, izing:0.4, ingly:0.4,
+         eness:0.4, ments:0.3, iness:0.3, ering:0.3, ility:0.3, ators:0.2, ously:0.2, ative:0.2, ology:0.2 }
+  };
+
+  /* Word Sandwich pairs: [start, end, "example words, most common first"].
+     Only pairs with at least one everyday word are included.
+     Easy: examples from the ~4,500 most common words. Medium and Hard: ~15,000. */
+  const PAIRS = {"easy":[["s","s","services states sports systems"],["s","e","site see some service"],["s","d","should said send second"],["s","y","security say study story"],["s","t","support set subject select"],["s","es","services states sites sales"],["s","ed","speed started sponsored selected"],["s","er","server seller silver summer"],["s","ing","shipping shopping something starting"],["s","ly","supply simply slightly specifically"],["s","est","suggest southwest"],["s","ers","sellers servers speakers suppliers"],["c","s","comments class categories conditions"],["c","e","code case care change"],["c","d","could card child called"],["c","y","city company community county"],["c","t","contact copyright current content"],["c","es","categories changes companies cases"],["c","ed","called created considered completed"],["c","er","center computer customer cover"],["c","ing","clothing coming creating computing"],["c","ly","currently completely clearly certainly"],["c","est","contest chest"],["c","ers","computers customers careers characters"],["p","s","products prices pages posts"],["p","e","page price people please"],["p","d","posted provided password powered"],["p","y","policy privacy property play"],["p","t","product post part project"],["p","es","prices pages pictures provides"],["p","ed","posted provided powered published"],["p","er","power paper player printer"],["p","ing","planning providing processing playing"],["p","ly","probably particularly previously properly"],["p","ers","players partners papers providers"],["d","s","does days details downloads"],["d","e","date drive due database"],["d","d","did download designed developed"],["d","y","day directory delivery display"],["d","t","development department different direct"],["d","es","does devices dates degrees"],["d","ed","designed developed detailed defined"],["d","er","disclaimer driver developer designer"],["d","ing","during doing dating developing"],["d","ly","daily directly definitely"],["d","est","digest"],["d","ers","drivers dealers developers disorders"],["b","s","business books benefits basis"],["b","e","before because browse blue"],["b","d","based board bad brand"],["b","y","buy body baby beauty"],["b","t","but best bit built"],["b","es","businesses bytes batteries becomes"],["b","ed","based believed"],["b","er","browser buyer brother border"],["b","ing","being building bring buying"],["b","ly","basically"],["b","est","biggest"],["b","ers","brothers buyers bestsellers brokers"],["m","s","members movies months messages"],["m","e","more make message made"],["m","d","method mind modified mid"],["m","y","may many money memory"],["m","t","most management must market"],["m","es","movies messages miles minutes"],["m","ed","modified moved managed married"],["m","er","member manager matter master"],["m","ing","making meeting marketing mailing"],["m","ly","monthly mostly mainly"],["m","ers","members manufacturers matters managers"],["t","s","this terms times tools"],["t","e","the time there these"],["t","d","thread third told turned"],["t","y","they today technology try"],["t","t","that text test treatment"],["t","es","times types technologies takes"],["t","ed","turned tried treated tested"],["t","er","together transfer teacher theater"],["t","ing","training thing taking trying"],["t","ly","totally truly typically"],["t","ers","teachers trailers"],["f","s","features forums files friends"],["f","e","free file future five"],["f","d","find found food friend"],["f","y","family friendly faculty finally"],["f","t","first format front fast"],["f","es","features files facilities fees"],["f","ed","featured feed fixed followed"],["f","er","further filter former flower"],["f","ing","following funding fishing finding"],["f","ly","family friendly finally fully"],["f","est","forest"],["f","ers","flowers filters farmers"],["h","s","has his hotels hours"],["h","e","have home here house"],["h","d","had hard hand head"],["h","y","history holiday happy highly"],["h","t","heart hit host highest"],["h","es","homes headlines houses hobbies"],["h","ed","happened hosted helped hundred"],["h","er","however higher hunter hardcover"],["h","ing","having hosting housing hearing"],["h","ly","highly"],["h","est","highest"],["h","ers","holders"],["r","s","rights reviews results resources"],["r","e","rate range release reference"],["r","d","read reserved related required"],["r","y","reply really ready recently"],["r","t","report right recent result"],["r","es","resources rates rules releases"],["r","ed","reserved related required received"],["r","er","register remember river rather"],["r","ing","rating reading running regarding"],["r","ly","reply really recently relatively"],["r","est","request"],["r","ers","readers researchers refers"],["w","s","was windows works words"],["w","e","were where while white"],["w","d","would world word wed"],["w","y","way why weekly warranty"],["w","t","what want without west"],["w","es","watches writes"],["w","ed","wanted worked"],["w","er","water whether weather winter"],["w","ing","working writing wedding warning"],["w","ly","weekly widely"],["w","ers","workers writers waters wallpapers"],["g","s","games girls groups gifts"],["g","e","game guide give grade"],["g","d","good gold ground grand"],["g","y","gallery guy generally glossary"],["g","t","get great government got"],["g","es","games guides goes galleries"],["g","ed","generated guaranteed granted"],["g","er","greater gender"],["g","ing","going getting giving growing"],["g","ly","generally"],["g","est","guest greatest"],["co","s","comments conditions companies computers"],["co","e","code compare college course"],["co","d","could command considered completed"],["co","y","company community county country"],["co","t","contact copyright content cost"],["co","es","companies countries courses comes"],["co","ed","considered completed continued covered"],["co","er","computer cover consumer consider"],["co","ing","coming computing consulting containing"],["co","ly","completely correctly comply"],["co","est","contest"],["co","ers","computers covers consumers"],["re","s","reviews results resources reports"],["re","e","release reference resource receive"],["re","d","read reserved related required"],["re","y","reply really ready recently"],["re","t","report recent result request"],["re","es","resources releases requires references"],["re","ed","reserved related required received"],["re","er","register remember reader refer"],["re","ing","reading regarding reporting recording"],["re","ly","reply really recently relatively"],["re","est","request"],["re","ers","readers researchers refers"],["un","s","units unless universities"],["un","e","unique universe unable undergraduate"],["un","d","united understand unlimited underground"],["un","y","university unfortunately"],["un","t","unit"],["un","es","universities"],["un","ed","united unlimited"],["un","er","under"],["un","ing","understanding"],["un","ly","unfortunately"],["in","s","includes instructions instruments individuals"],["in","e","insurance include increase income"],["in","d","included involved instead interested"],["in","y","industry injury inventory inquiry"],["in","t","interest investment independent input"],["in","es","includes industries inches increases"],["in","ed","included involved interested increased"],["in","er","inner insider integer"],["in","ing","including interesting increasing involving"],["in","ly","increasingly"],["in","est","interest"],["de","s","details deals devices designs"],["de","e","degree device determine defense"],["de","d","designed developed detailed defined"],["de","y","delivery delay democracy density"],["de","t","development department default debt"],["de","es","devices degrees describes"],["de","ed","designed developed detailed defined"],["de","er","developer designer dealer deliver"],["de","ing","developing depending dealing determining"],["de","ly","definitely"],["de","ers","dealers developers designers"],["st","s","states students stores status"],["st","e","state store style storage"],["st","d","standard started stand stated"],["st","y","study story stay strategy"],["st","t","start street student statement"],["st","es","states stores stories strategies"],["st","ed","started stated stored stopped"],["st","ing","starting string standing sterling"],["st","ly","strongly"]],"medium":[["co","es","companies countries courses comes"],["co","ed","considered completed continued covered"],["co","ng","coming computing consulting containing"],["co","er","computer cover consumer consider"],["co","ly","completely correctly comply commonly"],["co","ss","congress cordless consciousness compass"],["co","ic","comic cosmetic cosmic"],["co","on","common collection construction commission"],["co","al","commercial coastal continental conventional"],["co","st","coast contest contrast consist"],["co","le","couple compatible comfortable console"],["co","te","complete corporate contribute concrete"],["co","nt","content comment count component"],["co","ty","community county compatibility complexity"],["co","ry","country contemporary commentary contrary"],["co","s","comments conditions companies computers"],["co","e","code compare college course"],["co","d","could command considered completed"],["co","y","company community county country"],["co","t","contact copyright content cost"],["re","es","resources releases requires references"],["re","ed","reserved related required received"],["re","ng","reading regarding reporting recording"],["re","er","register remember reader refer"],["re","ly","reply really recently relatively"],["re","ss","regardless readiness restless recess"],["re","ic","republic realistic"],["re","on","region registration reason resolution"],["re","al","regional rental residential removal"],["re","st","request resist"],["re","le","responsible reasonable reliable remarkable"],["re","te","remote relate rebate regulate"],["re","nt","recent restaurant relevant replacement"],["re","ty","responsibility reality reliability relativity"],["re","ry","recovery regulatory registry repository"],["re","s","reviews results resources reports"],["re","e","release reference resource receive"],["re","d","read reserved related required"],["re","y","reply really ready recently"],["re","t","report recent result request"],["un","es","universities uncertainties undergraduates"],["un","ed","united unlimited untitled undefined"],["un","ng","understanding underlying undertaking undergoing"],["un","er","under underwater undercover uncover"],["un","ly","unfortunately unlikely uniquely unanimously"],["un","ss","unless"],["un","on","union uncommon"],["un","al","universal unusual unofficial unreal"],["un","le","unable unavailable uncle unstable"],["un","te","undergraduate unfortunate unite"],["un","nt","unemployment unpleasant"],["un","ty","university unity uncertainty"],["un","ry","unnecessary"],["un","s","units unless universities unions"],["un","e","unique universe unable undergraduate"],["un","d","united understand unlimited underground"],["un","y","university unfortunately unity unlikely"],["un","t","unit unemployment unpleasant"],["in","es","includes industries inches increases"],["in","ed","included involved interested increased"],["in","ng","including interesting increasing involving"],["in","er","inner insider integer installer"],["in","ly","increasingly initially instantly independently"],["in","ic","intrinsic inorganic"],["in","on","information introduction installation integration"],["in","al","international individual industrial internal"],["in","st","interest invest insist"],["in","le","incredible invisible inevitable invaluable"],["in","te","institute indicate intermediate invite"],["in","nt","investment independent instant instrument"],["in","ty","integrity intensity infinity inability"],["in","ry","industry injury inventory inquiry"],["in","s","includes instructions instruments individuals"],["in","e","insurance include increase income"],["in","d","included involved instead interested"],["in","y","industry injury inventory inquiry"],["in","t","interest investment independent input"],["de","es","devices degrees describes decades"],["de","ed","designed developed detailed defined"],["de","ng","developing depending dealing determining"],["de","er","developer designer dealer deliver"],["de","ly","definitely deeply deliberately desperately"],["de","ic","democratic demographic"],["de","on","description decision definition destination"],["de","al","dental developmental denial decimal"],["de","st","dentist deepest"],["de","le","desirable deductible dependable"],["de","te","delete despite debate desperate"],["de","nt","development department dependent defendant"],["de","ty","density deputy"],["de","ry","delivery dentistry"],["de","s","details deals devices designs"],["de","e","degree device determine defense"],["de","d","designed developed detailed defined"],["de","y","delivery delay democracy density"],["de","t","development department default debt"],["pr","es","prices provides properties procedures"],["pr","ed","provided proposed presented produced"],["pr","ng","providing processing programming pricing"],["pr","er","printer provider proper premier"],["pr","ly","probably previously properly primarily"],["pr","ss","press process progress princess"],["pr","ic","problematic pragmatic"],["pr","on","production protection presentation prevention"],["pr","al","professional proposal practical principal"],["pr","st","protest provost"],["pr","le","profile printable principle profitable"],["pr","te","private promote prerequisite probate"],["pr","nt","print president present prevent"],["pr","ty","property pretty priority productivity"],["pr","ry","primary preliminary proprietary preparatory"],["pr","s","products prices previous press"],["pr","e","price profile private provide"],["pr","d","provided proposed presented produced"],["pr","y","privacy property primary probably"],["pr","t","product project print president"],["di","es","differences diseases directories disabilities"],["di","ed","displayed distributed discussed directed"],["di","ng","dining displaying diving discussing"],["di","er","disclaimer dinner discover disaster"],["di","ly","directly differently digitally"],["di","ss","discuss distress dismiss"],["di","ic","diagnostic diplomatic"],["di","on","discussion division distribution direction"],["di","al","digital disposal dimensional differential"],["di","st","digest"],["di","le","disable disposable"],["di","te","dispute distribute discrete directorate"],["di","nt","different discount distant displacement"],["di","ty","disability diversity difficulty dignity"],["di","ry","directory dictionary discovery diary"],["di","s","directions discuss discussions directors"],["di","e","disease distance difference disclosure"],["di","d","diamond displayed distributed discussed"],["di","y","directory display directly dictionary"],["di","t","different direct district discount"],["ca","es","categories cases cables causes"],["ca","ed","called carried caused calculated"],["ca","ng","calling camping carrying catering"],["ca","er","career carrier camcorder carter"],["ca","ly","carefully"],["ca","ic","catalytic catastrophic"],["ca","on","canon cartoon carbon canyon"],["ca","al","capital casual carnival cathedral"],["ca","st","catalyst"],["ca","le","cable castle capable candle"],["ca","te","candidate calculate cassette carbohydrate"],["ca","nt","catchment"],["ca","ty","capacity capability cavity"],["ca","ry","category carry canary cavalry"],["ca","s","categories cards cars cases"],["ca","e","case care came cable"],["ca","d","card called carried caused"],["ca","y","category capacity carry carefully"],["ca","t","cart cast caught cabinet"],["su","es","supplies suites substances sunglasses"],["su","ed","submitted supported supplied suggested"],["su","ng","supporting surrounding suffering surfing"],["su","er","summer super supplier subscriber"],["su","ly","supply successfully suddenly surely"],["su","ss","success subclass suppress"],["su","on","subscription submission subsection suspension"],["su","al","substantial survival surgical supplemental"],["su","st","suggest"],["su","le","suitable sustainable subtle subtitle"],["su","te","suite substitute substrate subordinate"],["su","nt","sufficient subsequent supplement superintendent"],["su","ty","sustainability suitability susceptibility"],["su","ry","summary surgery subsidiary supplementary"],["su","s","supplies success subjects suggestions"],["su","e","sure subscribe surface suite"],["su","d","submitted supported supplied suggested"],["su","y","summary supply survey surgery"],["su","t","support subject submit suggest"],["st","es","states stores stories strategies"],["st","ed","started stated stored stopped"],["st","ng","starting strong string standing"],["st","er","starter stronger sticker stranger"],["st","ly","strongly strictly statistically steadily"],["st","ss","stress stainless"],["st","ic","strategic static stochastic statistic"],["st","on","station stimulation stabilization standardization"],["st","al","statistical structural steal"],["st","st","strongest"],["st","le","style stable struggle stole"],["st","te","state statute stimulate"],["st","nt","student statement stringent stunt"],["st","ty","stability"],["st","ry","story statutory stationery stationary"],["st","s","states students stores status"],["st","e","state store style storage"],["st","d","standard started stand stated"],["st","y","study story stay strategy"],["st","t","start street student statement"],["pa","es","pages parties packages patches"],["pa","ed","passed painted packed participated"],["pa","ng","parking painting packaging paying"],["pa","er","paper partner parameter passenger"],["pa","ly","particularly partly partially"],["pa","ic","pacific panic patriotic panoramic"],["pa","on","participation passion partition pavilion"],["pa","al","partial parental pastoral paranormal"],["pa","le","payable particle paddle"],["pa","te","participate paste passionate palette"],["pa","nt","payment parent patient paint"],["pa","ty","party parity"],["pa","ry","parliamentary pastry participatory"],["pa","s","pages parts parents partners"],["pa","e","page package participate palace"],["pa","d","password paid passed painted"],["pa","y","party particularly partly payday"],["pa","t","part payment past parent"],["ma","es","makes magazines machines matches"],["ma","ed","managed married maintained marked"],["ma","ng","making marketing mailing manufacturing"],["ma","er","manager matter master manufacturer"],["ma","ly","mainly manually materially"],["ma","ss","madness mattress"],["ma","ic","magic magnetic majestic macroeconomic"],["ma","on","mason marathon manipulation mansion"],["ma","al","material manual mathematical martial"],["ma","st","manifest"],["ma","le","maple marble mantle"],["ma","te","mandate manipulate magistrate"],["ma","nt","management magnificent"],["ma","ty","majority maternity maturity majesty"],["ma","ry","machinery mandatory marry masonry"],["ma","s","makes materials maps magazines"],["ma","e","make made magazine mature"],["ma","d","managed married maintained marked"],["ma","y","many majority mainly machinery"],["ma","t","management market magnet magnificent"],["mi","es","miles minutes mistakes ministries"],["mi","ed","mixed missed minded"],["mi","ng","missing mining mixing misleading"],["mi","er","minister mixer miner mister"],["mi","ss","mindless"],["mi","ic","microscopic"],["mi","on","million mission migration mitigation"],["mi","al","minimal mineral ministerial microbial"],["mi","st","midst"],["mi","le","middle miracle miserable"],["mi","te","minute migrate mitigate"],["mi","nt","migrant"],["mi","ty","minority mighty misty"],["mi","ry","military ministry missionary misery"],["mi","s","miles minutes miss miscellaneous"],["mi","e","middle minute mine mile"],["mi","d","mind mixed missed mild"],["mi","y","military ministry minority mighty"],["mi","t","might mint midnight mist"],["ch","es","changes charges challenges choices"],["ch","ed","changed charged checked characterized"],["ch","ng","changing checking choosing challenging"],["ch","er","chapter character chamber charter"],["ch","ly","chemically"],["ch","ss","chess"],["ch","ic","chronic characteristic chiropractic chaotic"],["ch","on","champion characterization chairperson"],["ch","al","chemical charcoal chronological choral"],["ch","st","chest cheapest checklist chemist"],["ch","le","chronicle charitable"],["ch","te","chocolate"],["ch","nt","checkpoint"],["ch","ty","charity"],["ch","ry","chemistry cherry"],["ch","s","changes characters charges charts"],["ch","e","change choose choice charge"],["ch","d","child changed charged checked"],["ch","y","chemistry charity cherry chevy"],["ch","t","chat chart checkout chest"],["tr","es","trees tries trades trustees"],["tr","ed","tried treated trusted trained"],["tr","ng","training trying trading tracking"],["tr","er","transfer trailer traveler tracker"],["tr","ly","truly traditionally"],["tr","ic","traffic tragic traumatic"],["tr","on","transportation translation transmission transaction"],["tr","al","trial traditional tropical tribal"],["tr","st","trust"],["tr","le","trouble triple triangle transferable"],["tr","te","translate tribute"],["tr","nt","treatment transparent transplant transient"],["tr","ty","treaty trinity"],["tr","ry","treasury trajectory"],["tr","s","trademarks trees trends tracks"],["tr","e","trade true tree trouble"],["tr","d","tried treated trend trusted"],["tr","y","truly treasury treaty trinity"],["tr","t","treatment trust transport transit"],["pe","es","peoples performances perspectives penalties"],["pe","ed","performed permitted personalized perceived"],["pe","ng","performing pending pertaining permitting"],["pe","er","pepper performer petitioner pewter"],["pe","ly","personally perfectly periodically permanently"],["pe","ic","periodic pediatric"],["pe","on","person permission pension petition"],["pe","al","personal peripheral pedal perpetual"],["pe","st","persist"],["pe","le","people percentile permissible"],["pe","te","petite"],["pe","nt","percent permanent pendant persistent"],["pe","ty","penalty personality petty"],["pe","s","perhaps persons pets personals"],["pe","e","people performance peace percentage"],["pe","d","period performed permitted personalized"],["pe","y","personally penalty personality perfectly"],["pe","t","percent perfect permanent permit"],["po","es","policies possibilities potatoes poles"],["po","ed","posted powered pointed polished"],["po","ng","posting posing pointing positioning"],["po","er","power poster powder pointer"],["po","ly","possibly potentially poorly politically"],["po","ss","possess pointless"],["po","ic","polyphonic poetic polytechnic"],["po","on","position population portion pollution"],["po","al","political potential portal postal"],["po","st","poorest"],["po","le","possible portable"],["po","te","postgraduate polite"],["po","nt","point potent pollutant"],["po","ty","poverty possibility popularity portability"],["po","ry","poetry pottery poultry"],["po","s","posts points policies politics"],["po","e","possible police positive portable"],["po","d","posted powered pound pointed"],["po","y","policy poetry poverty possibly"],["po","t","post point port pocket"],["ba","es","batteries babies bases battles"],["ba","ed","based balanced backed banned"],["ba","ng","banking baking backing balancing"],["ba","er","banner baker barrier barber"],["ba","ly","basically barely badly"],["ba","ic","basic"],["ba","on","balloon bacon baton baron"],["ba","al","bacterial basal"],["ba","le","battle"],["ba","nt","basement"],["ba","ry","battery bakery"],["ba","s","basis banks bags bars"],["ba","e","base balance battle baseline"],["ba","d","based band background balanced"],["ba","y","baby battery bankruptcy basically"],["ba","t","basket basement ballot ballet"],["mo","es","movies modules mortgages moves"],["mo","ed","modified moved mounted monitored"],["mo","ng","morning moving monitoring modeling"],["mo","er","mother monster moreover mover"],["mo","ly","monthly mostly monopoly moderately"],["mo","ic","mosaic monophonic"],["mo","on","motion modification motivation modulation"],["mo","al","moral mortal motivational monoclonal"],["mo","st","modest moist"],["mo","le","mobile module motorcycle molecule"],["mo","te","moderate monte motivate"],["mo","nt","mount moment movement monument"],["mo","ty","mobility mortality morality"],["mo","ry","monetary monastery"],["mo","s","movies months models modules"],["mo","e","more movie mobile mortgage"],["mo","d","modified moved mounted mood"],["mo","y","money monthly mostly modify"],["mo","t","most mount moment movement"],["se","es","services series searches securities"],["se","ed","selected served seemed sealed"],["se","ng","setting selling serving seeking"],["se","er","server seller semester seeker"],["se","ly","seriously separately securely severely"],["se","ss","seamless"],["se","ic","semantic seismic septic"],["se","on","section season selection session"],["se","al","several serial seasonal sequential"],["se","le","settle searchable sensible"],["se","te","separate senate"],["se","nt","settlement segment servant sediment"],["se","ty","security sensitivity severity serenity"],["se","ry","secretary secondary sensory"],["se","s","services series sellers searches"],["se","e","service secure sense serve"],["se","d","send second selected served"],["se","y","security secretary secondary seriously"],["se","t","select sent secret seat"],["sp","es","species spaces specifies speeches"],["sp","ed","speed sponsored specified specialized"],["sp","ng","spring sporting speaking spending"],["sp","er","speaker spider spoiler splitter"],["sp","ly","specifically specially"],["sp","ic","specific"],["sp","on","specification spoon speculation specialization"],["sp","al","special spiritual spatial spinal"],["sp","le","spindle sparkle"],["sp","te","spite"],["sp","nt","spent sprint"],["sp","ty","specialty spirituality specificity speciality"],["sp","s","sports species specifications springs"],["sp","e","space spoke spare spouse"],["sp","d","speed sponsored specified spend"],["sp","y","specifically specialty specify spirituality"],["sp","t","sport spirit spent spot"],["be","es","becomes believes besides beaches"],["be","ed","believed beloved beaded benefited"],["be","ng","being beginning becoming bedding"],["be","er","beaver beginner believer bender"],["be","ly","belly beautifully"],["be","on","beacon"],["be","al","behavioral beneficial"],["be","st","beast"],["be","le","beetle"],["be","ty","beauty"],["be","ry","berry beneficiary"],["be","s","benefits becomes bears begins"],["be","e","before because become believe"],["be","d","behind beyond believed bend"],["be","y","beauty berry belly beautifully"],["be","t","best benefit beat belt"],["an","es","antiques announces angles anomalies"],["an","ed","announced answered animated anticipated"],["an","ng","anything answering annoying announcing"],["an","er","another answer anger"],["an","ly","annually anomaly"],["an","ic","antarctic antibiotic"],["an","on","annotation animation anticipation"],["an","al","annual animal"],["an","st","antitrust"],["an","le","angle ankle"],["an","te","annotate anticipate"],["an","nt","ancient announcement"],["an","ty","anxiety annuity"],["an","ry","anniversary angry ancestry ancillary"],["an","s","animals answers announcements anonymous"],["an","e","anyone anime anywhere antique"],["an","d","announced answered animated anticipated"],["an","y","anyway anniversary anybody anxiety"],["an","t","ancient announcement antitrust"],["sc","es","sciences scores scenes schedules"],["sc","ed","scheduled scored scanned scared"],["sc","ng","screening scoring scheduling scanning"],["sc","er","scanner scooter scheduler"],["sc","ly","scholarly"],["sc","ic","scientific scenic scholastic schematic"],["sc","al","scandal"],["sc","st","scientist"],["sc","le","schedule scale scalable"],["sc","nt","scent"],["sc","ry","scary scenery"],["sc","s","schools sciences scores scripts"],["sc","e","science score schedule scale"],["sc","d","scheduled scored scanned scared"],["sc","y","scary scenery scrutiny scholarly"],["sc","t","script scientist scout scent"],["me","es","messages measures memories medicines"],["me","ed","mentioned measured mediated merged"],["me","ng","meeting meaning messaging measuring"],["me","er","member meter messenger merger"],["me","ly","merely mentally medically"],["me","ss","meaningless"],["me","ic","metric metallic mechanic metabolic"],["me","on","mention medication meditation mediation"],["me","al","medical metal mental memorial"],["me","le","meanwhile memorable measurable"],["me","nt","merchant measurement meant"],["me","ty","merchantability"],["me","ry","memory mercury merry"],["me","s","members messages means methods"],["me","e","message medicine measure merchandise"],["me","d","method mentioned measured mediated"],["me","y","memory mercury merely methodology"],["me","t","meet merchant measurement meant"],["sa","es","sales samples saves salaries"],["sa","ed","saved satisfied sacred saturated"],["sa","ng","saying saving sampling sailing"],["sa","er","saver safer sampler sander"],["sa","ly","safely sadly"],["sa","ss","sadness"],["sa","on","satisfaction salon salmon salvation"],["sa","al","sandal"],["sa","le","sample saddle"],["sa","te","satellite salute"],["sa","nt","saint"],["sa","ty","safety sanity"],["sa","ry","salary satisfactory sanctuary sanitary"],["sa","s","sales says savings samples"],["sa","e","same save sale sample"],["sa","d","said saved sand satisfied"],["sa","y","safety salary sandy satisfy"],["sa","t","saint salt"],["b","es","businesses bytes batteries becomes"],["b","ed","based believed balanced breed"],["b","ng","being building bring buying"],["b","er","browser buyer brother border"],["b","ly","basically butterfly belly briefly"],["b","ss","business bass boss brass"],["b","ic","basic bibliographic"],["b","on","button billion balloon bacon"],["b","al","biological bridal behavioral beneficial"],["b","st","best breakfast biggest broadcast"],["b","le","battle bottle bubble bicycle"],["b","te","byte brunette bite"],["b","nt","brilliant basement bent blunt"],["b","ty","beauty biodiversity bounty"],["b","ry","battery boundary binary berry"],["b","s","business books benefits basis"],["b","e","before because browse blue"],["b","d","based board bad brand"],["b","y","buy body baby beauty"],["b","t","but best bit built"],["c","es","categories changes companies cases"],["c","ed","called created considered completed"],["c","ng","clothing coming creating computing"],["c","er","center computer customer cover"],["c","ly","currently completely clearly certainly"],["c","ss","class cross congress chess"],["c","ic","classic comic clinic chronic"],["c","on","common collection construction commission"],["c","al","central commercial capital critical"],["c","st","cost coast cast contest"],["c","le","cable couple compatible cycle"],["c","te","complete create corporate certificate"],["c","nt","current content comment client"],["c","ty","city community county capacity"],["c","ry","country category century carry"],["c","s","comments class categories conditions"],["c","e","code case care change"],["c","d","could card child called"],["c","y","city company community county"],["c","t","contact copyright current content"],["d","es","does devices dates degrees"],["d","ed","designed developed detailed defined"],["d","ng","during doing dating developing"],["d","er","disclaimer driver developer designer"],["d","ly","daily directly definitely deeply"],["d","ss","discuss dress darkness distress"],["d","ic","domestic dynamic democratic diagnostic"],["d","on","description discussion decision division"],["d","al","digital deal dual dental"],["d","st","digest dust dentist deepest"],["d","le","double downloadable disable durable"],["d","te","date delete despite debate"],["d","nt","development department different document"],["d","ty","duty disability diversity density"],["d","ry","directory delivery dictionary discovery"],["d","s","does days details downloads"],["d","e","date drive due database"],["d","d","did download designed developed"],["d","y","day directory delivery display"],["d","t","development department different direct"],["f","es","features files facilities fees"],["f","ed","featured feed fixed followed"],["f","ng","following funding fishing finding"],["f","er","further filter former flower"],["f","ly","family friendly finally fully"],["f","ss","fitness fairness fortress forgiveness"],["f","ic","fabric fantastic forensic"],["f","on","function foundation fiction fashion"],["f","al","financial federal final functional"],["f","st","first fast forest forecast"],["f","le","file female flexible feasible"],["f","te","favorite facilitate finite flute"],["f","nt","front font frequent fragment"],["f","ty","faculty facility functionality flexibility"],["f","ry","factory ferry forestry fairy"],["f","s","features forums files friends"],["f","e","free file future five"],["f","d","find found food friend"],["f","y","family friendly faculty finally"],["f","t","first format front fast"],["h","es","homes headlines houses hobbies"],["h","ed","happened hosted helped hundred"],["h","ng","having hosting housing hearing"],["h","er","however higher hunter hardcover"],["h","ly","highly hopefully hardly hourly"],["h","ss","happiness homeless harness harmless"],["h","ic","historic hydraulic holistic harmonic"],["h","on","horizon honeymoon humiliation"],["h","al","hospital historical horizontal herbal"],["h","st","host highest honest harvest"],["h","le","handle hole horrible humble"],["h","te","hesitate"],["h","nt","hunt hint"],["h","ty","hospitality humidity humanity honesty"],["h","ry","history hungry hurry honorary"],["h","s","has his hotels hours"],["h","e","have home here house"],["h","d","had hard hand head"],["h","y","history holiday happy highly"],["h","t","heart hit host highest"],["m","es","movies messages miles minutes"],["m","ed","modified moved managed married"],["m","ng","making meeting marketing mailing"],["m","er","member manager matter master"],["m","ly","monthly mostly mainly merely"],["m","ss","mass miss mess madness"],["m","ic","music magic magnetic metric"],["m","on","million mission motion moon"],["m","al","medical material metal manual"],["m","st","most must modest mist"],["m","le","mobile middle male multiple"],["m","te","minute moderate mate monte"],["m","nt","management merchant mount moment"],["m","ty","majority minority mobility mortality"],["m","ry","memory military ministry mystery"],["m","s","members movies months messages"],["m","e","more make message made"],["m","d","method mind modified mid"],["m","y","may many money memory"],["m","t","most management must market"],["p","es","prices pages pictures provides"],["p","ed","posted provided powered published"],["p","ng","planning providing processing playing"],["p","er","power paper player printer"],["p","ly","probably particularly previously properly"],["p","ss","press process pass progress"],["p","ic","public pacific plastic polyphonic"],["p","on","person production protection position"],["p","al","personal professional political potential"],["p","st","post past protest playlist"],["p","le","people profile possible portable"],["p","te","private promote participate plate"],["p","nt","print point payment president"],["p","ty","property party pretty priority"],["p","ry","primary poetry pottery preliminary"],["p","s","products prices pages posts"],["p","e","page price people please"],["p","d","posted provided password powered"],["p","y","policy privacy property play"],["p","t","product post part project"],["s","es","services states sites sales"],["s","ed","speed started sponsored selected"],["s","ng","shipping shopping something starting"],["s","er","server seller silver summer"],["s","ly","supply simply slightly specifically"],["s","ss","success stress stainless seamless"],["s","ic","specific scientific strategic static"],["s","on","section soon season selection"],["s","al","special social several signal"],["s","st","suggest southwest southeast scientist"],["s","le","sale single style simple"],["s","te","site state suite satellite"],["s","nt","student statement sent significant"],["s","ty","security society safety specialty"],["s","ry","story summary secretary surgery"],["s","s","services states sports systems"],["s","e","site see some service"],["s","d","should said send second"],["s","y","security say study story"],["s","t","support set subject select"],["t","es","times types technologies takes"],["t","ed","turned tried treated tested"],["t","ng","training thing taking trying"],["t","er","together transfer teacher theater"],["t","ly","totally truly typically timely"],["t","ss","thickness toss timeless timeliness"],["t","ic","topic traffic toxic terrific"],["t","on","transportation television translation transmission"],["t","al","total technical trial traditional"],["t","st","test trust tourist twist"],["t","le","title table trouble temple"],["t","te","template taste translate tribute"],["t","nt","treatment tournament talent transparent"],["t","ty","twenty thirty treaty trinity"],["t","ry","theory territory temporary treasury"],["t","s","this terms times tools"],["t","e","the time there these"],["t","d","thread third told turned"],["t","y","they today technology try"],["t","t","that text test treatment"],["w","es","watches writes waves wishes"],["w","ed","wanted worked walked watched"],["w","ng","working writing wedding warning"],["w","er","water whether weather winter"],["w","ly","weekly widely wholly wonderfully"],["w","ss","wireless witness wellness wilderness"],["w","on","workstation wagon"],["w","al","withdrawal"],["w","st","west worst whilst wrist"],["w","le","while whole wholesale whale"],["w","te","white write wrote waste"],["w","nt","want went warrant waterfront"],["w","ty","warranty witty"],["w","ry","worry weary"],["w","s","was windows works words"],["w","e","were where while white"],["w","d","would world word wed"],["w","y","way why weekly warranty"],["w","t","what want without west"]],"hard":[["dis","ing","displaying discussing distributing discovering"],["dis","ers","disorders disclaimers disasters discovers"],["dis","ies","disabilities discrepancies discoveries"],["dis","ess","distress"],["dis","ion","discussion distribution discrimination discretion"],["dis","ble","disable disposable"],["dis","ate","discriminate"],["dis","ity","disability"],["dis","ent","displacement disappointment dissent disagreement"],["dis","tion","distribution discrimination discretion distinction"],["dis","able","disposable"],["dis","ation","discrimination dissertation dissemination"],["dis","ities","disabilities"],["con","ing","consulting containing continuing concerning"],["con","ers","consumers containers controllers considers"],["con","ess","congress consciousness"],["con","ion","construction condition connection configuration"],["con","ble","considerable convertible"],["con","ous","continuous conscious contiguous"],["con","est","contest conquest"],["con","ate","concentrate consolidate confederate consulate"],["con","ity","connectivity continuity confidentiality conformity"],["con","ist","consist"],["con","ent","content consistent consent convenient"],["con","ness","consciousness"],["con","tion","construction condition connection configuration"],["con","able","considerable"],["con","ally","continually"],["con","ling","controlling"],["con","ation","configuration conservation consideration consultation"],["con","ously","continuously"],["pre","ing","preparing preventing presenting preceding"],["pre","ers","prefers presenters"],["pre","ess","preparedness"],["pre","ion","presentation prevention prescription preparation"],["pre","ble","predictable preferable"],["pre","ous","previous precious prestigious"],["pre","ate","predicate"],["pre","ent","president present prevent precedent"],["pre","ness","preparedness"],["pre","tion","presentation prevention prescription preparation"],["pre","able","predictable preferable"],["pre","ling","prevailing"],["pre","ation","presentation preparation preservation precipitation"],["pre","ously","previously"],["pro","ing","providing processing programming producing"],["pro","ers","providers producers programmers promoters"],["pro","ies","properties probabilities"],["pro","ess","process progress"],["pro","ion","production protection provision promotion"],["pro","ble","profitable probable programmable"],["pro","est","protest"],["pro","ate","probate"],["pro","tic","problematic"],["pro","ity","productivity probability proximity prosperity"],["pro","ent","procurement prominent proficient"],["pro","tion","production protection promotion projection"],["pro","able","profitable probable programmable"],["pro","ally","professionally"],["pro","ling","profiling"],["pro","ation","proliferation propagation pronunciation"],["pro","ities","probabilities"],["mis","ing","missing misleading"],["mis","ies","missionaries"],["mis","ion","mission"],["mis","ble","miserable"],["mis","ous","miscellaneous"],["mis","able","miserable"],["out","ing","outstanding outsourcing outgoing outlying"],["out","ers","outfitters"],["out","ous","outrageous"],["out","ent","outpatient"],["sub","ing","submitting subscribing"],["sub","ers","subscribers"],["sub","ies","subsidiaries subcategories"],["sub","ion","subscription submission subsection subdivision"],["sub","ate","substrate subordinate"],["sub","ent","subsequent"],["sub","tion","subscription subsection substitution"],["sub","ally","substantially"],["non","ess","nonetheless"],["non","ion","nonfiction"],["non","tion","nonfiction"],["per","ing","performing pertaining permitting"],["per","ers","performers"],["per","ies","personalities"],["per","ion","permission perception percussion perfection"],["per","ble","permissible"],["per","ity","personality"],["per","ist","persist"],["per","ent","percent permanent persistent pertinent"],["per","tion","perception perfection persecution"],["per","ally","personally periodically"],["per","ical","periodical"],["per","ities","personalities"],["per","cally","periodically"],["com","ing","computing comparing completing combining"],["com","ers","computers commissioners composers compilers"],["com","ies","companies communities commodities competencies"],["com","ess","competitiveness completeness compress"],["com","ion","commission communication competition combination"],["com","ble","compatible comfortable comparable"],["com","ate","communicate compensate compassionate"],["com","ity","community compatibility complexity commodity"],["com","ent","comment component commitment complement"],["com","ness","competitiveness completeness"],["com","tion","communication competition combination compensation"],["com","able","comfortable comparable"],["com","ally","commercially"],["com","ling","compelling compiling"],["com","ation","communication combination compensation compilation"],["com","ities","communities commodities"],["com","ments","commitments commandments compliments"],["com","ative","comparative"],["for","ing","forming formatting forwarding forthcoming"],["for","ers","foreigners"],["for","ess","fortress forgiveness"],["for","ion","formation formulation"],["for","ate","fortunate formulate"],["for","ness","forgiveness"],["for","tion","formation formulation"],["for","ally","formally"],["for","ation","formation formulation"],["res","ing","resulting responding restructuring researching"],["res","ers","researchers resellers"],["res","ies","responsibilities"],["res","ess","restless"],["res","ion","resolution reservation restoration restriction"],["res","ble","responsible resemble"],["res","ity","responsibility"],["res","ent","resident respondent"],["res","tion","resolution reservation restoration restriction"],["res","ation","reservation restoration resignation"],["res","ities","responsibilities"],["tri","ers","triggers"],["tri","ion","trillion"],["tri","ity","trinity"],["car","ing","carrying carving"],["car","ers","careers carriers caregivers"],["car","ies","carries"],["car","ate","carbohydrate carbonate"],["car","ology","cardiology"],["str","ing","streaming striking strengthening struggling"],["str","ers","strangers strollers"],["str","ies","strategies"],["str","est","strongest"],["str","ent","stringent"],["str","ling","struggling"],["imp","ing","improving implementing importing imposing"],["imp","ers","importers"],["imp","ies","implies"],["imp","ess","impress"],["imp","ion","implementation impression implication"],["imp","ble","impossible"],["imp","ent","improvement implement impairment"],["imp","tion","implementation implication"],["imp","ation","implementation implication"],["imp","ments","improvements implements"],["imp","ative","imperative"],["over","ing","overwhelming overlooking overlapping overcoming"],["anti","ion","anticipation"],["anti","ate","anticipate"],["anti","tic","antibiotic"],["anti","tion","anticipation"],["anti","ation","anticipation"],["poly","ers","polymers"],["fore","ing","forecasting foregoing"],["fore","ers","foreigners"],["auto","ion","automation"],["auto","ous","autonomous"],["auto","ate","automate"],["auto","tic","automatic"],["auto","tion","automation"],["auto","ally","automatically"],["auto","ation","automation"],["auto","cally","automatically"],["post","ate","postgraduate"],["inter","ing","interesting interpreting interacting interviewing"],["inter","ers","interpreters"],["inter","ion","interaction interpretation intervention intersection"],["inter","ate","intermediate interstate"],["inter","ity","interoperability"],["inter","ent","intermittent"],["inter","tion","interaction interpretation intervention intersection"],["inter","ally","internationally internally"],["inter","ation","interpretation"],["inter","ingly","interestingly"],["super","ing","supervising"],["super","ion","supervision superannuation"],["super","ent","superintendent"],["super","tion","superannuation"],["super","ation","superannuation"],["under","ing","understanding underlying undertaking undergoing"],["under","ble","understandable"],["under","ate","undergraduate"],["under","able","understandable"],["trans","ing","transferring transforming transporting transmitting"],["trans","ers","transfers transformers"],["trans","ion","transportation translation transmission transaction"],["trans","ble","transferable"],["trans","ate","translate"],["trans","ent","transparent transient"],["trans","tion","transportation translation transaction transition"],["trans","able","transferable"],["trans","ation","transportation translation transformation transplantation"],["micro","ology","microbiology"],["photo","ers","photographers"],["multi","ion","multifunction multiplication"],["multi","tion","multifunction multiplication"],["multi","ation","multiplication"]]};
+
+  /* Start or end? items. Letters use both lists; affixes use the one list they appear in. */
+  const POSITION = [];
+  Object.keys(START[1]).forEach(l => {
+    const s = START[1][l], e = END[1][l];
+    if (Math.abs(s - e) >= 0.5) POSITION.push({ text: l, start: s, end: e });
+  });
+  ["dis","con","pre","pro","mis","sub","non"].forEach(t => POSITION.push({ text: t, start: START[3][t] }));
+  ["over","anti","mono","poly","fore","auto","post"].forEach(t => POSITION.push({ text: t, start: START[4][t] }));
+  ["inter","super","under","trans","micro","hyper","multi"].forEach(t => POSITION.push({ text: t, start: START[5][t] }));
+  ["re","un"].forEach(t => POSITION.push({ text: t, start: START[2][t] }));
+  ["ed","ly"].forEach(t => POSITION.push({ text: t, end: END[2][t] }));
+  ["ing","ous","ity","ist","est","ble","ies"].forEach(t => POSITION.push({ text: t, end: END[3][t] }));
+  ["ness","tion","able","ally","ical","isms"].forEach(t => POSITION.push({ text: t, end: END[4][t] }));
+  ["ation","ments","ology","ative","ously"].forEach(t => POSITION.push({ text: t, end: END[5][t] }));
+
+  /* ---------- Helpers ---------- */
+  const $ = id => document.getElementById(id);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const val = name => document.querySelector(`input[name="${name}"]:checked`).value;
+  const pct = n => (n === 0 ? "under 0.1" : n) + "%";
+  function shuffledBag(items) {
+    let bag = [];
+    return () => {
+      if (!bag.length) bag = items.slice().sort(() => Math.random() - 0.5);
+      return bag.pop();
+    };
+  }
+
+  const HINTS = {
+    build: "Make a word that starts and ends with these letters.",
+    position: "Do these letters come at the start or the end of more English words?"
+  };
+
+  /* ---------- Mode switching ---------- */
+  function setMode(m) {
+    ["build","position"].forEach(s => $(s).hidden = s !== m);
+    $("hint").textContent = HINTS[m];
+  }
+  document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener("change", () => setMode(val("mode"))));
+
+  /* ---------- 1. Build a word ---------- */
+  let bPair = null, bShown = 0, bExamples = [];
+  function nextBuild() {
+    const parts = val("parts"), level = val("len");
+    let pr;
+    do { pr = pick(PAIRS[level]); } while (bPair && pr[0] === bPair[0] && pr[1] === bPair[1]);
+    bPair = pr;
+    const [s, e] = pr;
+    const showS = parts !== "end", showE = parts !== "start";
+    $("bStart").textContent = showS ? s : "?";
+    $("bEnd").textContent = showE ? e : "?";
+    $("bStart").className = "chunk " + (showS ? "start" : "off");
+    $("bEnd").className = "chunk " + (showE ? "end" : "off");
+    /* Examples: for one-sided rounds, gather words from every pair with that start or end */
+    if (parts === "both") bExamples = pr[2].split(" ");
+    else {
+      const seen = new Set();
+      PAIRS[level].forEach(q => {
+        if ((parts === "start" && q[0] === s) || (parts === "end" && q[1] === e))
+          q[2].split(" ").forEach(w => seen.add(w));
+      });
+      bExamples = [...seen].sort(() => Math.random() - 0.5);
+    }
+    bShown = 0;
+    $("bWord").innerHTML = "";
+    $("bShow").textContent = "Show a word";
+  }
+  function showWord() {
+    if (!bExamples.length) return;
+    const w = bExamples[bShown % bExamples.length];
+    const parts = val("parts"), [s, e] = bPair;
+    const hasS = parts !== "end", hasE = parts !== "start";
+    const a = hasS ? s.length : 0, b = hasE ? w.length - e.length : w.length;
+    $("bWord").innerHTML = "<b>" +
+      (a ? `<span class="s">${w.slice(0, a)}</span>` : "") +
+      (b > a ? `<span class="m">${w.slice(a, b)}</span>` : "") +
+      (hasE ? `<span class="e">${w.slice(b)}</span>` : "") + "</b>";
+    bShown++;
+    $("bShow").textContent = bExamples.length > 1 ? "Another word" : "Show a word";
+  }
+  $("bNext").addEventListener("click", nextBuild);
+  $("bShow").addEventListener("click", showWord);
+  document.querySelectorAll('input[name="parts"], input[name="len"]').forEach(r =>
+    r.addEventListener("change", nextBuild));
+
+  /* ---------- 2. Start or end? ---------- */
+  const nextItem = shuffledBag(POSITION);
+  let pItem = null, pDone = false, pScore = 0, pTotal = 0;
+  const pSides = document.querySelectorAll(".side");
+  function nextPosition() {
+    pItem = nextItem();
+    pDone = false;
+    $("pChunk").textContent = pItem.text;
+    $("pResult").textContent = "";
+    pSides.forEach(b => { b.disabled = false; b.classList.remove("right", "wrong"); });
+  }
+  function answerOf(item) {
+    if (item.start !== undefined && item.end !== undefined) return item.start > item.end ? "start" : "end";
+    return item.start !== undefined ? "start" : "end";
+  }
+  function revealPosition(chosen) {
+    if (pDone) return;
+    pDone = true;
+    const ans = answerOf(pItem);
+    pSides.forEach(b => { b.disabled = true; b.classList.add(b.dataset.side === ans ? "right" : "wrong"); });
+    const t = pItem.text;
+    let msg;
+    if (pItem.start !== undefined && pItem.end !== undefined) {
+      msg = `${pct(pItem.start)} of words start with ${t}, and ${pct(pItem.end)} end with ${t}.`;
+    } else if (ans === "start") {
+      msg = `${t} is a common start: ${pct(pItem.start)} of words begin with it. Can you think of one?`;
+    } else {
+      msg = `${t} is a common ending: ${pct(pItem.end)} of words end with it. Can you think of one?`;
+    }
+    $("pResult").textContent = msg;
+    pTotal++;
+    if (chosen === ans) pScore++;
+    $("pScore").textContent = pScore; $("pTotal").textContent = pTotal;
+  }
+  pSides.forEach(b => b.addEventListener("click", () => revealPosition(b.dataset.side)));
+  $("pNext").addEventListener("click", nextPosition);
+
+  /* Space or Enter on the page moves to the next round */
+  document.addEventListener("keydown", e => {
+    if (e.code !== "Space" && e.key !== "Enter") return;
+    if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement || e.target instanceof HTMLAnchorElement) return;
+    e.preventDefault();
+    const m = val("mode");
+    if (m === "build") nextBuild();
+    if (m === "position") nextPosition();
+  });
+
+  setMode("build");
+  nextBuild(); nextPosition();
+})();
+</script>
+</body>
+</html>
