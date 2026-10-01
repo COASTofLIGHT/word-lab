@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2 Sentence Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --line: #5F808A;
+    --sea: #17677A;
+    --sea-deep: #124F5E;
+    --focus: #0B62A4;
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --language-c: #C9C3EA;
+    --noun-c: #A8D5CB;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page {
+    max-width: 1300px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    padding: clamp(0.85rem, 2.6vw, 2rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .back {
+    display: inline-block;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-bottom: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  header { flex: 0 0 auto; }
+
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  header p {
+    margin: 0.4rem 0 0;
+    color: var(--ink-soft);
+    font-size: clamp(1rem, 1.9vw, 1.3rem);
+    line-height: 1.3;
+    max-width: 62rem;
+  }
+
+  .controls {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+  }
+
+  .btn, .btn-primary {
+    height: 2.6rem;
+    padding: 0 1.3rem;
+    border-radius: 0.6rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  .btn:hover { border-color: var(--ink); }
+
+  .btn-primary {
+    background: var(--sea);
+    color: #fff;
+    border: 0;
+  }
+  .btn-primary:hover { background: var(--sea-deep); }
+
+  .btn:active, .btn-primary:active { transform: translateY(1px); }
+  .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+    margin-top: 0.75rem;
+  }
+
+  .tile {
+    position: relative;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 100%;
+    padding: clamp(1rem, 2.6vw, 2rem);
+    border: 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    color: var(--ink);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+  }
+  .tile:hover { filter: brightness(0.97); }
+  .tile:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  #language-tile { background: var(--language-c); }
+  #noun-tile { background: var(--noun-c); }
+
+  .tag {
+    position: absolute;
+    top: 1.1rem;
+    left: 1.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  .item {
+    display: block;
+    max-width: 100%;
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    overflow-wrap: normal;
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(0.4rem); }
+    to   { opacity: 1; transform: none; }
+  }
+  .fresh { animation: settle 0.22s ease-out; }
+
+  footer {
+    flex: 0 0 auto;
+    margin-top: 0.6rem;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 720px) {
+    .stage { flex-direction: column; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fresh { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <a class="back" href="https://coastoflight.github.io/randomwords/word-lab.html">&larr; Word Lab</a>
+
+  <header>
+    <h1>A2 Sentence builder</h1>
+    <p>Write a sentence using the language and the noun.</p>
+  </header>
+
+  <div class="controls">
+    <button type="button" class="btn" id="new-language-btn">New language</button>
+    <button type="button" class="btn" id="new-noun-btn">New noun</button>
+    <button type="button" class="btn-primary" id="random-btn">Random</button>
+  </div>
+
+  <div class="stage">
+    <button type="button" class="tile" id="language-tile" aria-label="Click for new language">
+      <span class="tag" aria-hidden="true">Language</span>
+      <span class="item" id="language"></span>
+    </button>
+    <button type="button" class="tile" id="noun-tile" aria-label="Click for a new noun">
+      <span class="tag" aria-hidden="true">Noun</span>
+      <span class="item" id="noun"></span>
+    </button>
+  </div>
+
+  <footer>Click any column to change just that one, or press Random to change both.</footer>
+  <p class="sr" role="status" id="status"></p>
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   Language: grammar and time words to build the sentence around.
+   Add or remove freely — one per line.
+---------------------------------------------------------------- */
+const LANGUAGE = [
+  "every day",
+  "because",
+  "but",
+  "however",
+  "After class",
+  "Before class",
+  "last night",
+  "today",
+  "at the moment",
+  "always",
+  "sometimes",
+  "never",
+  "have just",
+  "already",
+  "yet",
+  "ever",
+  "for 2 months",
+  "since",
+  "tomorrow",
+  "yesterday",
+  "last year",
+  "if",
+  "both",
+  "should",
+  "should not",
+  "must",
+  "must not",
+  "had to",
+  "when",
+  "while",
+  "more",
+  "most"
+];
+
+/* ---------------------------------------------------------------
+   Nouns: from the Cambridge A2 Key wordlist, keeping the everyday
+   things, people, places and activities (titles, units, US
+   duplicates and abstract words like "thing" or "side" left out).
+   Add or remove freely.
+---------------------------------------------------------------- */
+const NOUNS = [
+  "accident", "activity", "actor", "ad", "address", "adult", "adventure", "advert",
+  "advertisement", "advice", "aeroplane", "afternoon", "age", "air", "airport", "alarm clock",
+  "album", "ambulance", "animal", "apartment", "apartment building", "app", "apple", "appointment",
+  "area", "arm", "armchair", "art", "article", "assistant", "aunt", "autumn", "baby", "backpack",
+  "badminton", "bag", "ball", "balloon", "banana", "band", "bank", "barbecue", "baseball",
+  "basketball", "bat", "bath", "bathroom", "battery", "beach", "bean", "bear", "beard", "bed",
+  "bedroom", "bee", "beginner", "beginning", "belt", "bicycle", "bike", "bin", "biology", "bird",
+  "birth", "birthday", "biscuit", "blackboard", "blanket", "block", "blog", "blood", "blouse",
+  "board game", "boat", "body", "book", "bookcase", "bookshelf", "bookshop", "bookstore", "boot",
+  "boss", "bottle", "bowl", "box", "boy", "boyfriend", "bracelet", "brain", "bread", "breakfast",
+  "bridge", "brother", "building", "burger", "bus", "business", "businessman", "businesswoman",
+  "business person", "bus station", "bus stop", "butter", "butterfly", "cabinet", "café",
+  "cafeteria", "cake", "calendar", "camel", "camera", "camping", "campsite", "cap", "capital",
+  "car", "card", "career", "car park", "carpet", "carrot", "cartoon", "cash", "castle", "cat",
+  "CD", "CD player", "ceiling", "celebrity", "centre", "century", "cereal", "chain", "chair",
+  "channel", "character", "chatroom", "cheese", "chef", "chemist", "chemistry", "cheque", "chess",
+  "chicken", "child", "chilli", "chips", "chocolate", "cinema", "circle", "circus", "city",
+  "class", "classmate", "classroom", "cleaner", "climbing", "clock", "clothes", "cloud", "clown",
+  "club", "coach", "coast", "coffee", "cola", "colleague", "college", "colour", "comb", "comedy",
+  "comic", "company", "competition", "computer", "concert", "conversation", "cooker", "cooking",
+  "corner", "costume", "country", "countryside", "course", "cousin", "cow", "cream", "cycling",
+  "dad", "dance", "dancer", "dancing", "danger", "daughter", "day", "degree", "dentist",
+  "department", "department store", "desert", "desk", "dessert", "details", "diary", "dictionary",
+  "difference", "digital camera", "dining room", "dinner", "dinosaur", "diploma", "directions",
+  "disco", "discount", "dish", "doctor", "document", "dog", "doll", "dollar", "dolphin", "donkey",
+  "door", "drawer", "drawing", "dream", "dress", "drink", "driver", "driving licence", "drum",
+  "duck", "DVD", "DVD player", "ear", "earring", "egg", "electricity", "elephant", "email",
+  "engine", "engineer", "entrance", "envelope", "environment", "equipment", "euro", "evening",
+  "event", "exam", "example", "exhibition", "experience", "experiment", "explorer", "eye", "face",
+  "factory", "family", "farm", "farmer", "fashion", "fast food", "father", "feelings", "festival",
+  "field", "film", "finger", "fire", "first name", "fish", "fishing", "flat", "flight", "floor",
+  "flower", "fog", "folder", "food", "foot", "football", "footballer", "forest", "fork", "friend",
+  "fruit", "fur", "furniture", "gallery", "game", "garage", "garden", "garlic", "gate",
+  "geography", "gift", "girl", "girlfriend", "glass", "glasses", "glove", "goal", "gold", "golf",
+  "grade", "grandchild", "grandad", "granddaughter", "grandfather", "grandma", "grandmother",
+  "grandpa", "grandparent", "grandson", "granny", "grape", "grass", "group", "guest",
+  "guest-house", "guide", "guidebook", "guitar", "guy", "gym", "hair", "hall", "hand", "handbag",
+  "harbour", "hat", "head", "headache", "headphones", "headteacher", "health", "heart", "heating",
+  "helicopter", "hill", "hip hop", "history", "hobby", "hockey", "holiday", "home", "homework",
+  "honey", "horse", "hospital", "hotel", "house", "housewife", "husband", "ice", "ice cream",
+  "ice skating", "ID card", "idea", "information", "ingredient", "insect", "instructions",
+  "instrument", "internet", "invention", "invitation", "island", "jacket", "jam", "jazz", "jeans",
+  "jewellery", "job", "journalist", "journey", "juice", "jumper", "key", "keyboard", "kid", "king",
+  "kit", "kitchen", "kite", "knife", "lake", "lamp", "language", "laptop", "leather", "leg",
+  "lemon", "lemonade", "lesson", "letter", "licence", "life", "lift", "light", "link", "list",
+  "living room", "lorry", "luggage", "lunch", "lunchtime", "machine", "magazine", "mail",
+  "main course", "make-up", "man", "manager", "mango", "map", "market", "match", "maths", "meal",
+  "meat", "mechanic", "medicine", "meeting", "melon", "member", "memory", "menu", "message",
+  "metal", "midday", "midnight", "milk", "mineral water", "mirror", "mistake", "mobile phone",
+  "money", "monkey", "month", "moon", "morning", "mother", "motorbike", "motorway", "mountain",
+  "mouse", "mouth", "MP3 player", "mug", "mum", "museum", "mushroom", "music", "musician", "name",
+  "nationality", "nature", "neck", "necklace", "neighbour", "news", "newspaper", "night", "noise",
+  "noon", "nose", "notebook", "nurse", "ocean", "office", "oil", "omelette", "onion", "opera",
+  "opinion", "orange", "oven", "page", "pain", "painter", "painting", "paper", "paragraph",
+  "parent", "park", "parrot", "partner", "party", "passenger", "passport", "password", "pasta",
+  "path", "pear", "pen", "pencil", "pencil case", "penfriend", "people", "pepper", "performance",
+  "perfume", "person", "pet", "petrol", "petrol station", "pharmacy", "phone", "photo",
+  "photographer", "photography", "physics", "piano", "picnic", "picture", "pillow", "pilot",
+  "pizza", "place", "plane", "plant", "plastic", "plate", "platform", "player", "playground",
+  "pocket", "police", "police car", "police officer", "police station", "pool", "postcard",
+  "poster", "post office", "potato", "practice", "present", "price", "printer", "prize", "problem",
+  "programme", "project", "pupil", "purse", "puzzle", "queen", "question", "quiz", "rabbit",
+  "racket", "radio", "railway", "rain", "raincoat", "rap", "reading", "reason", "receipt",
+  "receptionist", "recipe", "refrigerator", "restaurant", "review", "rice", "river", "road",
+  "rock", "roof", "room", "roundabout", "rubber", "rubbish", "rugby", "ruler", "runner", "running",
+  "sailing", "salad", "sale", "salt", "sandwich", "sauce", "sausage", "scarf", "school",
+  "schoolchild", "science", "scientist", "scissors", "scooter", "screen", "sea", "season", "seat",
+  "secretary", "selfie", "sentence", "shampoo", "sheep", "shelf", "ship", "shirt", "shoe",
+  "shop assistant", "shopping", "shorts", "shower", "sightseeing", "silver", "singer", "singing",
+  "sink", "sister", "sitting room", "size", "skateboard", "skateboarding", "skating", "skiing",
+  "skirt", "sky", "slice", "snack", "snake", "snow", "snowboard", "snowboarding", "soap",
+  "social media", "sock", "sofa", "software", "son", "song", "soup", "speaker", "spelling",
+  "spoon", "sport", "sports centre", "spring", "stadium", "staff", "stairs", "stamp", "star",
+  "station", "steak", "stomach", "stomach ache", "store", "storm", "story", "strawberry", "street",
+  "stripes", "student", "subject", "success", "sugar", "suit", "suitcase", "summer", "sun",
+  "sunglasses", "supermarket", "supper", "surfboard", "surfing", "surname", "surprise", "sweater",
+  "sweet", "swimming", "swimming costume", "swimming pool", "swimsuit", "table", "table tennis",
+  "tablet", "taxi", "tea", "teacher", "team", "technology", "teenager", "telephone", "TV",
+  "temperature", "tennis", "tent", "term", "test", "textbook", "text message", "theatre",
+  "thunderstorm", "ticket", "tie", "tiger", "tights", "time", "timetable", "title", "toast", "toe",
+  "toilet", "tomato", "tooth", "toothache", "toothbrush", "topic", "tour", "tour guide", "tourist",
+  "tourist information centre", "towel", "town", "toy", "traffic", "traffic light", "train",
+  "trainer", "tram", "transport", "tree", "trip", "trousers", "T-shirt", "tyre", "umbrella",
+  "uncle", "underground", "uniform", "university", "vegetable", "video", "video game", "view",
+  "village", "violin", "visitor", "vocabulary", "volleyball", "waiter", "waitress", "walking",
+  "wall", "wallet", "wardrobe", "washing machine", "washing-up", "watch", "water", "weather",
+  "web page", "website", "week", "weekday", "weekend", "whale", "wheel", "wife", "wifi",
+  "wildlife", "wind", "window", "windsurfing", "winner", "winter", "woman", "wood", "wool", "word",
+  "worker", "world", "writer", "writing", "year", "yoghurt", "zoo"
+];
+
+const statusEl = document.getElementById("status");
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+/* ---------- one column: draws from a shuffled deck so nothing repeats until the list is used up ---------- */
+
+function makeColumn(id, list, avoid) {
+  const tile = document.getElementById(id + "-tile");
+  const el = document.getElementById(id);
+  let deck = [];
+  let current = null;
+
+  function fit() {
+    const style = getComputedStyle(tile);
+    const innerW = tile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const innerH = tile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+    if (innerW <= 0 || innerH <= 0) return;
+
+    let size = Math.min(innerH * 0.42, innerW * 0.3, 120);
+    size = Math.max(size, 16);
+    el.style.fontSize = size + "px";
+
+    let guard = 0;
+    while (guard++ < 60 && size > 15 && (el.scrollWidth > innerW + 1 || el.scrollHeight > innerH + 1)) {
+      size *= 0.94;
+      el.style.fontSize = size + "px";
+    }
+  }
+
+  function next() {
+    if (!deck.length) deck = shuffle(list.slice());
+    let item = deck.pop();
+    while ((item === current || (avoid && item === avoid())) && deck.length) item = deck.pop();
+    current = item;
+
+    el.textContent = item;
+    el.classList.remove("fresh");
+    void el.offsetWidth;
+    el.classList.add("fresh");
+    fit();
+  }
+
+  return { tile, next, fit, get current() { return current; } };
+}
+
+const language = makeColumn("language", LANGUAGE);
+const noun = makeColumn("noun", NOUNS);
+const columns = [language, noun];
+
+function announce() {
+  statusEl.textContent = language.current + ", " + noun.current;
+}
+
+function change(column) { column.next(); announce(); }
+function randomAll() { columns.forEach((c) => c.next()); announce(); }
+
+columns.forEach((c) => c.tile.addEventListener("click", () => change(c)));
+
+document.getElementById("new-language-btn").addEventListener("click", () => change(language));
+document.getElementById("new-noun-btn").addEventListener("click", () => change(noun));
+document.getElementById("random-btn").addEventListener("click", randomAll);
+
+/* Keys: Space or Enter = both, 1 / 2 = one column. */
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.closest && event.target.closest("button") && (event.code === "Space" || event.code === "Enter")) return;
+  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); randomAll(); }
+  else if (event.key === "1") change(language);
+  else if (event.key === "2") change(noun);
+});
+
+let resizeFrame;
+function scheduleRefit() {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(() => columns.forEach((c) => c.fit()));
+}
+window.addEventListener("resize", scheduleRefit);
+window.addEventListener("orientationchange", scheduleRefit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleRefit);
+if (window.ResizeObserver) {
+  const observer = new ResizeObserver(scheduleRefit);
+  columns.forEach((c) => observer.observe(c.tile));
+}
+
+randomAll();
+</script>
+</body>
+</html>

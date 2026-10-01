@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odd One Out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --line: #5F808A;
+    --sea: #17677A;
+    --sea-deep: #124F5E;
+    --focus: #0B62A4;
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --words-c: #A8D5CB;
+    --linker-c: #A9CCEB;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page {
+    max-width: 1300px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    padding: clamp(0.85rem, 2.6vw, 2rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .back {
+    display: inline-block;
+    flex: 0 0 auto;
+    margin-bottom: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  header { flex: 0 0 auto; }
+
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  header p {
+    margin: 0.4rem 0 0;
+    color: var(--ink-soft);
+    font-size: clamp(1rem, 1.9vw, 1.3rem);
+    line-height: 1.3;
+    max-width: 62rem;
+  }
+
+  .controls {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+  }
+
+  .btn, .btn-primary {
+    height: 2.6rem;
+    padding: 0 1.3rem;
+    border-radius: 0.6rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  .btn:hover { border-color: var(--ink); }
+
+  .btn-primary {
+    background: var(--sea);
+    color: #fff;
+    border: 0;
+  }
+  .btn-primary:hover { background: var(--sea-deep); }
+
+  .btn:active, .btn-primary:active { transform: translateY(1px); }
+  .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+    margin-top: 0.75rem;
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 100%;
+    padding: clamp(1rem, 2.6vw, 2rem);
+    border: 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    color: var(--ink);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+  }
+  .tile:hover { filter: brightness(0.97); }
+  .tile:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  #words-tile { flex: 1.3 1 0; background: var(--words-c); }
+  #linker-tile { flex: 1 1 0; background: var(--linker-c); }
+
+  .tag {
+    position: absolute;
+    top: 1.1rem;
+    left: 1.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  .words {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15em;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .words .word {
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  .linker {
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(0.4rem); }
+    to   { opacity: 1; transform: none; }
+  }
+  .fresh { animation: settle 0.22s ease-out; }
+
+  footer {
+    flex: 0 0 auto;
+    margin-top: 0.6rem;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 720px) {
+    .stage { flex-direction: column; }
+    #words-tile, #linker-tile { flex: 1 1 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fresh { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+   <a class="back" href="https://coastoflight.github.io/randomwords/word-lab.html">&larr; Word Lab</a>
+
+  <header>
+    <h1>Odd one out</h1>
+    <p>Which word is different from the others, and why? Explain your answer using the word on the right.</p>
+  </header>
+
+  <div class="controls">
+    <button type="button" class="btn" id="new-words-btn">New set</button>
+    <button type="button" class="btn" id="new-linker-btn">New linker</button>
+    <button type="button" class="btn-primary" id="random-btn">Random</button>
+  </div>
+
+  <div class="stage">
+    <button type="button" class="tile" id="words-tile" aria-label="Click for a new set of words">
+      <span class="tag" aria-hidden="true">Words</span>
+      <span class="words" id="words"></span>
+    </button>
+    <button type="button" class="tile" id="linker-tile" aria-label="Click for the next linker">
+      <span class="tag" aria-hidden="true">Linker</span>
+      <span class="linker" id="linker"></span>
+    </button>
+  </div>
+
+  <footer>Click the words for a new set. Click the linker for another way to explain it.</footer>
+  <p class="sr" role="status" id="status"></p>
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   Word groups: each is three words, one of which is the odd one
+   out (deliberately open to more than one valid answer, same as
+   the classroom odd-one-out game). Add or remove a group freely —
+   one array of three strings per line.
+---------------------------------------------------------------- */
+const WORD_GROUPS = [
+  ["February", "April", "Monday"],
+  ["cat", "dog", "turtle"],
+  ["dolphin", "shark", "elephant"],
+  ["aubergine", "carrot", "strawberry"],
+  ["Argentina", "Italy", "Spain"],
+  ["ear", "nose", "feet"],
+  ["teaspoon", "fork", "knife"],
+  ["coffee", "hot chocolate", "lemonade"],
+  ["doctor", "teacher", "student"],
+  ["potato", "banana", "apple"],
+  ["drum", "guitar", "violin"],
+  ["red", "green", "square"],
+  ["lion", "tiger", "goldfish"],
+  ["train", "bicycle", "bus"],
+  ["mother", "brother", "teacher"],
+  ["happy", "angry", "tall"],
+  ["rain", "wind", "snow"],
+  ["hammer", "screwdriver", "spoon"],
+  ["whale", "shark", "crocodile"],
+  ["run", "sleep", "jumo"],
+  ["tennis", "football", "chess"],
+  ["shirt", "trousers", "umbrella"],
+  ["pen", "pencil", "ruler"],
+  ["north", "purple", "south"],
+  ["mountain", "river", "lamp"],
+  ["uncle", "cousin", "dentist"],
+  ["sad", "excited", "short"],
+  ["thunder", "lightning", "breeze"],
+  ["keyboard", "mouse", "sofa"],
+  ["orange", "scarf", "banana"],
+  ["wolf", "fox", "rabbit"],
+  ["maths", "art", "science"],
+  ["September", "October", "Sunday"],
+  ["Thursday", "autumn", "spring"],
+  ["bee", "butterfly", "spider"],
+  ["bat", "eagle", "blackbird"],
+  ["cow", "sheep", "wolf"],
+  ["rose", "tulip", "oak"],
+  ["novel", "painting", "poem"],
+  ["stamp", "dollar", "euro"],
+  ["thunderstorm", "hurricane", "drizzle"],
+  ["Africa", "Asia", "France"],
+  ["triangle", "red", "rectangle"],
+  ["wardrobe", "cupboard", "oven"],
+  ["laptop", "book", "tablet"],
+  ["jazz", "ballet", "rock"],
+  ["birthday", "wedding", "English class"],
+  ["north", "east", "up"],
+  ["brave", "kind", "exhausted"],
+  ["speak", "shout", "walk"]
+];
+
+/* ---------------------------------------------------------------
+   Linkers: cycle independently of the word groups, so any group
+   can be explained with an easier or harder linker. Add or remove
+   freely — one per line.
+---------------------------------------------------------------- */
+const LINKERS = [
+  "however",
+  "but",
+  "on the other hand",
+  "neither",
+  "although",
+  "the difference",
+  "both",
+  "whereas",
+  "unlike",
+  "while",
+  "in contrast"
+];
+
+const wordsTile = document.getElementById("words-tile");
+const linkerTile = document.getElementById("linker-tile");
+const wordsEl = document.getElementById("words");
+const linkerEl = document.getElementById("linker");
+const statusEl = document.getElementById("status");
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+/* ---------- words: draws from a shuffled deck so groups don't repeat until the pool is used ---------- */
+
+let wordDeck = [];
+let currentGroup = null;
+
+function nextWords() {
+  if (!wordDeck.length) wordDeck = shuffle(WORD_GROUPS.slice());
+  let group = wordDeck.pop();
+  if (group === currentGroup && wordDeck.length) group = wordDeck.pop();
+  currentGroup = group;
+
+  wordsEl.innerHTML = group.map(() => '<span class="word"></span>').join("");
+  [...wordsEl.children].forEach((el, i) => { el.textContent = group[i]; });
+  wordsEl.classList.remove("fresh");
+  void wordsEl.offsetWidth;
+  wordsEl.classList.add("fresh");
+
+  fitWords();
+  announce();
+}
+
+/* ---------- linker: cycles through a shuffled order, then reshuffles and starts again ---------- */
+
+let linkerOrder = shuffle(LINKERS.slice());
+let linkerPos = 0;
+
+function showLinker() {
+  linkerEl.textContent = linkerOrder[linkerPos];
+  linkerEl.classList.remove("fresh");
+  void linkerEl.offsetWidth;
+  linkerEl.classList.add("fresh");
+  fitLinker();
+  announce();
+}
+
+function nextLinker() {
+  if (linkerPos < linkerOrder.length - 1) {
+    linkerPos++;
+  } else {
+    linkerOrder = shuffle(LINKERS.slice());
+    linkerPos = 0;
+  }
+  showLinker();
+}
+
+function announce() {
+  const words = currentGroup ? currentGroup.join(", ") : "";
+  const linker = linkerOrder[linkerPos];
+  statusEl.textContent = "Words: " + words + ". Linker: " + linker;
+}
+
+/* ---------- sizing: shrink each panel's text to fit, then let it grow back on resize ---------- */
+
+function fitWords() {
+  const items = [...wordsEl.children];
+  if (!items.length) return;
+  const style = getComputedStyle(wordsTile);
+  const innerW = wordsTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const innerH = wordsTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  if (innerW <= 0 || innerH <= 0) return;
+
+  let size = Math.min(innerH / items.length * 0.62, innerW * 0.26, 120);
+  size = Math.max(size, 16);
+  items.forEach((el) => { el.style.fontSize = size + "px"; });
+
+  let guard = 0;
+  while (guard++ < 60 && size > 15) {
+    const totalH = wordsEl.scrollHeight;
+    const maxLineW = Math.max(...items.map((el) => el.scrollWidth));
+    if (totalH <= innerH + 1 && maxLineW <= innerW + 1) break;
+    size *= 0.94;
+    items.forEach((el) => { el.style.fontSize = size + "px"; });
+  }
+}
+
+function fitLinker() {
+  const style = getComputedStyle(linkerTile);
+  const innerW = linkerTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const innerH = linkerTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  if (innerW <= 0 || innerH <= 0) return;
+
+  let size = Math.min(innerH * 0.4, innerW * 0.22, 110);
+  size = Math.max(size, 16);
+  linkerEl.style.fontSize = size + "px";
+
+  let guard = 0;
+  while (guard++ < 60 && size > 15 && linkerEl.scrollWidth > innerW + 1) {
+    size *= 0.94;
+    linkerEl.style.fontSize = size + "px";
+  }
+}
+
+wordsTile.addEventListener("click", nextWords);
+linkerTile.addEventListener("click", nextLinker);
+
+document.getElementById("new-words-btn").addEventListener("click", nextWords);
+document.getElementById("new-linker-btn").addEventListener("click", nextLinker);
+document.getElementById("random-btn").addEventListener("click", () => {
+  nextWords();
+  nextLinker();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); nextWords(); }
+  else if (event.key === "l" || event.key === "L") nextLinker();
+});
+
+let resizeFrame;
+function scheduleRefit() {
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(() => { fitWords(); fitLinker(); });
+}
+window.addEventListener("resize", scheduleRefit);
+window.addEventListener("orientationchange", scheduleRefit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleRefit);
+if (window.ResizeObserver) {
+  new ResizeObserver(scheduleRefit).observe(wordsTile);
+  new ResizeObserver(scheduleRefit).observe(linkerTile);
+}
+
+nextWords();
+showLinker();
+</script>
+</body>
+</html>

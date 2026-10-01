@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2.25rem);
+  }
+
+  .back {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    text-decoration: none;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  header p {
+    margin: 0.4rem 0 0;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+    margin: 2rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* One row per level on wider screens: wordlist on the left,
+     sentence builder on the right. */
+  @media (min-width: 640px) {
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* Level colours: warm for A, cool for B. Give each <li> its level class. */
+  .tiles li.a1 { --c: #F2D9A6; } /* A1: sand yellow */
+  .tiles li.a2 { --c: #F4B5A0; } /* A2: coral orange */
+  .tiles li.b1 { --c: #A9CCEB; } /* B1: sky blue */
+  .tiles li.b2 { --c: #A8D5CB; } /* B2: sea green */
+
+  /* Activity colours */
+  .tiles li.similar { --c: #C9C3EA; } /* Similar but Different: lavender */
+  .tiles li.odd { --c: #C7DE9F; } /* Odd One Out: leaf green */
+  .tiles li.bbs { --c: #F0C2D3; } /* Because, But, So: rose pink */
+
+  .tiles a {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    min-height: 13rem;
+    height: 100%;
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border-radius: 0.9rem;
+    background: var(--c);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .tiles a:hover { filter: brightness(0.96); }
+  .tiles a:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  .title {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  .about {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <a class="back" href="https://coastoflight.github.io/">&larr; COAST of LIGHT</a>
+
+  <header>
+    <h1>Word Lab</h1>
+    <p>Wordlists and sentence builders, from A1 to B1.</p>
+  </header>
+
+  <!--
+    To add a page: copy one <li> block, then change the href, title and description.
+    Set the <li> class to its level (a1, a2, b1 or b2) or its activity colour (similar, odd or bbs).
+    A new activity needs its own class here and a matching colour line in the style section.
+  -->
+  <ul class="tiles">
+    <li class="a1">
+      <a href="a1-wordlist.html">
+        <span class="title">A1 wordlist</span>
+        <span class="about">Random nouns, verbs and adjectives.</span>
+      </a>
+    </li>
+    <li class="a1">
+      <a href="a1-sentence-builder.html">
+        <span class="title">A1 Sentence builder</span>
+        <span class="about">Create sentences with random language points.</span>
+      </a>
+    </li>
+    <li class="a2">
+      <a href="a2-wordlist.html">
+        <span class="title">A2 wordlist</span>
+        <span class="about">Random words.</span>
+      </a>
+    </li>
+    <li class="a2">
+      <a href="sentence-builder.html">
+        <span class="title">A2 Sentence builder</span>
+        <span class="about">Create sentences with random language points.</span>
+      </a>
+    </li>
+    <li class="b1">
+      <a href="b1-wordlist.html">
+        <span class="title">B1 wordlist</span>
+        <span class="about">Random words.</span>
+      </a>
+    </li>
+    <li class="b1">
+      <a href="b1-sentence-builder.html">
+        <span class="title">B1 Sentence builder</span>
+        <span class="about">Create sentences with random language points.</span>
+      </a>
+    </li>
+    <li class="similar">
+      <a href="https://coastoflight.github.io/exam-talk/similar-but-different.html">
+        <span class="title">Similar but Different</span>
+        <span class="about">How are they similar and different?</span>
+      </a>
+    </li>
+    <li class="odd">
+      <a href="https://coastoflight.github.io/exam-talk/odd-one-out.html">
+        <span class="title">Odd One Out</span>
+        <span class="about">Which word is different, and why?</span>
+      </a>
+    </li>
+    <li class="bbs">
+      <a href="because-but-so.html">
+        <span class="title">Because, But, So</span>
+        <span class="about">Finish the sentence three ways.</span>
+      </a>
+    </li>
+  </ul>
+</main>
+</body>
+</html>
