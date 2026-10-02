@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Two to Five</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --panel: #F9FBFB;
+    --line: rgba(16, 48, 58, 0.14);
+    /* Level colours, as in Word Lab */
+    --a2: #F4B5A0;  /* coral orange */
+    --b1: #A9CCEB;  /* sky blue */
+    --b2: #A8D5CB;  /* sea green */
+    --level: var(--a2);
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--mist); color: var(--ink); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+  button, input { font-family: var(--font); color: var(--ink); }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .page {
+    height: 100%; max-width: 1400px; margin: 0 auto;
+    padding: clamp(0.75rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2.25rem);
+    display: flex; flex-direction: column; gap: clamp(0.5rem, 1.5vh, 1rem);
+  }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .top h1 { margin: 0; font-size: clamp(1.5rem, 2.8vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .back { color: var(--ink-soft); font-size: 0.95rem; text-decoration: none; white-space: nowrap; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* The board */
+  .board {
+    flex: 1; min-height: 0; background: var(--level); border-radius: 0.9rem;
+    padding: clamp(1rem, 3vw, 2.5rem); display: flex; flex-direction: column;
+    transition: background-color 250ms ease;
+  }
+  .board.a2 { --level: var(--a2); }
+  .board.b1 { --level: var(--b1); }
+  .board.b2 { --level: var(--b2); }
+
+  .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .prompt { margin: 0; font-size: clamp(1rem, 1.6vw, 1.3rem); font-weight: 600; line-height: 1.3; }
+
+  /* The four numbers: all lit when any length is allowed, one lit in Exactly mode */
+  .nums { display: flex; gap: 0.4rem; flex: none; }
+  .num {
+    width: clamp(2.2rem, 4.2vw, 3.4rem); aspect-ratio: 1; border-radius: 0.6rem;
+    display: grid; place-items: center; background: var(--panel);
+    font-size: clamp(1.2rem, 2.4vw, 2rem); font-weight: 800; font-variant-numeric: tabular-nums;
+    transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .num.off { opacity: 0.3; transform: scale(0.9); }
+  .num.ring { box-shadow: inset 0 0 0 3px var(--ink); }
+
+  .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.6rem; }
+  .sentence {
+    margin: 0; font-size: clamp(1.7rem, min(4.6vw, 7.5vh), 4rem); font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance;
+  }
+  /* The gap: one slot per word. Solid slots must be filled, dashed slots are optional. */
+  .gap { display: inline-flex; gap: 0.22em; vertical-align: baseline; white-space: nowrap; margin: 0 0.1em; }
+  .slot { display: inline-block; width: 1.5em; height: 0.75em; border-bottom: 0.09em solid var(--ink); }
+  .slot.maybe { border-bottom-style: dashed; opacity: 0.45; }
+  .ex {
+    display: inline-block; background: var(--panel); border-radius: 0.3em;
+    padding: 0 0.22em; margin: 0.06em 0.05em; animation: pop 0.3s ease-out;
+  }
+  @keyframes pop { from { transform: scale(0.85); opacity: 0; } }
+  .worth { margin: 0; min-height: 1.4em; font-size: clamp(1rem, 1.6vw, 1.3rem); font-weight: 600; }
+
+  /* Round result */
+  .result h2 { margin: 0 0 0.8rem; font-size: clamp(1.6rem, min(4vw, 6vh), 3.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+  .result ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; max-width: 44rem; }
+  .result li {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 1.2rem; align-items: baseline;
+    background: var(--panel); border-radius: 0.6rem; padding: 0.45rem 0.9rem;
+    font-size: clamp(1.1rem, 2vw, 1.6rem); font-weight: 700;
+  }
+  .result li span { font-variant-numeric: tabular-nums; }
+  .result li .sub { font-weight: 600; color: var(--ink-soft); font-size: 0.8em; }
+
+  /* Teams */
+  .scores { display: flex; gap: 0.6rem; align-items: stretch; flex-wrap: wrap; }
+  .teams { flex: 1; min-width: min(100%, 18rem); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 0.6rem; }
+  .team {
+    display: flex; align-items: center; gap: 0.7rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 0.9rem; padding: 0.45rem 0.7rem;
+  }
+  .team .name {
+    flex: 1; min-width: 6rem; width: 100%; font-size: 1.05rem; font-weight: 700;
+    border: 0; border-bottom: 2px dashed transparent; background: transparent; padding: 0.1em 0;
+  }
+  .team .name:hover, .team .name:focus { border-bottom-color: var(--ink-soft); outline: none; }
+  .team .total { font-size: 1.8rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; line-height: 1; }
+  .pts { display: flex; gap: 0.3rem; }
+  .pt {
+    width: 2.3rem; height: 2.3rem; border-radius: 0.55rem; border: 2px solid var(--ink);
+    background: transparent; font-size: 1.05rem; font-weight: 700; padding: 0;
+  }
+  .pt.on { background: var(--ink); color: var(--mist); }
+  .pt:disabled { opacity: 0.2; cursor: default; }
+  .tools { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
+  .tool { border: 0; background: transparent; color: var(--ink-soft); font-size: 0.9rem; font-weight: 600; text-align: left; padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
+  .tool:hover { color: var(--ink); text-decoration: underline; }
+  .tool:disabled { opacity: 0.35; cursor: default; text-decoration: none; }
+
+  /* Bottom bar */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  button.btn {
+    font-weight: 600; font-size: 1rem; padding: 0.55em 1.1em; border-radius: 0.6rem;
+    border: 2px solid var(--ink); background: var(--ink); color: var(--mist);
+  }
+  button.btn.ghost { background: transparent; color: var(--ink); }
+  button.btn:hover { filter: brightness(1.15); }
+  button.btn:disabled { opacity: 0.35; cursor: default; filter: none; }
+  .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 0.6rem; overflow: hidden; }
+  .seg button { font-weight: 700; font-size: 1rem; padding: 0.45em 1em; border: 0; background: transparent; }
+  .seg button.on { background: var(--ink); color: var(--mist); }
+  .seg button:focus-visible { outline-offset: -3px; }
+  .count { font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 700px) {
+    html, body, .page { height: auto; }
+    .stage { min-height: 38vh; padding: 1.2rem 0; }
+    .team { flex-wrap: wrap; }
+    .team .name { flex-basis: 100%; }
+    .team .total { margin-left: auto; }
+    .tools { flex-direction: row; flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .board, .num { transition: none; }
+    .ex { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <h1>Two to Five</h1>
+    <a class="back" href="./">&larr; Word Lab</a>
+  </div>
+
+  <section class="board a2" id="board">
+    <div class="head">
+      <p class="prompt" id="prompt"></p>
+      <div class="nums" id="nums" aria-hidden="true">
+        <div class="num">2</div><div class="num">3</div><div class="num">4</div><div class="num">5</div>
+      </div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </section>
+
+  <div class="scores">
+    <div class="teams" id="teams"></div>
+    <div class="tools">
+      <button class="tool" id="addTeam">Add a team</button>
+      <button class="tool" id="removeTeam">Remove a team</button>
+      <button class="tool" id="reset">Reset scores</button>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="controls">
+      <button class="btn ghost" id="prev">Back</button>
+      <button class="btn" id="next">Next sentence</button>
+      <button class="btn ghost" id="example">Show an example</button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Game">
+        <button data-mode="free" class="on">2 to 5</button>
+        <button data-mode="exact">Exactly</button>
+      </div>
+      <div class="seg" role="group" aria-label="Level">
+        <button data-lv="a2" class="on">A2</button>
+        <button data-lv="b1">B1</button>
+        <button data-lv="b2">B2</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /*
+    Sentences. Each line is: the sentence (with ___ for the gap), then four
+    example answers of 2, 3, 4 and 5 words, in that order.
+    To add a sentence, copy a line and change it. Contractions (don't, they'd)
+    and hyphenated words (ten-euro) count as one word.
+  */
+  const SENTENCES = {
+    a2: [
+      ["I ___ to school every day.", "usually walk", "ride my bike", "take the early bus", "walk with my best friend"],
+      ["My cat likes to ___ on the sofa.", "sleep quietly", "sit and sleep", "play with my socks", "sleep all day and night"],
+      ["Can you ___ me your phone, please?", "just lend", "come and show", "stop and quickly lend", "be very kind and lend"],
+      ["She ___ a book from the shop yesterday.", "quickly bought", "went and bought", "and her sister bought", "and her two friends bought"],
+      ["We ___ dinner at 9 o'clock every evening.", "always have", "sit and have", "all sit and have", "cook and eat a big"],
+      ["On Saturdays, my friends and I ___ in the park.", "play football", "meet and talk", "ride our new bikes", "eat pizza and play games"],
+      ["My brother ___ every morning before school.", "eats breakfast", "has a shower", "listens to loud music", "makes toast for the family"],
+      ["There is ___ in my bedroom.", "a desk", "a big bed", "a very old computer", "a small desk and chair"],
+      ["I can't ___ because I'm too tired.", "go out", "do my homework", "play football this afternoon", "go to the party tonight"],
+      ["My best friend ___ at the weekend.", "plays tennis", "visits her grandparents", "goes to the beach", "watches films with her family"],
+      ["Yesterday I ___ and it was great.", "went swimming", "saw a film", "played basketball with friends", "went shopping with my cousins"],
+      ["My mum ___ when she gets home.", "makes tea", "takes a shower", "cooks dinner for us", "sits down and watches TV"],
+      ["In summer, we ___ every day.", "go swimming", "eat ice cream", "go to the beach", "stay outside until it's dark"],
+      ["The teacher asked us to ___ before Friday.", "study hard", "finish the project", "write a short story", "learn all the new words"],
+      ["I'd like ___ for my birthday.", "new trainers", "a new phone", "a really big cake", "a party with my friends"],
+      ["My dog ___ when I come home.", "always jumps", "runs to me", "barks and runs around", "runs around the living room"],
+      ["Tomorrow I'm going to ___ with my family.", "have lunch", "visit my grandparents", "watch a funny film", "go to a new restaurant"],
+      ["He ___ on the bus this morning.", "fell asleep", "lost his phone", "listened to some music", "sat next to his teacher"],
+      ["Please don't ___ in the classroom.", "eat food", "use your phone", "shout at your friends", "throw paper at other students"],
+      ["I usually ___ after I finish my homework.", "watch TV", "play video games", "go out with friends", "talk to my friends online"],
+      ["My grandparents ___ in a small village.", "live happily", "have a farm", "have a lovely house", "grow vegetables and keep chickens"],
+      ["Last weekend we ___ at the beach.", "had fun", "played volleyball together", "ate lunch and swam", "spent the whole day relaxing"],
+      ["My sister never ___ in the morning.", "eats breakfast", "makes her bed", "wakes up on time", "has time to eat breakfast"],
+      ["I want to ___ when I'm older.", "be famous", "have a dog", "live in another country", "work with animals every day"],
+      ["It was raining, so we ___ at home.", "played games", "watched a film", "made pizza for lunch", "played cards and ate popcorn"]
+    ],
+    b1: [
+      ["If it's sunny tomorrow, we ___ after class.", "will meet", "can play football", "will have a picnic", "are going to the beach"],
+      ["I've never ___ in my life.", "been abroad", "eaten raw fish", "been on a plane", "slept in a tent outside"],
+      ["My parents don't let me ___ during the week.", "go out", "play video games", "stay up very late", "use my phone after dinner"],
+      ["While I was walking home, I ___.", "fell over", "saw my cousin", "found a ten-euro note", "bumped into my old teacher"],
+      ["The best thing about my town is ___.", "the beach", "its friendly people", "the food in summer", "the park near my house"],
+      ["I used to ___ when I was little.", "hate vegetables", "bite my nails", "sleep with a teddy", "be afraid of the dark"],
+      ["You should ___ if you want to pass the exam.", "study more", "revise every day", "get plenty of sleep", "ask your teacher for help"],
+      ["I was really surprised when ___.", "it snowed", "my team won", "I passed the test", "my friends organised a party"],
+      ["My friend has just ___, so she's really happy.", "finished school", "got a puppy", "passed her driving test", "won a prize for singing"],
+      ["I'm looking forward to ___ this summer.", "sleeping late", "seeing my cousins", "going to a festival", "spending time at the beach"],
+      ["Before I go to bed, I always ___.", "read something", "brush my teeth", "check my phone again", "listen to some relaxing music"],
+      ["It's important to ___ when you meet someone new.", "be friendly", "smile and listen", "ask them some questions", "remember their name straight away"],
+      ["I haven't ___ since last year.", "been swimming", "seen my cousins", "been to the cinema", "had a really good holiday"],
+      ["If I had more free time, I ___.", "would paint", "would learn guitar", "would read more books", "would start my own band"],
+      ["Our teacher told us ___ before the trip.", "to rest", "to pack early", "to bring some water", "to charge our phones fully"],
+      ["The film was so boring that ___.", "I left", "we fell asleep", "everyone started to talk", "I looked at my phone"],
+      ["I get annoyed when people ___.", "interrupt me", "arrive really late", "talk during a film", "don't answer my messages quickly"],
+      ["She was tired because she ___ the night before.", "had studied", "had gone out", "had stayed up late", "had watched films until midnight"],
+      ["I'd rather ___ than go shopping.", "stay home", "play video games", "tidy my whole bedroom", "go for a long walk"],
+      ["When I finish school, I want to ___.", "travel abroad", "study computer science", "get a good job", "take a year to travel"],
+      ["My phone ___, so I couldn't call you.", "was broken", "had no battery", "was in my locker", "fell in the swimming pool"],
+      ["We were late because ___.", "it rained", "Dad overslept again", "we missed the train", "my sister lost her keys"],
+      ["I think everyone should ___ at least once.", "go camping", "try new food", "travel to another country", "sing in front of people"],
+      ["He apologised for ___.", "being late", "forgetting my birthday", "breaking my new headphones", "not replying to my message"],
+      ["I've been ___ for two hours.", "studying maths", "waiting for you", "trying to call you", "playing this game with friends"]
+    ],
+    b2: [
+      ["If I'd known about the party, I ___.", "would've come", "would have come", "would have brought something", "would have invited my cousin"],
+      ["Despite ___, she managed to finish the race.", "the rain", "feeling very ill", "hurting her left ankle", "having slept for three hours"],
+      ["I wish I ___ when I was younger.", "had travelled", "had learnt piano", "had taken more risks", "had listened to my grandparents"],
+      ["It's high time the government ___.", "took action", "listened to teenagers", "invested in public transport", "did something about climate change"],
+      ["Spending too much time online can ___.", "be harmful", "affect your sleep", "make you feel lonely", "stop you seeing your friends"],
+      ["By the time we arrived, ___.", "they'd gone", "everyone had left", "the film had started", "all the food had gone"],
+      ["She's the kind of person who ___.", "never complains", "always tells jokes", "makes everyone feel welcome", "would help anyone in trouble"],
+      ["I can't stand people who ___.", "show off", "never say thanks", "talk over other people", "are always on their phones"],
+      ["Unless we ___, the problem will only get worse.", "act now", "change our habits", "start using less plastic", "all work together on it"],
+      ["It's worth ___ before you make a decision.", "thinking carefully", "asking for advice", "talking to your family", "looking at all the options"],
+      ["I would have passed if I ___.", "had studied", "had worked harder", "had revised the vocabulary", "had read the questions properly"],
+      ["Nowadays, teenagers tend to ___.", "sleep less", "shop online more", "spend less time outdoors", "follow celebrities on social media"],
+      ["Having ___, he decided to go home.", "finished work", "missed the bus", "lost all his money", "waited for over an hour"],
+      ["What I love most about weekends is ___.", "sleeping in", "having no homework", "seeing all my friends", "not setting an alarm clock"],
+      ["She suggested ___ instead of staying in.", "going out", "trying something new", "going for a walk", "meeting up at the beach"],
+      ["He was accused of ___.", "telling lies", "copying my homework", "breaking the school rules", "taking money from the shop"],
+      ["Social media has made it easier to ___.", "stay connected", "share your opinions", "find people like you", "keep in touch with friends"],
+      ["I'd sooner ___ than give a speech in public.", "eat insects", "fail an exam", "clean the whole school", "walk home in the rain"],
+      ["No sooner had we sat down than ___.", "it rained", "the lights failed", "the fire alarm rang", "my phone started to ring"],
+      ["It's no use ___; you just have to practise.", "getting upset", "blaming your teacher", "waiting for a miracle", "hoping it will get easier"],
+      ["The government ought to ___.", "do more", "protect the environment", "build more sports centres", "make public transport much cheaper"],
+      ["She regrets ___.", "leaving early", "not studying languages", "selling her old guitar", "arguing with her best friend"],
+      ["This time next year, I'll be ___.", "studying abroad", "living in London", "preparing for my exams", "working in my uncle's shop"],
+      ["I'm not used to ___.", "waking early", "speaking in public", "eating dinner so early", "being away from my family"],
+      ["The reason I was late is that ___.", "I overslept", "my alarm failed", "the roads were flooded", "I couldn't find my keys"]
+    ]
+  };
+
+  const ROUND = 5;          // sentences in a round
+  const MAX_TEAMS = 6;
+
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const sum = a => a.reduce((t, v) => t + (v || 0), 0);
+
+  // Each level has its own shuffled pile, so sentences don't repeat until the pile runs out.
+  const piles = { a2: [], b1: [], b2: [] };
+  function draw(lv) {
+    if (!piles[lv].length) piles[lv] = shuffle(SENTENCES[lv].slice());
+    return piles[lv].pop();
+  }
+
+  let level = "a2";
+  let mode = "free";        // "free" = any length from 2 to 5, "exact" = the lit number
+  let teams = [{ name: "Team 1", bank: 0 }, { name: "Team 2", bank: 0 }];
+  let round = null;         // { items: [{ s, n, exact }], scores: [team][sentence] }
+  let at = 0;               // 0 to 4 = sentence, 5 = round result
+  let shown = 0;            // word count of the example on screen, 0 = none
+
+  const $ = id => document.getElementById(id);
+  const board = $("board"), stage = $("stage"), promptEl = $("prompt"), teamsEl = $("teams");
+  const nextBtn = $("next"), prevBtn = $("prev"), exBtn = $("example"), countEl = $("count");
+  const nums = [...document.querySelectorAll(".num")];
+
+  function newRound(bank) {
+    if (bank && round) teams.forEach((t, i) => { t.bank += sum(round.scores[i]); });
+    // The numbers for Exactly: each of 2, 3, 4, 5 once, plus one more.
+    const bag = shuffle([2, 3, 4, 5, 2 + Math.floor(Math.random() * 4)]);
+    round = {
+      items: bag.map(n => ({ s: draw(level), n, exact: mode === "exact" })),
+      scores: teams.map(() => Array(ROUND).fill(null))
+    };
+    at = 0; shown = 0;
+    render();
+  }
+
+  const roundMax = () => sum(round.items.map(it => it.exact ? it.n : 5));
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderSentence() {
+    const it = round.items[at];
+    promptEl.textContent = it.exact
+      ? `Fill the gap with exactly ${it.n} words.`
+      : "Fill the gap with 2 to 5 words. One point for each word.";
+
+    nums.forEach((d, i) => {
+      const k = i + 2;
+      d.classList.toggle("off", it.exact && k !== it.n);
+      d.classList.toggle("ring", (it.exact && k === it.n) || shown === k);
+    });
+
+    const [before, after] = it.s[0].split("___");
+    const p = el("p", "sentence");
+    p.append(before);
+    if (shown) {
+      it.s[shown - 1].split(" ").forEach(w => { p.append(el("span", "ex", w), " "); });
+      p.lastChild.remove();
+    } else {
+      const gap = el("span", "gap");
+      const slots = it.exact ? it.n : 5, solid = it.exact ? it.n : 2;
+      for (let i = 0; i < slots; i++) gap.append(el("span", i < solid ? "slot" : "slot maybe"));
+      p.append(gap);
+    }
+    p.append(after);
+
+    const worth = el("p", "worth", shown ? `${shown} words, so ${shown} points.` : "");
+    stage.className = "stage";
+    stage.replaceChildren(p, worth);
+
+    exBtn.disabled = false;
+    exBtn.textContent = !shown ? "Show an example" : (it.exact || shown === 5) ? "Hide the example" : "Show a longer one";
+    nextBtn.textContent = at === ROUND - 1 ? "See the round result" : "Next sentence";
+    prevBtn.disabled = at === 0;
+    countEl.textContent = `Sentence ${at + 1} of ${ROUND}`;
+  }
+
+  function renderResult() {
+    promptEl.textContent = "Round result";
+    nums.forEach(d => { d.classList.add("off"); d.classList.remove("ring"); });
+
+    const rows = teams.map((t, i) => ({ name: t.name || `Team ${i + 1}`, pts: sum(round.scores[i]), total: t.bank + sum(round.scores[i]) }))
+      .sort((a, b) => b.pts - a.pts);
+    const best = rows[0].pts, winners = rows.filter(r => r.pts === best).map(r => r.name);
+    const headline = best === 0 ? "No points this round."
+      : winners.length === 1 ? (teams.length === 1 ? `${best} points this round.` : `${winners[0]} wins the round.`)
+      : `A draw between ${winners.slice(0, -1).join(", ")} and ${winners[winners.length - 1]}.`;
+
+    const box = el("div", "result");
+    const list = el("ol");
+    rows.forEach(r => {
+      const li = el("li");
+      li.append(el("span", null, r.name), el("span", null, `${r.pts} out of ${roundMax()}`), el("span", "sub", `Total ${r.total}`));
+      list.append(li);
+    });
+    box.append(el("h2", null, headline), list);
+    stage.className = "stage";
+    stage.replaceChildren(box);
+
+    exBtn.disabled = true;
+    exBtn.textContent = "Show an example";
+    nextBtn.textContent = "Start a new round";
+    prevBtn.disabled = false;
+    countEl.textContent = "";
+  }
+
+  function renderTeams() {
+    const it = round.items[at];
+    teamsEl.replaceChildren(...teams.map((t, i) => {
+      const card = el("div", "team");
+      const name = el("input", "name");
+      name.value = t.name; name.maxLength = 16; name.setAttribute("aria-label", `Name of team ${i + 1}`);
+      name.addEventListener("input", () => { t.name = name.value; });
+      const pts = el("div", "pts");
+      if (it) {
+        [0, 2, 3, 4, 5].forEach(v => {
+          const b = el("button", "pt", v);
+          b.setAttribute("aria-label", `${v} points`);
+          b.classList.toggle("on", round.scores[i][at] === v);
+          b.disabled = it.exact && v !== 0 && v !== it.n;
+          b.addEventListener("click", () => {
+            round.scores[i][at] = round.scores[i][at] === v ? null : v;
+            renderTeams();
+          });
+          pts.append(b);
+        });
+      }
+      card.append(name, pts, el("span", "total", t.bank + sum(round.scores[i])));
+      return card;
+    }));
+    $("addTeam").disabled = teams.length >= MAX_TEAMS;
+    $("removeTeam").disabled = teams.length <= 1;
+  }
+
+  function render() {
+    board.className = "board " + level;
+    if (at < ROUND) renderSentence(); else renderResult();
+    renderTeams();
+  }
+
+  function forward() {
+    if (at < ROUND) { at++; shown = 0; render(); } else { newRound(true); }
+  }
+  function back() {
+    if (at > 0) { at--; shown = 0; render(); }
+  }
+
+  nextBtn.addEventListener("click", forward);
+  prevBtn.addEventListener("click", back);
+  exBtn.addEventListener("click", () => {
+    const it = round.items[at];
+    if (!it) return;
+    shown = it.exact ? (shown ? 0 : it.n) : (shown === 0 ? 2 : shown === 5 ? 0 : shown + 1);
+    render();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowRight") forward();
+    if (e.key === "ArrowLeft") back();
+  });
+
+  $("addTeam").addEventListener("click", () => {
+    if (teams.length >= MAX_TEAMS) return;
+    teams.push({ name: `Team ${teams.length + 1}`, bank: 0 });
+    round.scores.push(Array(ROUND).fill(null));
+    render();
+  });
+  $("removeTeam").addEventListener("click", () => {
+    if (teams.length <= 1) return;
+    teams.pop(); round.scores.pop();
+    render();
+  });
+  $("reset").addEventListener("click", () => {
+    teams.forEach(t => { t.bank = 0; });
+    round.scores = teams.map(() => Array(ROUND).fill(null));
+    render();
+  });
+
+  // Changing the game applies from the sentence on screen onwards.
+  document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+    if (mode === b.dataset.mode) return;
+    mode = b.dataset.mode;
+    document.querySelectorAll("[data-mode]").forEach(x => x.classList.toggle("on", x === b));
+    for (let i = at; i < ROUND; i++) {
+      round.items[i].exact = mode === "exact";
+      round.scores.forEach(s => { s[i] = null; });
+    }
+    shown = 0;
+    render();
+  }));
+
+  // Changing the level keeps the points so far and starts a new round.
+  document.querySelectorAll("[data-lv]").forEach(b => b.addEventListener("click", () => {
+    if (level === b.dataset.lv) return;
+    level = b.dataset.lv;
+    document.querySelectorAll("[data-lv]").forEach(x => x.classList.toggle("on", x === b));
+    newRound(true);
+  }));
+
+  newRound(false);
+</script>
+</body>
+</html>
