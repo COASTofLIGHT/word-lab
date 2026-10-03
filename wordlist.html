@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordlists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --line: #5F808A;
+    --sea: #17677A;
+    --sea-deep: #124F5E;
+    --focus: #0B62A4;
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2.25rem);
+  }
+
+  .back {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  header p {
+    margin: 0.35rem 0 0;
+    color: var(--ink-soft);
+    font-size: 1rem;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0 1.25rem;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.75rem;
+  }
+
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.9rem;
+  }
+
+  .group-label { font-weight: 600; }
+
+  .choices { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .choices label { position: relative; display: block; }
+
+  .choices input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .choices span {
+    display: grid;
+    place-items: center;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 1rem;
+    border: 2px solid var(--line);
+    border-radius: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .choices input:not(:checked):hover + span { border-color: var(--ink); }
+
+  .choices input:checked + span {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--mist);
+  }
+
+  /* The chosen level takes its Word Lab colour */
+  #level-options input:checked + span {
+    background: var(--lv);
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .choices input:focus-visible + span {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .note { color: var(--ink-soft); font-size: 0.95rem; }
+
+  .primary {
+    height: 2.75rem;
+    padding: 0 1.6rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: var(--sea);
+    color: #fff;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .primary:hover { background: var(--sea-deep); }
+  .primary:active { transform: translateY(1px); }
+  .primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  /* Word tiles */
+  .grid {
+    --cols: 3;
+    --rows: 1;
+    --gap: clamp(0.6rem, 1.6vw, 1.1rem);
+    --chrome: 24rem;
+    --h: clamp(8.5rem, calc((100vh - var(--chrome) - (var(--rows) - 1) * var(--gap)) / var(--rows)), 36rem);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--gap);
+  }
+
+  @supports (height: 100svh) {
+    .grid {
+      --h: clamp(8.5rem, calc((100svh - var(--chrome) - (var(--rows) - 1) * var(--gap)) / var(--rows)), 36rem);
+    }
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    flex: 0 0 calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    min-width: 0;
+    height: var(--h);
+    padding: clamp(0.9rem, 2vw, 1.6rem);
+    border: 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    background: var(--c);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tile:hover { filter: brightness(0.96); }
+  .tile:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  .swap {
+    position: absolute;
+    top: 0.85rem;
+    left: 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tile:hover .swap,
+  .tile:focus-visible .swap { opacity: 0.7; }
+
+  .text { display: block; width: 100%; }
+
+  .word {
+    display: block;
+    width: 100%;
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    overflow-wrap: normal;
+    hyphens: none;
+  }
+
+  .meta {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: clamp(0.9rem, 1.4vw, 1.15rem);
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: pre-line;
+    opacity: 0.8;
+  }
+  .meta:empty { display: none; }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(0.4rem); }
+    to   { opacity: 1; transform: none; }
+  }
+  .text.fresh { animation: settle 0.22s ease-out; }
+
+  .hint {
+    margin: 1.25rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .grid { --chrome: 32rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .text.fresh { animation: none; }
+    .choices span,
+    .swap { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <a class="back" href="./">&larr; Word Lab</a>
+
+  <header>
+    <h1>Wordlists</h1>
+    <p id="source"></p>
+  </header>
+
+  <div class="controls">
+    <div class="row">
+      <div class="group" role="radiogroup" aria-labelledby="level-label">
+        <span class="group-label" id="level-label">Level</span>
+        <div class="choices" id="level-options"></div>
+      </div>
+      <div class="group" role="radiogroup" aria-labelledby="count-label">
+        <span class="group-label" id="count-label">How many words?</span>
+        <div class="choices" id="count-options"></div>
+      </div>
+      <button type="button" class="primary" id="new-words">New words</button>
+    </div>
+
+    <div class="row">
+      <div class="group" role="group" aria-labelledby="type-label">
+        <span class="group-label" id="type-label">Word type</span>
+        <div class="choices" id="type-options">
+          <label><input type="checkbox" value="noun"><span>Nouns</span></label>
+          <label><input type="checkbox" value="verb"><span>Verbs</span></label>
+          <label><input type="checkbox" value="adjective"><span>Adjectives</span></label>
+        </div>
+        <span class="note">Leave all unticked for any word.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="hint">Click a word to swap just that one. Changing the number keeps the words you already have; changing the word type picks a fresh set.</p>
+  <p class="sr" role="status" id="status"></p>
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   The levels. To add one (B2, say): add a line here, then add its
+   words to LISTS below under the same id.
+---------------------------------------------------------------- */
+const LEVELS = [
+  { id: "a1", label: "A1", colour: "#F2D9A6", source: "Random words from the Cambridge Starters, Movers and Flyers lists." },
+  { id: "a2", label: "A2", colour: "#F4B5A0", source: "Random words from the Cambridge A2 Key list." },
+  { id: "b1", label: "B1", colour: "#A9CCEB", source: "Random words from the Cambridge B1 list." }
+];
+
+/* ---------------------------------------------------------------
+   The wordlists, one per level. Each entry is a plain string in the
+   Cambridge format, e.g. "apple (n)" or "answer (n & v)". To add a
+   word, add a string anywhere in its list; to remove one, delete it.
+---------------------------------------------------------------- */
+const LISTS = {
+  /* ---------- A1 ---------- */
+  a1: [
+  "act (v)", "actor (n)", "add (v)", "address (n)", "adventure (n)", "afraid (adj)", "afternoon (n)",
+  "age (n)", "agree (v)", "air (n)", "airport (n)", "alien (n)", "all (adj, adv, pron & det)",
+  "all right (adj & adv)", "alone (adj)", "alphabet (n)", "amazing (adj & exclam)", "ambulance (n)",
+  "angry (adj)", "animal (n)", "answer (n & v)", "app (n)", "appear (v)", "apple (n)", "April (n)",
+  "arm (n)", "armchair (n)", "arrive (v)", "art (n)", "artist (n)", "ask (v)", "asleep (adj)",
+  "astronaut (n)", "August (n)", "aunt (n)", "autumn (n)", "awake (adj)", "baby (n)", "back (n, adj & adv)",
+  "backpack (n)", "bad (adj)", "badminton (n)", "bag (n)", "balcony (n)", "ball (n)", "balloon (n)",
+  "banana (n)", "band (n – music)", "bandage (n)", "bank (n)", "baseball (n)", "baseball cap (n)",
+  "basement (n)", "basketball (n)", "bat (n)", "bath (n)", "bathroom (n)", "be (v)", "be called (v)",
+  "beach (n)", "bean (n)", "bear (n)", "beard (n)", "beautiful (adj)", "bed (n)", "bedroom (n)", "bee (n)",
+  "beetle (n)", "begin (v)", "believe (v)", "belt (n)", "best (adj & adv)", "better (adj & adv)",
+  "bicycle (n)", "big (adj)", "bike (n)", "bin (n)", "bird (n)", "birthday (n)", "biscuit (n)", "bit (n)",
+  "black (adj)", "blanket (n)", "blond (adj)", "blue (adj)", "board (n)", "board game (n)", "boat (n)",
+  "body (n)", "book (n)", "bookcase (n)", "bookshop (n)", "boots (n)", "bored (adj)", "boring (adj)",
+  "borrow (v)", "bottle (n)", "bottom (n & adj)", "bounce (v)", "bowl (n)", "box (n)", "boy (n)",
+  "bracelet (n)", "brave (adj)", "bread (n)", "break (n & v)", "breakfast (n)", "bridge (n)",
+  "brilliant (adj & exclam)", "bring (v)", "broken (adj)", "brother (n)", "brown (adj)", "brush (n & v)",
+  "build (v)", "building (n)", "burger (n)", "burn (v)", "bus (n)", "bus station (n)", "bus stop (n)",
+  "business (n)", "businessman/businesswoman (n)", "busy (adj)", "butter (n)", "butterfly (n)", "buy (v)",
+  "café (n)", "cage (n)", "cake (n)", "calendar (n)", "call (v)", "camel (n)", "camera (n)", "camp (v)",
+  "car (n)", "car park (n)", "card (n)", "careful (adj)", "carrot (n)", "carry (v)", "cartoon (n)",
+  "castle (n)", "cat (n)", "catch (v)", "cave (n)", "CD (n)", "centre (n)", "century (n)", "cereal (n)",
+  "chair (n)", "change (v)", "channel (n)", "chat (v)", "cheap (adj)", "cheese (n)", "chemist (n)",
+  "chess (n)", "chicken (n)", "child/children (n)", "chips (n)", "chocolate (n)", "choose (v)",
+  "chopsticks (n)", "cinema (n)", "circle (n)", "circus (n)", "city (n)", "clap (v)", "class (n)",
+  "classmate (n)", "classroom (n)", "clean (v & adj)", "clever (adj)", "climb (v)", "clock (n)", "close (v)",
+  "closed (adj)", "clothes (n)", "cloud (n)", "cloudy (adj)", "clown (n)", "club (n)", "coat (n)",
+  "coconut (n)", "coffee (n)", "cold (n & adj)", "collect (v)", "college (n)", "colour (n & v)",
+  "comb (n & v)", "come (v)", "comic (n)", "comic book (n)", "competition (n)", "complete (v)",
+  "computer (n)", "concert (n)", "conversation (n)", "cook (n & v)", "cooker (n)", "cool (adj & exclam)",
+  "corner (n)", "correct (adj)", "costume (n)", "cough (n)", "count (v)", "country (n)", "countryside (n)",
+  "cousin (n)", "cow (n)", "crayon (n)", "creature (n)", "crocodile (n)", "cross (n & v)", "crown (n)",
+  "cry (v)", "cup (n)", "cupboard (n)", "curly (adj)", "cushion (n)", "cut (v)", "cycle (v)", "dad (n)",
+  "dance (n & v)", "dangerous (adj)", "dark (adj)", "date (n – time)", "daughter (n)", "day (n)",
+  "dear (adj – Dear Harry)", "December (n)", "decide (v)", "deep (adj)", "delicious (adj)", "dentist (n)",
+  "desert (n)", "design (n & v)", "designer (n)", "desk (n)", "diary (n)", "dictionary (n)",
+  "difference (n)", "different (adj)", "difficult (adj)", "dining room (n)", "dinner (n)", "dinosaur (n)",
+  "dirty (adj)", "disappear (v)", "do (v)", "doctor (n)", "dog (n)", "doll (n)", "dolphin (n)", "donkey (n)",
+  "door (n)", "double (adj)", "downstairs (n & adv)", "draw (v)", "drawing (n)", "dream (n & v)",
+  "dress (n)", "dress up (v)", "drink (n & v)", "drive (n & v)", "driver (n)", "drop (v)", "drum (n)",
+  "dry (v & adj)", "duck (n)", "DVD (n)", "e-book (n)", "eagle (n)", "ear (n)", "earache (n)",
+  "early (adj & adv)", "Earth (n)", "east (n)", "easy (adj)", "eat (v)", "egg (n)", "elbow (n)",
+  "elephant (n)", "email (n & v)", "empty (adj)", "end (n & v)", "engine (n)", "engineer (n)",
+  "English (n & adj)", "enjoy (v)", "enormous (adj)", "enough (adj & pron)", "enter (v – a competition)",
+  "entrance (n)", "envelope (n)", "environment (n)", "evening (n)", "example (n)",
+  "excellent (adj & exclam)", "excited (adj)", "exciting (adj)", "exit (n)", "expensive (adj)",
+  "explain (v)", "explore (v)", "extinct (adj)", "eye (n)", "face (n)", "factory (n)", "fair (adj)",
+  "fall (v)", "fall over (v)", "family (n)", "famous (adj)", "fantastic (adj & exclam)", "far (adj & adv)",
+  "farm (n)", "farmer (n)", "fast (adj & adv)", "fat (adj)", "father (n)", "favourite (adj)", "February (n)",
+  "feed (v)", "feel (v)", "festival (n)", "fetch (v)", "field (n)", "file (n)", "film (n & v)",
+  "film star (n)", "find (v)", "find out (v)", "fine (adj & exclam)", "finger (n)", "finish (v)", "fire (n)",
+  "fire engine (n)", "fire fighter (n)", "fire station (n)", "first (adj & adv)", "fish (n & v)",
+  "fishing (n)", "fix (v)", "flag (n)", "flat (n)", "floor (n)", "flour (n)", "flower (n)", "fly (n & v)",
+  "fog (n)", "foggy (adj)", "follow (v)", "food (n)", "foot/feet (n)", "football (n)", "forest (n)",
+  "forget (v)", "fork (n)", "Friday (n)", "fridge (n)", "friend (n)", "friendly (adj)", "frightened (adj)",
+  "frightening (adj)", "frog (n)", "front (n & adj)", "fruit (n)", "full (adj)", "fun (n & adj)",
+  "funfair (n)", "funny (adj)", "fur (n)", "furry (adj)", "future (n)", "game (n)", "garden (n)", "gate (n)",
+  "geography (n)", "get (v)", "get dressed (v)", "get off (v)", "get on (v)", "get to (v)",
+  "get undressed (v)", "get up (v)", "giraffe (n)", "girl (n)", "give (v)", "glass (n & adj)", "glasses (n)",
+  "glove (n)", "glue (n & v)", "go (v)", "go out (v)", "go shopping (v)", "go to bed (v)", "go to sleep (v)",
+  "goal (n)", "goat (n)", "gold (n & adj)", "golf (n)", "good (adj)", "granddaughter (n)", "grandfather (n)",
+  "grandma (n)", "grandmother (n)", "grandpa (n)", "grandparent (n)", "grandson (n)", "grape (n)",
+  "grass (n)", "great (adj & exclam)", "green (adj)", "grey (adj)", "ground (n)", "group (n)", "grow (v)",
+  "grown-up (n)", "guess (n & v)", "guitar (n)", "gym (n)", "hair (n)", "half (n & adj)", "hall (n)",
+  "hand (n)", "handbag (n)", "happen (v)", "happy (adj)", "hard (adj & adv)", "hat (n)", "hate (v)",
+  "have (v)", "have got (v)", "head (n)", "headache (n)", "hear (v)", "heavy (adj)", "helicopter (n)",
+  "helmet (n)", "help (v)", "hide (v)", "high (adj)", "hill (n)", "hippo (n)", "history (n)", "hit (v)",
+  "hobby (n)", "hockey (n)", "hold (v)", "hole (n)", "holiday (n)", "home (n & adv)", "homework (n)",
+  "honey (n)", "hop (v)", "hope (v)", "horrible (adj)", "horse (n)", "hospital (n)", "hot (adj)",
+  "hotel (n)", "hour (n)", "house (n)", "huge (adj)", "hundred (n)", "hungry (adj)", "hurry (v)", "hurt (v)",
+  "husband (n)", "ice (n)", "ice cream (n)", "ice skates (n)", "ice skating (n)", "idea (n)", "ill (adj)",
+  "important (adj)", "improve (v)", "information (n)", "insect (n)", "inside (n, adv & prep)",
+  "instrument (n)", "interested (adj)", "interesting (adj)", "internet (n)", "invent (v)", "invitation (n)",
+  "invite (v)", "island (n)", "jacket (n)", "jam (n)", "January (n)", "jeans (n)", "jellyfish (n)",
+  "job (n)", "join (v – a club)", "journalist (n)", "journey (n)", "juice (n)", "July (n)", "jump (v)",
+  "June (n)", "jungle (n)", "kangaroo (n)", "keep (v)", "key (n)", "keyboard (n – computer)", "kick (n & v)",
+  "kid (n)", "kilometre (n)", "kind (n & adj)", "king (n)", "kitchen (n)", "kite (n)", "kitten (n)",
+  "kiwi (n)", "knee (n)", "knife (n)", "know (v)", "lake (n)", "lamp (n)", "land (v)", "language (n)",
+  "laptop (n)", "large (adj)", "last (adj & adv)", "late (adj & adv)", "laugh (n & v)", "lazy (adj)",
+  "leaf/leaves (n)", "learn (v)", "leave (v)", "left (n & adj – direction)", "leg (n)", "lemon (n)",
+  "lemonade (n)", "lesson (n)", "let (v)", "letter (n)", "library (n)", "lie (v – lie down)", "lift (n & v)",
+  "light (n & adj)", "like (v & prep)", "lime (n)", "line (n)", "lion (n)", "listen (v)", "little (adj)",
+  "live (v)", "living room (n)", "lizard (n)", "long (adj)", "look (v)", "look after (v)", "look at (v)",
+  "look for (v)", "look like (v)", "lorry (n)", "lose (v)", "loud (adj)", "love (v)", "lovely (adj)",
+  "low (adj)", "lucky (adj)", "lunch (n)", "machine (n)", "magazine (n)", "make (v)", "make sure (v)",
+  "man/men (n)", "manager (n)", "mango (n)", "map (n)", "March (n)", "market (n)", "married (adj)",
+  "mat (n)", "match (n – football)", "maths (n)", "matter (n)", "May (n)", "meal (n)", "mean (v)",
+  "meat (n)", "meatballs (n)", "mechanic (n)", "medicine (n)", "meet (v)", "meeting (n)", "member (n)",
+  "message (n)", "metal (n & adj)", "midday (n)", "middle (n & adj)", "midnight (n)", "milk (n)",
+  "milkshake (n)", "million (n)", "mind (v)", "minute (n)", "mirror (n)", "missing (adj)", "mistake (n)",
+  "mix (v)", "model (n)", "Monday (n)", "money (n)", "monkey (n)", "monster (n)", "month (n)", "moon (n)",
+  "morning (n)", "mother (n)", "motorbike (n)", "motorway (n)", "mountain (n)", "mouse/mice (n)",
+  "moustache (n)", "mouth (n)", "move (v)", "mum (n)", "museum (n)", "music (n)", "name (n)",
+  "naughty (adj)", "neck (n)", "necklace (n)", "need (v)", "nest (n)", "net (n)", "new (adj)", "news (n)",
+  "newspaper (n)", "next (adj & adv)", "nice (adj)", "night (n)", "noise (n)", "noisy (adj)", "noodles (n)",
+  "north (n)", "nose (n)", "November (n)", "number (n)", "nurse (n)", "ocean (n)", "October (n)",
+  "octopus (n)", "office (n)", "OK (adj)", "old (adj)", "olives (n)", "onion (n)", "online (adj)",
+  "open (v & adj)", "orange (n & adj)", "outside (n, adv & prep)", "oven (n)", "page (n)", "paint (n & v)",
+  "painting (n)", "pair (n)", "pancake (n)", "panda (n)", "paper (n & adj)", "parent (n)", "park (n)",
+  "parrot (n)", "part (n)", "party (n)", "passenger (n)", "past (n & prep)", "pasta (n)", "path (n)",
+  "pea (n)", "pear (n)", "pen (n)", "pencil (n)", "penguin (n)", "pepper (n)", "person/people (n)",
+  "pet (n)", "phone (n & v)", "photo (n)", "photographer (n)", "piano (n)", "pick up (v)", "picnic (n)",
+  "picture (n)", "pie (n)", "piece (n)", "pilot (n)", "pineapple (n)", "pink (adj)", "pirate (n)",
+  "pizza (n)", "place (n)", "plane (n)", "planet (n)", "plant (n & v)", "plastic (n & adj)", "plate (n)",
+  "platform (n)", "play (v)", "player (n)", "playground (n)", "pleased (adj)", "pocket (n)", "point (v)",
+  "polar bear (n)", "police officer (n)", "police station (n)", "pond (n)", "pool (n)", "poor (adj)",
+  "pop music (n)", "pop star (n)", "popular (adj)", "post (v)", "post office (n)", "postcard (n)",
+  "poster (n)", "potato (n)", "practice (n)", "practise (v)", "prefer (v)", "prepare (v)", "present (n)",
+  "pretty (adj)", "prize (n)", "problem (n)", "programme (n)", "project (n)", "pull (v)", "puppy (n)",
+  "purple (adj)", "push (v)", "put (v)", "put on (v)", "puzzle (n)", "pyjamas (n)", "pyramid (n)",
+  "quarter (n)", "queen (n)", "question (n)", "quick (adj)", "quiet (adj)", "quiz (n)", "rabbit (n)",
+  "race (n & v)", "racing (adj – car, bike)", "radio (n)", "railway (n)", "rain (n & v)", "rainbow (n)",
+  "read (v)", "ready (adj)", "red (adj)", "remember (v)", "repair (v)", "repeat (v)", "restaurant (n)",
+  "rice (n)", "rich (adj)", "ride (n & v)", "right (n & adj)", "ring (n)", "river (n)", "road (n)",
+  "robot (n)", "rock (n)", "rock music (n)", "rocket (n)", "roller skates (n)", "roller skating (n)",
+  "roof (n)", "room (n)", "round (adj, adv & prep)", "rubber (n)", "rucksack (n)", "rug (n)", "ruler (n)",
+  "run (v)", "sad (adj)", "safe (adj)", "sail (n & v)", "salad (n)", "salt (n)", "same (adj)", "sand (n)",
+  "sandwich (n)", "Saturday (n)", "sauce (n)", "sausage (n)", "save (v)", "say (v)", "scarf (n)",
+  "scary (adj)", "school (n)", "science (n)", "scissors (n)", "score (n & v)", "screen (n)", "sea (n)",
+  "search (n & v)", "seat (n)", "second (adj & adv)", "secret (n)", "see (v)", "sell (v)", "send (v)",
+  "sentence (n)", "September (n)", "several (adj)", "shampoo (n)", "shape (n)", "shark (n)", "sheep (n)",
+  "shelf (n)", "shell (n)", "ship (n)", "shirt (n)", "shoe (n)", "shop (n & v)", "shopping (n)",
+  "shopping centre (n)", "short (adj)", "shorts (n)", "shoulder (n)", "shout (v)", "show (v)", "shower (n)",
+  "sick (adj)", "silly (adj)", "silver (n & adj)", "sing (v)", "singer (n)", "sister (n)", "sit (v)",
+  "skate (n & v)", "skateboard (n)", "skateboarding (n)", "ski (n & v)", "skip (v)", "skirt (n)", "sky (n)",
+  "skyscraper (n)", "sledge (n & v)", "sleep (v)", "slow (adj)", "small (adj)", "smell (n & v)",
+  "smile (n & v)", "snack (n)", "snail (n)", "snake (n)", "snow (n & v)", "snowball (n)", "snowboard (n)",
+  "snowboarding (n)", "snowman (n)", "soap (n)", "sock (n)", "sofa (n)", "soft (adj)", "son (n)", "song (n)",
+  "sore (adj)", "sorry (adj)", "sound (n & v)", "soup (n)", "south (n)", "space (n)", "spaceship (n)",
+  "speak (v)", "special (adj)", "spell (v)", "spend (v)", "spider (n)", "spoon (n)", "sport (n)",
+  "sports centre (n)", "spot (n)", "spotted (adj)", "spring (n)", "square (n & adj)", "stadium (n)",
+  "stage (n – theatre)", "stairs (n)", "stamp (n)", "stand (v)", "star (n)", "start (v)", "station (n)",
+  "stay (v)", "step (n)", "stomach (n)", "stomach-ache (n)", "stone (n)", "stop (v)", "storm (n)",
+  "story (n)", "straight (adj)", "strange (adj)", "strawberry (n)", "stream (n)", "street (n)", "stripe (n)",
+  "striped (adj)", "strong (adj)", "student (n)", "study (v)", "subject (n)", "sugar (n)", "suitcase (n)",
+  "summer (n)", "sun (n)", "Sunday (n)", "sunglasses (n)", "sunny (adj)", "supermarket (n)", "sure (adj)",
+  "surname (n)", "surprise (n)", "surprised (adj)", "swan (n)", "sweater (n)", "sweet (adj)", "sweets (n)",
+  "swim (n & v)", "swimming pool (n)", "swimsuit (n)", "swing (n & v)", "T-shirt (n)", "table (n)",
+  "table tennis (n)", "tablet (n)", "tail (n)", "take (v)", "take a photo (v)", "take off (v)", "talk (v)",
+  "tall (adj)", "taste (n & v)", "taxi (n)", "tea (n)", "teach (v)", "teacher (n)", "team (n)",
+  "teddy bear (n)", "telephone (n)", "tell (v)", "temperature (n)", "tennis (n)", "tennis racket (n)",
+  "tent (n)", "terrible (adj)", "text (n & v)", "thank (v)", "theatre (n)", "thin (adj)", "thing (n)",
+  "think (v)", "third (adj & adv)", "thirsty (adj)", "thousand (n)", "throw (v)", "Thursday (n)",
+  "tick (n & v)", "ticket (n)", "tidy (v & adj)", "tiger (n)", "time (n)", "timetable (n)", "tired (adj)",
+  "today (n & adv)", "toe (n)", "tomato (n)", "tomorrow (n & adv)", "tonight (n & adv)", "tooth/teeth (n)",
+  "toothache (n)", "toothbrush (n)", "toothpaste (n)", "top (n & adj)", "torch (n)", "tortoise (n)",
+  "touch (v)", "tour (n)", "towel (n)", "town (n)", "town centre (n)", "toy (n)", "tractor (n)",
+  "traffic (n)", "train (n)", "trainers (n)", "travel (v)", "treasure (n)", "tree (n)", "trip (n)",
+  "trousers (n)", "try (n & v)", "Tuesday (n)", "tune (n)", "turn (v)", "turn off (v)", "turn on (v)",
+  "TV (n)", "tyre (n)", "ugly (adj)", "umbrella (n)", "uncle (n)", "understand (v)", "unfriendly (adj)",
+  "unhappy (adj)", "uniform (n)", "university (n)", "unkind (adj)", "untidy (adj)", "unusual (adj)",
+  "upstairs (n & adv)", "use (v)", "vegetable (n)", "video (n & v)", "view (n)", "village (n)", "violin (n)",
+  "visit (v)", "volleyball (n)", "wait (v)", "waiter (n)", "wake up (v)", "walk (n & v)", "wall (n)",
+  "want (v)", "warm (adj)", "wash (n & v)", "watch (n & v)", "water (n & v)", "waterfall (n)",
+  "watermelon (n)", "wave (n & v)", "way (n)", "weak (adj)", "wear (v)", "weather (n)", "website (n)",
+  "Wednesday (n)", "week (n)", "weekend (n)", "well (adj & adv)", "west (n)", "wet (adj)", "whale (n)",
+  "wheel (n)", "whisper (v)", "whistle (v)", "white (adj)", "wife (n)", "wifi (n)", "wild (adj)", "win (n)",
+  "wind (n)", "window (n)", "windy (adj)", "wing (n)", "winner (n)", "winter (n)", "wish (n & v)",
+  "woman/women (n)", "wonderful (adj)", "wood (n)", "wool (n)", "word (n)", "work (n & v)", "world (n)",
+  "worried (adj)", "worse (adj & adv)", "worst (adj & adv)", "write (v)", "wrong (adj)", "x-ray (n)",
+  "year (n)", "yellow (adj)", "yesterday (n & adv)", "yoghurt (n)", "young (adj)", "zebra (n)", "zero (n)",
+  "zoo (n)"
+  ],
+
+  /* ---------- A2 ---------- */
+  a2: [
+  "a/an (det)", "a few (det, adj & pron)", "able (adj)", "about (adv & prep)", "above (adv & prep)",
+  "accident (n)", "across (adv & prep)", "act (n & v)", "action (adj)", "activity (n)", "actor (n)",
+  "actually (adv)", "ad (n)", "add (v)", "address (n)", "adult (adj & n)", "advanced (adj)", "adventure (n)",
+  "advert (n)", "advertisement (n)", "advice (n)", "aeroplane (n)", "afraid (adj)", "after (adv & prep)",
+  "afternoon (n)", "afterwards (adv)", "again (adv)", "against (prep)", "age (n)", "aged (adj)", "ago (adv)",
+  "agree (v)", "air (n)", "airport (n)", "alarm clock (n)", "album (n)", "all (adv, det & pron)",
+  "all kinds of (det & pron)", "allow (v)", "all right/alright (adj, adv & exclam)",
+  "all sorts of (det & pron)", "all the time (det)", "almost (adv)", "alone (adj & adv)", "along (prep)",
+  "already (adv)", "alright (adj, adv & exclam)", "also (adv)", "always (adv)", "a.m. (adv)", "amazed (adj)",
+  "amazing (adj)", "ambulance (n)", "among (prep)", "an (det)", "and (conj)", "angry (adj)", "animal (n)",
+  "another (det & pron)", "answer (n & v)", "any (det & pron)", "anybody (pron)", "anymore (adv)",
+  "anyone (pron)", "anything (pron)", "anyway (adv)", "anywhere (adv)", "apartment (n)",
+  "apartment building (n)", "app (n)", "apple (n)", "appointment (n)", "area (n)", "arm (n)", "armchair (n)",
+  "around (adv & prep)", "arrive (v)", "art (n)", "article (n)", "as (conj & adv & prep)",
+  "as good as (phrase)", "as soon as possible (phrase)", "as well (phrase)", "as well as (phrase)", "ask (v)",
+  "assistant (n)", "as well (adv)", "as well (as) (prep)", "at (prep)", "at / @ (prep)", "at all (prep phr)",
+  "attractive (adj)", "aunt (n)", "autumn (n)", "available (adj)", "away (adv)", "awesome (adj)",
+  "awful (adj)",
+
+  "baby (n)", "back (n, adv & adj)", "backpack (n)", "bad (adj)", "badly (adv)", "badminton (n)", "bag (n)",
+  "bake (v)", "ball (n)", "balloon (n)", "banana (n)", "band (n)", "bank (n)", "barbecue/ barbeque (n)",
+  "baseball (n)", "basketball (n)", "bat (n)", "bath (n)", "bathing suit (n)", "bathroom (n)", "bathtub (n)",
+  "battery (n)", "be (av & v)", "beach (n)", "bean (n)", "bear (n)", "beard (n)", "beautiful (adj)",
+  "because (conj)", "because of (prep phr)", "become (v)", "bed (n)", "bedroom (n)", "bee (n)",
+  "before (adv, conj & prep)", "begin (v)", "beginner (n)", "beginning (n)", "behind (adv & prep)",
+  "believe (v)", "belong (v)", "below (adv & prep)", "belt (n)", "beside (prep)", "best (adj & adv)",
+  "better (adj & adv)", "between (prep)", "bicycle (n)", "big (adj)", "bike (n)", "bill (n)", "bin (n)",
+  "biology (n)", "bird (n)", "birth (n)", "birthday (n)", "biscuit (n) (Br Eng) (Am Eng: cookie)",
+  "bit (n & adv)", "black (adj & n)", "blackboard (n)", "blanket (n)", "block (n)", "blog (n)",
+  "blond(e) (adj)", "blood (n)", "blouse (n)", "blue (adj & n)", "board (n)", "board game (n)", "boat (n)",
+  "body (n)", "boil (v)", "boiled (adj)", "book (n & v)", "bookcase (n)", "bookshelf (n)",
+  "bookshop (n) (Br Eng)", "bookstore (n) (Am Eng)", "boot (n)", "bored (adj)", "boring (adj)", "born (v)",
+  "borrow (v)", "boss (n)", "both (pron & det)", "bother (v)", "bottle (n)", "bottom (n)", "bowl (n)",
+  "box (n)", "boy (n)", "boyfriend (n)", "bracelet (n)", "brain (n)", "brave (adj)", "bread (n)",
+  "break (n & v)", "break down (phr v)", "breakfast (n)", "bridge (n)", "bright (adj – for colours)",
+  "brilliant (adj)", "bring (v)", "bring back (v)", "broken (adj)", "brother (n)", "brown (adj & n)",
+  "brush (n & v)", "build (v)", "building (n)", "burger (n)", "bus (n)", "business (n)", "businessman (n)",
+  "businesswoman (n)", "business person (n)", "bus station (n)", "bus stop (n)", "busy (adj)", "but (conj)",
+  "butter (n)", "butterfly (n)", "buy (v)", "by (prep)", "by accident (prep phr)", "by the way (prep phr)",
+  "bye (exclam)",
+
+  "cabinet (n)", "cafe/café (n)", "cafeteria (n)", "cake (n)", "calendar (n)", "call (n & v)", "camel (n)",
+  "camera (n)", "camp (v)", "camping (n)", "campsite (n)", "cap (n)", "capital (n)", "can (n & mv)",
+  "candy (n)", "cannot (mv)", "car (n)", "card (n)", "career (n)", "careful (adj)", "carefully (adv)",
+  "car park (n) (Br Eng) (Am Eng: parking lot)", "carpet (n)", "carrot (n)", "carry (v)", "cartoon (n)",
+  "case (n)", "cash (n & v)", "castle (n)", "cat (n)", "catch (v)", "CD (n)", "CD player (n)", "ceiling (n)",
+  "cell phone (n)", "celebrate (v)", "celebrity (n)", "cent (n)", "centre/center (n)",
+  "centimetre/centimeter (cm) (n)", "century (n)", "cereal (n)", "certainly (adv)", "chain (n)", "chair (n)",
+  "change (v & n)", "channel (n)", "character (n)", "chat (n)", "chatroom (n)", "cheap (adj)", "check (v)",
+  "cheese (n)", "chef (n)", "chemist (n) (Br Eng) (Am Eng: drugstore)", "chemistry (n)", "cheque (n)",
+  "chess (n)", "chicken (n)", "child (n)", "chilli (n)", "chips (n pl)", "chocolate (n)", "choose (v)",
+  "cinema (n)", "circle (n)", "circus (n)", "city (n)", "class (n)", "classical (adj)", "classmate (n)",
+  "classroom (n)", "clean (adj & v)", "cleaner (n)", "clear (adj)", "clearly (adv)", "clever (adj)",
+  "click (n & v)", "climb (v)", "climbing (n)", "clock (n)", "close (adj & v)", "close to (prep phr)",
+  "closed (adj)", "closet (n)", "clothes (n pl)", "cloud (n)", "cloudy (adj)", "clown (n)", "club (n)",
+  "coach (n)", "coast (n)", "coffee (n)", "cola (n)", "cold (adj & n)", "colleague (n)", "collect (v)",
+  "college (n)", "colour (n & v)", "comb (n)", "come (v)", "come back (v)", "comedy (n)", "comfortable (adj)",
+  "comic (n)", "company (n)", "competition (n)", "complete (v)", "computer (n)", "concert (n)",
+  "congratulations! (exclam)", "contact (n & v)", "continue (v)", "conversation (n)", "cook (n & v)",
+  "cooker (n)", "cookie (n) (Am Eng) (Br Eng: biscuit)", "cooking (n)", "cool (adj & exclam)", "copy (v)",
+  "corner (n)", "cost (n & v)", "costume (n)", "could (mv)", "country (n)", "countryside (n)", "course (n)",
+  "cousin (n)", "cover (v & n)", "cow (n)", "crazy (adj)", "cream (adj & n)", "cycling (n)",
+
+  "dad (n)", "daily (adj & adv)", "dance (n & v)", "dancer (n)", "dancing (n)", "danger (n)",
+  "dangerous (adj)", "dark (adj)", "date (n)", "daughter (n)", "day (n)", "dead (adj)", "dear (adj)",
+  "decide (v)", "deep (adj)", "degree (n)", "delay (n & v)", "delicious (adj)", "deliver (v)", "dentist (n)",
+  "department (n)", "department store (n)", "describe (v)", "desert (n)", "design (v)",
+  "design (planning) (n)", "design (process) (n)", "design (drawing) (n)", "desk (n)", "dessert (n)",
+  "details (n)", "diary (n)", "dictionary (n)", "die (v)", "difference (n)", "different (adj)",
+  "difficult (adj)", "digital (adj)", "digital camera (n)", "dining room (n)", "dinner (n)", "dinosaur (n)",
+  "diploma (n)", "directions (n)", "dirty (adj)", "disco (n)", "discount (n)", "discover (v)", "discuss (v)",
+  "dish (n)", "dive (v)", "diving (adj)", "do (av & v)", "doctor (n)", "document (n)", "dog (n)", "doll (n)",
+  "dollar (n)", "dolphin (n)", "donkey (n)", "door (n)", "dot (n)", "double (adj)", "download (n & v)",
+  "downstairs (adv)", "Dr (n)", "draw (v)", "drawer (n)", "drawing (n)", "dream (n & v)", "dress (n & v)",
+  "dressed (adj)", "drink (n & v)", "drive (v)", "driver (n)", "driving licence (n)", "drop (v)",
+  "drugstore (n) (Am Eng) (Br Eng: chemist)", "drum (n)", "dry (adj & v)", "duck (n)", "during (prep)",
+  "DVD (n)", "DVD player (n)",
+
+  "each (det & pron)", "each other (pron)", "ear (n)", "early (adj & adv)", "earn (v)", "earring (n)",
+  "easily (adv)", "east (n, adj & adv)", "easy (adj)", "eat (v)", "egg (n)", "electric (adj)",
+  "electricity (n)", "elephant (n)", "elevator (n) (Am Eng) (Br Eng: lift)", "else (adv)", "email (n & v)",
+  "empty (adj)", "end (v & n)", "engine (n)", "engineer (n)", "enjoy (v)", "enough (adv, det & pron)",
+  "enter (v)", "entrance (n)", "envelope (n)", "environment (n)", "equipment (n)",
+  "eraser (n) (Am Eng) (Br Eng: rubber)", "especially (adv)", "euro (n)", "even (adv)", "evening (n)",
+  "event (n)", "ever (adv)", "every (det)", "everybody (pron)", "everyone (pron)", "everything (pron)",
+  "everywhere (adv)", "exactly (adv)", "examination/exam (n)", "example (n)", "excellent (adj)",
+  "except (conj & prep)", "excited (adj)", "exciting (adj)", "excuse (v)", "exercise (n & v)",
+  "exhibition (n)", "expensive (adj)", "experience (n)", "experiment (n)", "explain (v)", "explore (v)",
+  "explorer (n)", "extra (adj)", "eye (n)",
+
+  "face (n)", "fact (n)", "factory (n)", "fail (v)", "fair (adj)", "fall (n & v)", "family (n)",
+  "famous (adj)", "fan (n)", "fantastic (adj)", "far (adv)", "farm (n)", "farmer (n)", "fashion (n)",
+  "fast (adj & adv)", "fast food (n)", "fat (adj)", "father (n)", "favourite (adj)", "feel (v)",
+  "feelings (n)", "festival (n)", "few (det & adj)", "field (n)", "file (n)", "fill (v)", "fill in (phr v)",
+  "film (n & v)", "final (adj)", "finally (adv)", "find (v)", "find out (phr v)", "fine (adj)", "finger (n)",
+  "finish (v)", "fire (n)", "first (adv & adj)", "first name (n)", "first of all (adv)", "fish (n & v)",
+  "fishing (n)", "fit (adj)", "fix (v)", "flat (n)", "flight (n)", "floor (n)", "flower (n)", "fly (v)",
+  "fog (n)", "foggy (adj)", "folder (n)", "follow (v)", "follow (social media) (v)", "food (n)", "foot (n)",
+  "football (n)", "footballer (n)", "for (prep)", "foreign (adj)", "forest (n)", "forget (v)", "fork (n)",
+  "form (n)", "free (adj & adv)", "French fries (n) (Am Eng) (Br Eng: chips)", "fresh (adj)", "fried (adj)",
+  "friend (n)", "friendly (adj)", "frightened (adj)", "from (prep)", "front (n)", "fruit (n)", "full (adj)",
+  "fun (adj & n)", "funny (adj)", "fur (n)", "furniture (n)", "further (adj)", "future (n)",
+
+  "gallery (n)", "game (n)", "garage (n)", "garden (n)", "garlic (n)", "gas (n) (Am Eng) (Br Eng: petrol)",
+  "gas station (n) (Am Eng) (Br Eng: petrol station)", "gate (n)", "geography (n)", "get (v)", "get back (v)",
+  "get dressed (v)", "get fit (v)", "get married (v)", "get off (phr v)", "gift (n)", "girl (n)",
+  "girlfriend (n)", "give (v)", "give back (v)", "glad (adj)", "glass (n & adj)", "glasses (n pl)",
+  "glove (n)", "go (v)", "goal (n)", "gold (n & adj)", "golden (adj)", "golf (n)", "good (adj)",
+  "good afternoon (exclam)", "goodbye (exclam)", "good evening (exclam)", "good-looking (adj)",
+  "good morning (exclam)", "good night (exclam)", "go out (phr v)", "grade (n)", "gram (me) (n)",
+  "grandchild (n)", "grand(d)ad (n)", "granddaughter (n)", "grandfather (n)", "grandma (n)", "grandmother (n)",
+  "grandpa (n)", "grandparent (n)", "grandson (n)", "granny (n)", "grape (n)", "grass (n)", "great (adj)",
+  "green (adj)", "grey (adj & n) (Br Eng) (Am Eng: gray)", "grilled (adj)", "grocery store (n) (Am Eng)",
+  "group (n)", "grow (v)", "grow up (phr v)", "guess (v)", "guest (n)", "guest-house (n)", "guide (n)",
+  "guidebook (n)", "guitar (n)", "guy (n)", "gym (n)",
+
+  "hair (n)", "half (det, n & pron)", "half-price (adj)", "hall (n)", "hand (n)", "handbag (n)", "happen (v)",
+  "happy (adj)", "harbour (n)", "hard (adj & adv)", "hat (n)", "hate (v)", "have (av & v)", "have got to (mv)",
+  "have to (mv)", "he (pron)", "head (n)", "headache (n)", "headphones (n)", "headteacher (n)", "health (n)",
+  "healthy (adj)", "hear (v)", "heart (n)", "heating (n)", "heavy (adj)", "helicopter (n)", "hello (exclam)",
+  "help (v & n)", "helpful (adj)", "her (det & pron)", "here (adv)", "hers (pron)", "herself (pron)",
+  "hey (exclam)", "hi (exclam)", "high (adj)", "hill (n)", "him (pron)", "himself (pron)", "hip hop (n)",
+  "his (det & pron)", "history (n)", "hit (v)", "hobby (n)", "hockey (n)", "hold (v)", "holiday (n)",
+  "home (n & adv)", "homework (n)", "honey (n)", "hope (v)", "horrible (adj)", "horror (adj)", "horse (n)",
+  "hospital (n)", "hot (adj)", "hotel (n)", "hour (n)", "house (n)", "housewife (n)", "how (adv)",
+  "however (adv)", "huge (adj)", "hungry (adj)", "hurry (v)", "hurt (v)", "husband (n)",
+
+  "I (pron)", "ice (n)", "ice cream (n)", "ice skating (n)", "ID (n)", "ID card (n)", "idea (n)",
+  "identification (n)", "if (conj)", "ill (adj)", "immediately (adv)", "important (adj)", "impossible (adj)",
+  "improve (v)", "in (adv & prep)", "include (v)", "including (prep)", "indoor (adj)", "indoors (adv)",
+  "information (n)", "in front of (prep phr)", "ingredient (n)", "insect (n)", "inside (adv & prep)",
+  "instead (adv)", "instead of (prep)", "instructions (n pl)", "instrument (n)", "interested (adj)",
+  "interesting (adj)", "international (adj)", "internet (n)", "into (prep)", "invent (v)", "invention (n)",
+  "invitation (n)", "invite (v)", "island (n)", "it (pron)", "IT (n)", "its (det)", "itself (pron)",
+
+  "jacket (n)", "jam (n)", "jazz (n)", "jeans (n pl)", "jewellery (n) (Br Eng) (Am Eng: jewelry)", "job (n)",
+  "join (v)", "journalist (n)", "journey (n)", "juice (n)", "jump (v)", "jumper (n)", "just (adv)",
+
+  "keep (v)", "key (n)", "keyboard (n)", "kick (n & v)", "kid(s) (n)",
+  "kilogramme (kg) (n) (Br Eng) (Am Eng: kilogram)", "kilometre (km) (n) (Br Eng) (Am Eng: kilometer)",
+  "kind (adj & n)", "king (n)", "kiss (n & v)", "kit (n)", "kitchen (n)", "kite (n)", "knife (n)", "know (v)",
+
+  "lake (n)", "lamp (n)", "language (n)", "laptop (computer) (n)", "large (adj)", "last (adj & det)",
+  "late (adv & adj)", "later (adv)", "laugh (v)", "lazy (adj)", "learn (v)", "least (adv)",
+  "leather (n & adj)", "leave (v)", "left (adj, adv & n)", "left-hand (adj)", "leg (n)", "lemon (n)",
+  "lemonade (n)", "lend (v)", "length (n)", "less (adj, det & pron)", "lesson (n)", "let (v)", "letter (n)",
+  "level (n)", "licence (n)", "lie down (phr v)", "life (n)", "lift (n)", "light (n & adj)",
+  "like (adv, prep & v)", "line (n)", "link (technology) (n)", "list (n)", "listen (v)",
+  "litre (n) (Br Eng) (Am Eng: liter)", "little (adj)", "live (v)", "living room (n)", "local (adj)",
+  "long (adj)", "look (v)", "look after (phr v)", "look at (phr v)", "look for (phr v)", "look out (phr v)",
+  "lorry (n)", "lose (v)", "lost (adj)", "lots / a lot (n)", "loud (adj)", "love (n & v)", "lovely (adj)",
+  "low (adj)", "luck (n)", "luckily (adv)", "lucky (adj)", "luggage (n)", "lunch (n)", "lunchtime (n)",
+
+  "machine (n)", "mad (adj)", "magazine (n)", "mail (n)", "main course (n)", "make (v)",
+  "make sure (that) (v)", "make-up (n)", "man (n)", "manager (n)", "mango (n)", "many (det & pron)", "map (n)",
+  "mark (n)", "market (n)", "married (adj)", "match (n)", "maths/mathematics (n) (Br Eng) (Am Eng: math)",
+  "matter (n & v)", "may (mv)", "maybe (adv)", "me (pron)", "meal (n)", "mean (v)", "meat (n)", "mechanic (n)",
+  "medicine (n)", "meet (v)", "meeting (n)", "melon (n)", "member (n)", "memory (n)", "menu (n)",
+  "message (n)", "metal (n & adj)", "metre (n) (Br Eng) (Am Eng: meter)", "midday (n)", "middle (n)",
+  "midnight (n)", "might (mv)", "mile (n)", "milk (n)", "million (n)", "mind (v)", "mine (pron)",
+  "mineral water (n)", "minus (prep)", "minute (n)", "mirror (n)", "Miss (n)", "miss (v)", "missing (adj)",
+  "mistake (n)", "mix (v)", "mobile (phone) (n)", "model (n)", "modern (adj)", "mom (n) (Am Eng)",
+  "moment (n)", "money (n)", "monkey (n)", "month (n)", "monthly (adj & adv)", "moon (n)",
+  "more (adj, adv, det & pron)", "morning (n)", "most (adj, adv, det & pron)", "mother (n)", "motorbike (n)",
+  "motorway (n)", "mountain (n)", "mouse (n)", "mouth (n)", "move (v)", "movie (n) (Am Eng) (Br Eng: film)",
+  "movie star (n) (Am Eng) (Br Eng: film star)", "movie theater (n) (Am Eng) (Br Eng: cinema)",
+  "MP3 player (n)", "Mr (n)", "Mrs (n)", "Ms (n)", "much (adj, adv, det & pron)", "mug (n)",
+  "mum (n) (Br Eng)", "museum (n)", "mushroom (n)", "music (n)", "musical (adj)", "musician (n)", "must (mv)",
+  "my (det)", "myself (pron)",
+
+  "name (n)", "national (adj)", "nationality (n)", "nature (n)", "natural (not artificial) (adj)",
+  "near (adv & prep)", "nearly (adv)", "neck (n)", "necklace (n)", "need (v)", "neighbour (n)",
+  "nervous (adj)", "net (n)", "never (adv)", "new (adj)", "news (n)", "newspaper (n)", "next (adj & adv)",
+  "next to (prep)", "nice (adj)", "night (n)", "no (adv, det & pron)", "nobody (pron)", "noise (n)",
+  "noisy (adj)", "noon (n)", "no one (pron)", "normal (adj)", "north (n, adj & adv)", "nose (n)", "not (adv)",
+  "note (n & v)", "notebook (n)", "nothing (pron)", "notice (n)", "now (adv)", "number (n)", "nurse (n)",
+
+  "ocean (n)", "occupation (n)", "o'clock (adv)", "of (prep)", "of course (not) (adv)", "off (adv)",
+  "offer (n & v)", "office (n)", "often (adv)", "oh (exclam)", "oh dear! (exclam)", "oil (n)",
+  "OK/okay (exclam)", "old (adj)", "Olympic (adj)", "omelette (n)", "on (prep & adv)", "once (adv)",
+  "one (det & pron)", "onion (n)", "online (adj & adv)", "only (adv & adj)", "open (adj & v)", "opera (n)",
+  "opinion (n)", "opposite (prep)", "or (conj)", "orange (adj & n)", "order (n & v)", "other (det & pron)",
+  "our (det)", "ours (pron)", "ourselves (pron)", "out (adv)", "outdoor (adj)", "outdoors (adv)",
+  "out of (prep)", "outside (prep & adv)", "oven (n)", "over (prep & adv)", "own (adj)",
+
+  "pack (v)", "page (n)", "pain (n)", "paint (v & n)", "painter (n)", "painting (n)", "pale (adj)", "pair (n)",
+  "paper (n & adj)", "paragraph (n)", "pardon (exclam)", "parent (n)", "park (n & v)",
+  "parking lot (n) (Am Eng) (Br Eng: car park)", "parrot (n)", "part (n)", "partner (n)", "party (n)",
+  "pass (v)", "passenger (n)", "passport (n)", "password (n)", "past (prep & n)", "pasta (n)", "path (n)",
+  "pay (v)", "PC (personal computer) (n)", "pear (n)", "pen (n)", "pence (n)", "pencil (n)", "pencil case (n)",
+  "penfriend (n)", "penny (n)", "people (n pl)", "pepper (n)", "per (prep)", "perfect (adj)",
+  "perform (entertainment) (v)", "performance (entertainment) (n)", "perfume (n)", "perhaps (adv)",
+  "person (n)", "pet (n)", "petrol (n)", "petrol station (n)", "pharmacy (n)", "phone (v & n)",
+  "photo(graph) (n)", "photographer (n)", "photography (n)", "physics (n)", "piano (n)", "pick up (phr v)",
+  "picnic (n)", "picture (n)", "piece (n)", "pillow (n)", "pilot (n)", "pink (adj)", "pity (n)", "pizza (n)",
+  "place (n)", "plan (n & v)", "plane (n)", "plant (n)", "plastic (n & adj)", "plate (n)", "platform (n)",
+  "play (v & n)", "player (n)", "playground (n)", "pleasant (adj)", "please (v & exclam)", "pleased (adj)",
+  "plus (prep)", "p.m. (adv)", "pocket (n)", "point (v)", "police (n)", "police car (n)", "police officer (n)",
+  "police station (n)", "polite (adj)", "pool (n)", "poor (adj)", "poor thing/you (adj)", "pop (n)",
+  "popular (adj)", "port (n)", "possible (adj)", "possibly (adv)", "post (v & n)", "postcard (n)",
+  "poster (n)", "post office (n)", "potato (n)", "pound (£) (n)", "practice (n) (Br Eng) (Am Eng: practise)",
+  "practise (v)", "prefer / would prefer (v)", "prepare (v)", "present (n)", "pretty (adj)", "price (n)",
+  "print (v)", "printer (n)", "prize (n)", "probably (adv)", "problem (n)", "program (n)", "programme (n)",
+  "project (n)", "pull (v)", "pupil (n)", "purple (adj)", "purse (n)", "push (v)", "put (v)", "put on (phr v)",
+  "puzzle (n)",
+
+  "quarter (n)", "queen (n)", "question (n)", "quick (adj)", "quickly (adv)", "quiet (adj)", "quite (adv)",
+  "quiz (n)",
+
+  "rabbit (n)", "race (n & v)", "racket (n)", "radio (n)", "railway (n)", "rain (n & v)", "raincoat (n)",
+  "rap (n)", "read (v)", "reading (n)", "ready (adj)", "real (adj)", "really (adv)", "reason (n)",
+  "receipt (n)", "receive (v)", "receptionist (n)", "recipe (n)", "record (v)", "red (adj)",
+  "refrigerator (n)", "relax (become happy) (v)", "relaxing (adj)", "remember (v)", "rent (v)", "repair (v)",
+  "repeat (v)", "rest (n & v)", "restaurant (n)", "return (n & v)", "review (n)", "rice (n)", "rich (adj)",
+  "ride (n & v)", "right (n, adj & adv)", "right hand (adj)", "ring (n & v)", "river (n)", "road (n)",
+  "roast (v & adj)", "rock (n)", "roof (n)", "room (n)", "round (adj)", "roundabout (n)", "rubber (n)",
+  "rubbish (n)", "rugby (n)", "ruler (n)", "run (v)", "runner (n)", "running (n)",
+
+  "sad (adj)", "safe (adj)", "sail (v)", "sailing (n)", "salad (n)", "sale (n)", "salt (n)",
+  "same (adj & pron)", "sandwich (n)", "sauce (n)", "sausage (n)", "save (v)", "say (v)", "scared (adj)",
+  "scarf (n)", "scary (adj)", "school (n)", "schoolchild (n)", "science (n)", "scientist (n)",
+  "scissors (n pl)", "scooter (n)", "screen (n)", "sea (n)", "season (n)", "seat (n)", "second (adj, det & n)",
+  "secretary (n)", "see (v)", "seem (v)", "selfie (n)", "sell (v)", "send (v)", "sentence (n)",
+  "serious (person) (adj)", "serve (v)", "set (n)", "several (det & pron)", "shall (mv)", "shame (n)",
+  "shampoo (n & v)", "share (v)", "share (digitally) (v)", "she (pron)", "sheep (n)", "sheet (n)", "shelf (n)",
+  "ship (n)", "shirt (n)", "shoe (n)", "shop (n & v)", "shop assistant (n)", "shopping (n)", "short (adj)",
+  "shorts (n pl)", "should (mv)", "shout (v)", "show (v & n)", "shower (n)", "shut (v)", "shy (adj)",
+  "sick (adj)", "side (n)", "sightseeing (n)", "sign (n)", "silver (n & adj)", "similar (adj)", "simple (adj)",
+  "since (prep)", "sing (v)", "singer (n)", "singing (n)", "single (adj)", "sink (n)", "sister (n)", "sit (v)",
+  "sit down (phr v)", "site (n)", "sitting room (n)", "size (n)", "skate (v)", "skateboard (n)",
+  "skateboarding (n)", "skating (n)", "ski (v)", "skiing (n)", "skirt (n)", "sky (n)", "sleep (v)",
+  "slice (n)", "slim (adj)", "slow (adj)", "slowly (adv)", "small (adj)", "smart (stylish) (adj)",
+  "smart (clever) (adj)", "smoke (v)", "smoking (n)", "snack (n)", "snake (n)", "snow (n & v)",
+  "snowboard (n)", "snowboarding (n)", "so (conj & adv)", "soap (n)", "soccer (n)", "social media (n)",
+  "sock (n)", "sofa (n)", "soft (adj)", "software (n)", "some (det & pron)", "somebody (pron)",
+  "someone (pron)", "something (pron)", "sometimes (adv)", "somewhere (adv)", "son (n)", "song (n)",
+  "soon (adv)", "sorry (adj)", "sort (n)", "sound (v)", "soup (n)", "south (n, adj & adv)", "space (n)",
+  "spare (adj)", "speak (v)", "speaker (n)", "special (adj)", "spell (v)", "spelling (n)", "spend (v)",
+  "spoon (n)", "sport (n)", "sports centre (n)", "spring (n)", "square (n & adj)", "stadium (n)", "staff (n)",
+  "stage (n)", "stairs (n pl)", "stamp (n)", "stand (v)", "star (n & v)", "start (v)", "station (n)",
+  "stay (v)", "steak (n)", "steal (v)", "still (adv)", "stomach (n)", "stomach ache (n)", "stop (n & v)",
+  "store (n)", "storm (n)", "story (n)", "straight (adj & adv)", "strange (adj)", "strawberry (n)",
+  "street (n)", "striped (adj)", "stripes (n)", "strong (adj)", "student (n)", "studies (n pl)", "study (v)",
+  "stuff (n)", "subject (n)", "success (n)", "successful (adj)", "such (det)", "suddenly (adv)", "sugar (n)",
+  "suggest (v)", "suit (n)", "suitcase (n)", "summer (n)", "sun (n)", "sunglasses (n pl)", "sunny (adj)",
+  "supermarket (n)", "supper (n)", "suppose (v)", "sure (adj)", "surf (v)", "surfboard (n)", "surfing (n)",
+  "surname (n)", "surprise (n)", "surprised (adj)", "surprising (adj)", "sweater (n)", "sweet (n & adj)",
+  "swim (v & n)", "swimming (n)", "swimming costume (n)", "swimming pool (n)", "swimsuit (n)",
+
+  "the same as (phrase)", "table (n)", "table tennis (n)", "tablet (n)", "take (v)", "take off (phr v)",
+  "take part (v)", "talk (n & v)", "tall (adj)", "tasty (adj)", "taxi (n)", "tea (n)", "teach (v)",
+  "teacher (n)", "team (n)", "technology (n)", "teenager (n)", "telephone (n & v)", "television (TV) (n)",
+  "tell (v)", "temperature (n)", "tennis (n)", "tent (n)", "term (n)", "terrible (adj)", "test (n)",
+  "text (n & v)", "textbook (n)", "text message (n)", "than (prep & conj)", "thank (v)", "thanks (exclam)",
+  "thank you (exclam)", "that (conj & pron)", "the (det)", "theatre (n)", "their (det)", "theirs (pron)",
+  "them (pron)", "themselves (pron)", "then (adv)", "there (adv)", "these (det & pron)", "they (pron)",
+  "thin (adj)", "thing (n)", "think (v)", "thirsty (adj)", "this (det & pron)", "those (det & pron)",
+  "through (prep)", "throw (v)", "thunderstorm (n)", "ticket (n)", "tidy (adj & v)", "tidy up (v)", "tie (n)",
+  "tiger (n)", "tights (n pl)", "till (prep)", "time (n)", "timetable (n)", "tired (adj)", "title (n)",
+  "to (prep)", "toast (n)", "today (n & adv)", "toe (n)", "together (adv)", "toilet (n)", "tomato (n)",
+  "tomorrow (n & adv)", "tonight (n & adv)", "too (adv)", "tooth (n)", "toothache (n)", "toothbrush (n)",
+  "top (n)", "topic (n)", "total (adj & n)", "tour (n)", "tour guide (n)", "tourist (n)",
+  "tourist information centre (n)", "towel (n)", "town (n)", "toy (n)", "traffic (n)", "traffic light (n)",
+  "train (n)", "trainer (n)", "tram (n)", "transport (n)", "travel (v)", "tree (n)", "trip (n)", "trouble (n)",
+  "trousers (n pl)", "true (adj)", "try (v)", "try on (phr v)", "T-shirt (n)", "tune (music) (n)", "turn (v)",
+  "turn off (phr v)", "turn on (phr v)", "twice (adv)", "type (n)", "tyre (n)",
+
+  "umbrella (n)", "uncle (n)", "under (prep)", "underground (n & adj)", "understand (v)",
+  "unfortunately (adj)", "unhappy (n)", "uniform (n)", "university (n)", "until (prep)", "unusual (adj)",
+  "up (prep & adv)", "upload (v)", "upset (adj)", "upstairs (adv)", "us (pron)", "use (v)", "useful (adj)",
+  "usual (adj)", "usually (adv)",
+
+  "v / versus (prep)", "variety (n)", "various (adj)", "vegetable (n)", "very (adv)", "video (n)",
+  "video game (n)", "view (n)", "village (n)", "violin (n)", "visit (v)", "visit (n)", "visitor (n)",
+  "vocabulary (n)", "volleyball (n)",
+
+  "wait (v)", "waiter (n)", "waitress (n)", "wake (v)", "wake up (phr v)", "walk (v & n)", "walking (n)",
+  "wall (n)", "wallet (n)", "wardrobe (n)", "want (v)", "warm (adj)", "wash (v)", "washing machine (n)",
+  "washing-up (n)", "wash up (phr v)", "watch (n & v)", "water (n)", "way (n)", "we (pron)", "wear (v)",
+  "weather (n)", "web (n)", "web page (n)", "website (n)", "week (n)", "weekday (n)", "weekend (n)",
+  "weekly (adj & adv)", "welcome (adj & exclam)", "well (adv & adj)", "well known (adj)",
+  "west (n, adj & adv)", "wet (adj)", "whale (n)", "what (det & pron)", "wheel (n)", "when (adv)",
+  "where (adv)", "which (det & pron)", "while (conj)", "white (adj)", "who (pron)", "whole (adj & n)",
+  "whose (det & pron)", "why (adv)", "wide (adj)", "wife (n)", "wifi (n)", "wild (adj)", "wildlife (n)",
+  "will (mv)", "win (v)", "wind (n)", "window (n)", "windsurfing (n)", "windy (adj)", "winner (n)",
+  "winter (n)", "wish (n)", "with (prep)", "without (prep)", "woman (n)", "wonderful (adj)", "wood (n)",
+  "wooden (adj)", "wool (n)", "word (n)", "work (n & v)", "worker (n)", "work out (phr v)", "world (n)",
+  "worried (adj)", "worry (v)", "worse (adj)", "worst (adj)", "would (mv)", "wow (exclam)", "write (v)",
+  "write down (phr v)", "writer (n)", "writing (n)", "wrong (adj)",
+
+  "Yeah! (exclam)", "year (n)", "yellow (adj)", "yes (adv)", "yesterday (adv)", "yet (adv)", "yog(h)urt (n)",
+  "you (pron)", "young (adj)", "your (det)", "yours (pron)", "yourself (pron)",
+
+  "zoo (n)",
+  ],
+
+  /* ---------- B1 ---------- */
+  b1: [
+  "a/an (det)", "ability (n)", "able (adj)", "about (adv & prep)", "above (adj, adv & prep)", "abroad (adv)",
+  "absent (adj)", "absolutely (adv)", "accent (n)", "accept (v)", "acceptable (adj)", "access (n)",
+  "accident (n)", "accommodation (n)", "accompany (v)", "according to (prep phr)", "account (n)",
+  "accountant (n)", "accurate (adj)", "ache (n)", "achieve (v)", "achievement (n)", "across (adv & prep)",
+  "act (n & v)", "action (n)", "active (adj)", "activity (n)", "actor (n)", "actress (n)", "actually (adv)",
+  "ad (advertisement) (n)", "add (v)", "addition (n)", "address (n)", "admire (v)", "admission (n)",
+  "admit (v)", "adult (adj & n)", "advance (n)", "advanced (adj)", "advantage (n)", "adventure (n)",
+  "advert (n)", "advertise (v)", "advertisement (n)", "advice (n)", "advise (v)", "aeroplane (n)",
+  "affect (v)", "afford (v)", "afraid (adj)", "after (adv, conj & prep)", "afternoon (n)", "afterwards (adv)",
+  "again (adv)", "against (prep)", "age (n)", "aged (adj)", "agency (n)", "ages (n pl)", "ago (adv)",
+  "agree (v)", "ahead (adv)", "aim (n & v)", "air (n)", "air conditioning (n)", "air force (n)", "airline (n)",
+  "airport (n)", "alarm (n)", "alarm clock (n)", "album (n)", "alike (adv)", "alive (adj)",
+  "all (adj, adv, det & pron)", "all right/alright (adj, adv & exclam)", "allow (v)", "almost (adv)",
+  "alone (adv & adj)", "along (adv & prep)", "aloud (adv)", "alphabet (n)", "already (adv)", "also (adv)",
+  "although (conj)", "altogether (adv)", "always (adv)", "a.m. (adv)", "amazed (adj)", "amazing (adj)",
+  "ambition (n)", "ambulance (n)", "among (amongst) (prep)", "amount (n)", "amusing (adj)", "an (det)",
+  "ancient (adj)", "and (conj)", "angry (adj)", "animal (n)", "ankle (n)", "anniversary (n)", "announce (v)",
+  "announcement (n)", "annoy (v)", "annual (adj)", "another (det & pron)", "answer (n & v)", "answerphone (n)",
+  "ant (n)", "antique (adj & n)", "anxious (adj)", "any (det & pron)", "anybody (pron)", "anymore (adv)",
+  "anyone (pron)", "anything (pron)", "anyway (adv)", "anywhere (adv)", "apart (adv)", "apart from (adv)",
+  "apartment (n)", "apartment building (n)", "apologise (v)", "apology (n)", "app (n)", "appear (v)",
+  "appearance (n)", "apple (n)", "application (n)", "apply (v)", "appointment (n)", "approach (v)",
+  "approve (v)", "approximately (adv)", "architect (n)", "architecture (n)", "area (n)", "argue (v)",
+  "argument (n)", "arm (n)", "armchair (n)", "army (n)", "around (adv & prep)", "arrange (v)",
+  "arrangement (n)", "arrest (v)", "arrival (n)", "arrive (v)", "art (n)", "article (n)", "artist (n)",
+  "as (conj & prep)", "ashamed (adj)", "ask (v)", "asleep (adj)", "as long as (phr)", "aspirin (n)",
+  "assist (v)", "assistant (n)", "astronaut (n)", "as well (as) (prep & adv)", "at (prep)", "at / @ (n)",
+  "at all (prep phr)", "at first (prep phr)", "athlete (n)", "athletics (n)", "at last (prep phr)",
+  "at least (prep phr)", "atmosphere (n)", "at once (prep phr)", "at present (prep phr)", "attach (v)",
+  "attack (n & v)", "attempt (v)", "attend (v)", "attention (n)", "at the same time (prep phr)",
+  "attitude (n)", "attract (v)", "attraction (n)", "attractive (adj)", "audience (n)", "aunt (n)",
+  "author (n)", "autumn (n) (Br Eng) (Am Eng: fall)", "available (adj)", "average (adj & n)", "avoid (v)",
+  "awake (adj)", "away (adv)", "awesome (adj)", "awful (adj)",
+
+  "baby (n)", "babysit (v)", "babysitter (n)", "back (adv, adj & n)", "background (n)",
+  "background (experience) (n)", "backpack (n)", "backpacker (n)", "backpacking (n)", "backwards (adv)",
+  "bad (adj)", "badly (adv)", "badminton (n)", "bag (n)", "baggage (n)", "bake (v)", "baker (n)",
+  "balcony (n)", "bald (adj)", "ball (n)", "ballet (n)", "balloon (n)", "banana (n)", "band (n)",
+  "bandage (n)", "bank (n)", "bank account (n)", "banking (n)", "bar (n)", "barbecue (n & v)", "barber (n)",
+  "baseball (n)", "base on (phr v)", "basic (adj)", "basin (n)", "basket (n)", "basketball (n)", "bat (n)",
+  "bath (n & v)", "bathing suit (n)", "bathroom (n)", "bathtub (n)", "battery (n)", "battle (n)", "bay (n)",
+  "be (av & v)", "beach (n)", "bean (n)", "bear (n)", "beard (n)", "beat (v)", "beautiful (adj)", "beauty (n)",
+  "because (conj)", "because of (prep phr)", "become (v)", "bed (n)", "bedroom (n)", "bee (n)", "beef (n)",
+  "before (prep, adv & conj)", "begin (v)", "beginner (n)", "beginning (n)", "behave (v)", "behaviour (n)",
+  "behind (prep & adv)", "believe (v)", "bell (n)", "belong (v)", "below (adv & prep)", "belt (n)",
+  "beneath (prep)", "benefit (n & v)", "be over (phr v)", "beside (adv & prep)", "besides (prep)",
+  "best (adj & adv)", "bestseller (n)", "better (adj & adv)", "between (prep & adv)", "beyond (prep & adv)",
+  "bicycle (n)", "big (adj)", "bike (n)", "bill (n)", "bin (n)", "biography (n)", "biology (n)", "bird (n)",
+  "birth (n)", "birthday (n)", "biscuit (n)", "bit (n)", "bite (v)", "bitter (adj)", "black (adj & n)",
+  "blackboard (n)", "blame (v)", "blank (adj)", "blanket (n)", "bleed (v)", "blind (adj)", "block (n)",
+  "blog (n)", "blogger (n)", "blond(e) (adj)", "blood (n)", "blouse (n)", "blow (v)", "blue (adj & n)",
+  "board (n & v)", "board game (n)", "boarding pass (n)", "boat (n)", "body (n)", "boil (v)", "boiled (adj)",
+  "bold (adj)", "bomb (n & v)", "bone (n)", "book (n & v)", "bookcase (n)", "booking (n)",
+  "booking office (n)", "bookshelf (n)", "bookshop (n) (Br Eng) (Am Eng: bookstore)",
+  "bookstore (n) (Am Eng) (Br Eng: bookshop)", "boot (n)", "border (n)", "bored (adj)", "boring (adj)",
+  "born (adj)", "borrow (v)", "boss (n)", "both (pron & det)", "bother (v)", "bottle (n)", "bottom (adj & n)",
+  "bowl (n)", "box (n)", "boy (n)", "boyfriend (n)", "bracelet (n)", "brain (n)", "brake (n & v)",
+  "branch (n)", "brand new (adj)", "brave (adj)", "bread (n)", "break (n & v)", "break down (phr v)",
+  "breakfast (n)", "break in (phr v)", "break up (phr v)", "breath (n)", "breathe (v)", "breeze (n)",
+  "bride (n)", "bridge (n)", "brief (adj)", "bright (adj)", "brilliant (adj)", "bring (v)", "bring up (phr v)",
+  "broad (adj)", "broccoli (n)", "brochure (n)", "broken (adj)", "brother (n)", "brown (adj & n)",
+  "brush (n & v)", "bucket (n)", "bug (n)", "build (v)", "building (n)", "bulb (n)", "bunch (n)", "burger (n)",
+  "burn (v)", "burning (adj)", "bury (v)", "bus (n)", "business (n)", "businessman (n)", "businesswoman (n)",
+  "bus station (n)", "bus stop (n)", "busy (adj)", "but (conj & prep)", "butcher (n)", "butter (n)",
+  "butterfly (n)", "button (n)", "buy (v)", "buyer (n)", "by (prep)", "by accident (prep phr)",
+  "by hand (prep phr)", "by mistake (prep phr)", "by name (prep phr)", "bye (exclam)",
+
+  "cab (n)", "cabbage (n)", "cabin (n)", "cabinet (n)", "cable (n)", "café/cafe (n)", "cafeteria (n)",
+  "cage (n)", "cake (n)", "calculator (n)", "calendar (n)", "calf (n)", "call (n & v)", "call for (phr v)",
+  "call in (phr v)", "calm (adj)", "camel (n)", "camera (n)", "camp (n & v)", "camping (n)", "campsite (n)",
+  "can (n & mv)", "canal (n)", "cancel (v)", "candidate (n)", "candle (n)", "candy (n)", "canteen (n)",
+  "cap (n)", "capital (adj & n)", "captain (n)", "car (n)", "card (n)", "cardboard (adj & n)", "care (n & v)",
+  "career (n)", "careful (adj)", "carefully (adv)", "careless (adj)",
+  "car park (n) (Br Eng) (Am Eng: parking lot)", "carpet (n)", "carrot (n)", "carry (v)", "carry on (phr v)",
+  "carry out (phr v)", "cartoon (n)", "case (n)", "cash (n)", "cashpoint (n)", "castle (n)", "casual (adj)",
+  "cat (n)", "catch (v)", "cathedral (n)", "cattle (n)", "cave (n)", "CD (n)", "CD player (n)", "ceiling (n)",
+  "celebrate (v)", "celebration (n)", "celebrity (n)", "cell phone (n)", "cent (n)",
+  "centimetre (cm) (n) (Br Eng) (Am Eng: centimeter)", "central (adj)", "central heating (n)",
+  "centre/center (n)", "century (n)", "cereal (n)", "ceremony (n)", "certain (adj)", "certainly (not) (adv)",
+  "certificate (n)", "chain (n)", "chair (n)", "challenge (n & v)", "challenging (adj)", "champion (n)",
+  "championship (n)", "chance (n)", "change (n & v)", "changing room (n)", "channel (n)", "chapter (n)",
+  "character (n)", "charge (n & v)", "charity (n)", "charming (adj)", "chat (n & v)", "chatroom (n)",
+  "chat show (n) (Br Eng) (Am Eng: talk show)", "cheap (adj)", "cheat (v)", "check (n & v)",
+  "check in (phr v)", "check-in (n)", "check out (phr v)", "checkout (n)", "cheek (n)", "cheerful (adj)",
+  "cheers! (exclam)", "cheese (n)", "chef (n)", "chemist (n)", "chemistry (n)", "cheque (n)", "chess (n)",
+  "chest of drawers (n)", "chicken (n)", "child (n)", "childhood (n)", "chilli (n)", "chin (n)", "chip (n)",
+  "chocolate (n)", "choice (n)", "choose (v)", "cinema (n)", "circle (n)", "circus (n)", "city (n)",
+  "clap (v)", "class (n)", "classical (adj)", "classmate (n)", "classroom (n)", "clean (adj & v)",
+  "cleaner (n)", "clear (adj & v)", "clearly (adv)", "clever (adj)", "click (n & v)", "cliff (n)",
+  "climate (n)", "climb (v)", "climbing (n)", "clinic (n)", "clock (n)", "close (adj, adv & v)",
+  "closed (adj)", "clothes (n pl)", "cloud (n)", "cloudy (adj)", "clown (n)", "club (n)", "coach (n)",
+  "coast (n)", "coat (n)", "coconut (n)", "cod (n)", "coffee (n)", "coin (n)", "cola (n)", "cold (adj & n)",
+  "collar (n)", "colleague (n)", "collect (v)", "collection (n)", "college (n)", "colour (n & v)",
+  "colourful (adj)", "comb (n & v)", "come (v)", "comedy (n)", "come on (phr v)", "comfort (n)",
+  "comfortable (adj)", "comic (adj & n)", "comma (n)", "comment (n)", "common (adj)", "communicate (v)",
+  "communication (n)", "company (n)", "compare (v)", "compete (v)", "competition (n)", "competitor (n)",
+  "complain (v)", "complaint (n)", "complete (adj & v)", "completely (adv)", "complicated (adj)",
+  "composition (n)", "computer (n)", "concentrate (v)", "concert (n)", "conclusion (n)", "condition (n)",
+  "conference (n)", "confident (adj)", "confirm (v)", "confused (adj)", "confusing (adj)",
+  "congratulations! (exclam)", "connect (v)", "connection (n)", "consider (v)", "consist (v)", "consonant (n)",
+  "contact (n & v)", "contain (v)", "contents (n)", "contest (n)", "continent (n)", "continue (v)",
+  "contract (n)", "control (n & v)", "convenient (adj)", "conversation (n)", "convince (v)", "cook (n & v)",
+  "cooker (n)", "cookie (n) (Am Eng) (Br Eng: biscuit)", "cooking (n)", "cool (adj, exclam & v)",
+  "copy (n & v)", "corn (n)", "corner (n)", "correct (adj)", "correction (n)", "cost (n & v)", "costume (n)",
+  "cosy (adj)", "cottage (n)", "cotton (n)", "cough (n & v)", "could (mv)", "count (v)", "country (n)",
+  "countryside (n)", "couple (n)", "courage (n)", "course (n)", "court (n)", "cousin (n)", "cover (n & v)",
+  "cow (n)", "crash (n & v)", "crazy (adj)", "cream (adj & n)", "create (v)", "creative (adj)", "creature (n)",
+  "credit (n)", "credit card (n)", "crew (n)", "cricket (n)", "crime (n)", "criminal (n)", "crop (n)",
+  "cross (n & v)", "crossing (n)", "cross out (phr v)", "crossroads (n)", "crowd (n)", "crowded (adj)",
+  "cruel (adj)", "cruise (n)", "cry (n & v)", "cucumber (n)", "cultural (adj)", "culture (n)", "cup (n)",
+  "cupboard (n)", "cure (n & v)", "curious (adj)", "curiously (adv)", "curly (adj)", "currency (n)",
+  "curriculum (n)", "curry (n)", "curtain (n)", "cushion (n)", "custom (n)", "customer (n)", "customs (n pl)",
+  "cut (n & v)", "cute (adj)", "cut up (phr v)", "CV (Curriculum Vitae) (n)", "cycle (n & v)", "cycling (n)",
+  "cyclist (n)",
+
+  "dad (n)", "daily (adj & adv)", "damage (n & v)", "damaged (adj)", "dance (n & v)", "dancer (n)",
+  "dancing (n)", "danger (n)", "dangerous (adj)", "dark (adj & n)", "data (n)", "date (n & v)", "deposit (n)",
+  "depressed (adj)", "depth (n)", "describe (v)", "description (n)", "desert (n)", "deserve (v)",
+  "design (n & v)", "designer (n)", "desk (n)", "despite (prep)", "dessert (n)", "destination (n)",
+  "destroy (v)", "detail (n)", "detective (n)", "develop (v)", "development (n)", "diagram (n)", "dial (v)",
+  "diary (n)", "dictionary (n)", "die (v)", "diet (n)", "difference (n)", "different (adj)", "difficult (adj)",
+  "difficulty (n)", "dig (v)", "digital (adj)", "digital camera (n)", "dining room (n)", "dinner (n)",
+  "dinosaur (n)", "diploma (n)", "direct (adj & v)", "direction (n)", "directly (adv)", "director (n)",
+  "dirt (n)", "dirty (adj)", "disabled (adj)", "disadvantage (n)", "disagree (v)", "disappear (v)",
+  "daughter (n)", "day (n)", "dead (adj)", "deaf (adj)", "deal (v)", "deal with (sth/sb) (phr v)",
+  "dear (adj & exclam)", "death (n)", "decide (v)", "decision (n)", "declare (v)", "decorate (v)",
+  "decrease (n & v)", "deep (adj & adv)", "defeat (n & v)", "defence (n)", "defend (v)", "definitely (adv)",
+  "degree (n)", "delay (n & v)", "delete (v)", "delicious (adj)", "delighted (adj)", "deliver (v)",
+  "delivery (n)", "demand (n & v)", "dentist (n)", "depart (v)", "department (n)", "department store (n)",
+  "departure (n)", "depend (on/upon) (v & phr v)", "disappoint (v)", "disappointed (adj)",
+  "disappointing (adj)", "disappointment (n)", "disc/disk (n)", "disc jockey (DJ) (n)", "disco(theque) (n)",
+  "discount (n)", "discover (v)", "discovery (n)", "discuss (v)", "discussion (n)", "disease (n)",
+  "disgusting (adj)", "dish (n)", "dishwasher (n)", "disk (n)", "dislike (v)", "display (n & v)",
+  "distance (n)", "district (n)", "disturb (v)", "dive (v)", "diver (n)", "divide (v)", "diving (n)",
+  "DJ (disc jockey) (n)", "do (av & v)", "doctor / Dr (n)", "document (n)", "documentary (n)", "dog (n)",
+  "doll (n)", "dollar (n)", "dolphin (n)", "donkey (n)", "door (n)", "dot (n)", "double (adj & det)",
+  "doubt (n & v)", "down (adv & prep)", "download (n & v)", "downstairs (adj & adv)", "dozen (det & n)",
+  "Dr (n)", "drag (v)", "drama (n)", "draw (v)", "drawer (n)", "drawing (n)", "dream (n & v)", "dress (n & v)",
+  "dressed (adj)", "drink (n & v)", "drive (n & v)", "driver (n)", "driving licence (n)", "drop (n & v)",
+  "drugstore (n) (Am Eng) (Br Eng: chemist)", "drum (n)", "dry (adj & v)", "duck (n)", "due (adj)",
+  "due to (prep phr)", "dull (adj)", "during (prep)", "dust (n)", "dustbin (n) (Br Eng) (Am Eng: trash can)",
+  "dusty (adj)", "duty (n)", "duty-free (adj & n)", "duvet (n)", "DVD (n)", "DVD player (n)",
+
+  "each (det & pron)", "ear (n)", "early (adj & adv)", "earn (v)", "earring (n)", "easily (adv)",
+  "east (n, adj & adv)", "easy (adj)", "eat (v)", "economic (adj)", "economics (n)", "edge (n)", "edit (v)",
+  "edition (n)", "editor (n)", "educate (v)", "education (n)", "educational (adj)", "effect (n)",
+  "efficient (adj)", "effort (n)", "egg (n)", "either (adv, det & pron)", "elder (adj)", "electric (adj)",
+  "electricity (n)", "electronic (adj)", "elephant (n)", "else (adv)", "email (n & v)", "empty (adj)",
+  "end (v & n)", "energy (n)", "engine (n)", "engineer (n)", "enjoy (v)", "enjoyable (adj)",
+  "enough (adv, det & pron)", "enter (v)", "entertain (v)", "entertainment (n)", "entire (adj)",
+  "entrance (n)", "envelope (n)", "environment (n)", "equal (adj)", "equipment (n)", "eraser (n)",
+  "especially (adv)", "essay (n)", "evening (n)", "event (n)", "ever (adv)", "every (det)", "everybody (pron)",
+  "everyone (pron)", "everything (pron)", "everywhere (adv)", "exactly (adv)", "example (n)",
+  "excellent (adj)", "except (conj & prep)", "excited (adj)", "exciting (adj)", "excuse (v)",
+  "exercise (n & v)", "expensive (adj)", "experience (n)", "experiment (n)", "explain (v)", "explore (v)",
+  "explorer (n)", "extra (adj)", "eye (n)",
+
+  "face (n)", "fact (n)", "fail (v)", "fair (adj & n)", "fairly (adv)", "fall (n & v)", "family (n)",
+  "famous (adj)", "fan (n)", "fancy (v)", "fantastic (adj)", "far (adv)", "farm (n)", "farmer (n)",
+  "fashion (n)", "fast (adj & adv)", "fast food (n)", "fat (adj)", "father (n)", "favourite (adj)", "fear (n)",
+  "fee (n)", "feed (v)", "feel (v)", "feeling (n)", "female (adj & n)", "ferry (n)", "festival (n)",
+  "few (det & adj)", "field (n)", "fight (n & v)", "fill (v)", "film (n & v)", "final (adj)", "finally (adv)",
+  "find (v)", "find out (phr v)", "fine (adj & n)", "finger (n)", "finish (v)", "fire (n)", "firefighter (n)",
+  "firework (n)", "firm (n)", "first (adj & adv)", "fish (n & v)", "fishing (n)", "fit (adj & v)", "fix (v)",
+  "flag (n)", "flat (adj & n)", "flavour (n)", "flight (n)", "float (v)", "flood (n & v)", "floor (n)",
+  "flower (n)", "flu (n)", "flute (n)", "fly (n & v)", "fog (n)", "fold (v)", "folk (adj & n)", "follow (v)",
+  "following (adj)", "fond (adj)", "food (n)", "fool (n)", "foot (n)", "football (n)", "footballer (n)",
+  "for (prep)", "foreign (adj)", "foreigner (n)", "forest (n)", "forever (adv)", "forget (v)", "forgive (v)",
+  "fork (n)", "form (n)", "former (adj)", "fortunately (adv)", "forward(s) (adv)", "fountain (n)", "frame (n)",
+  "free (adj & adv)", "freeze (v)", "freezer (n)", "freezing (adj)", "French fries (n)", "frequent (adj)",
+  "frequently (adv)", "fresh (adj)", "fridge (n)", "fried (adj)", "friend (n)", "friendly (adj)",
+  "friendship (n)", "frighten (v)", "frightened (adj)", "frightening (adj)", "frog (n)", "from (prep)",
+  "front (adj & n)", "frozen (adj)", "fruit (n)", "fry (v)", "fuel (n)", "full (adj)", "full-time (adj)",
+  "fully (adv)", "fun (adj & n)", "funny (adj)", "fur (n)", "furniture (n)", "further (adv & adj)",
+  "future (adj & n)",
+
+  "gain (v)", "game (n)", "garage (n)", "garden (n)", "garlic (n)", "gas (n)", "gate (n)", "general (adj)",
+  "generally (adv)", "generous (adj)", "gentle (adj)", "geography (n)", "get (v)", "get along (with) (phr v)",
+  "get back (phr v)", "get down (phr v)", "get fit (v)", "get in (phr v)", "get off (phr v)", "get on (phr v)",
+  "gift (n)", "girl (n)", "girlfriend (n)", "give (v)", "give back (phr v)", "give in (phr v)",
+  "give out (phr v)", "give up (phr v)", "give way (phr v)", "glad (adj)", "glance (v)", "glass (n & adj)",
+  "glasses (n pl)", "glove (n)", "go (v & n)", "goal (n)", "goalkeeper (n)", "goat (n)", "go for (phr v)",
+  "gold (adj & n)", "golden (adj)", "golf (n)", "good (adj)", "good afternoon (exclam)", "goodbye (exclam)",
+  "good evening (exclam)", "good-looking (adj)", "good morning (exclam)", "good night (exclam)",
+  "goods (n pl)", "go off (phr v)", "government (n)", "grab (v)", "grade (n)", "grammar (n)", "grandchild (n)",
+  "grand(d)ad (n)", "granddaughter (n)", "grandfather (n)", "grandma (n)", "grandmother (n)", "grandpa (n)",
+  "grandparent (n)", "grandson (n)", "granny (n)", "grant (n)", "grape (n)", "grass (n)", "grateful (adj)",
+  "great (adj)", "green (adj & n)", "greet (v)", "greeting (n)", "grey (adj & n)", "grill (n & v)",
+  "grilled (adj)", "grocery store (n)", "groom (n)", "ground (n)", "group (n)", "grow (v)", "grow up (phr v)",
+  "guard (n)", "guess (n & v)", "guest (n)", "guest-house (n)", "guide (n & v)", "guidebook (n)",
+  "guilty (adj)", "guitar (n)", "guitarist (n)", "gum (n)", "gym (n)", "gymnastics (n)",
+
+  "habit (n)", "hair (n)", "half (adv, det, n & pron)", "hall (n)", "hand (n & v)", "handbag (n)",
+  "handle (v)", "handwriting (n)", "hang (v)", "happen (v)", "happy (adj)", "harbour (n)", "hard (adj & adv)",
+  "hardly (adv)", "hat (n)", "hate (v)", "have (av & v)", "have got to (mv)", "head (n)", "headache (n)",
+  "headline (n)", "headphones (n)", "headteacher (n)", "health (n)", "healthy (adj)", "hear (v)", "heart (n)",
+  "heat (n)", "heater (n)", "heating (n)", "heavy (adj)", "heel (n)", "height (n)", "helicopter (n)",
+  "hello (exclam)", "helmet (n)", "help (n & v)", "her (det & pron)", "herb (n)", "here (adv)", "hero (n)",
+  "herself (pron)", "hey (exclam)", "hi (exclam)", "high (adj & adv)", "hill (n)", "him (pron)",
+  "historic (adj)", "history (n)", "hit (n & v)", "hobby (n)", "hold (v)", "holiday (n)", "home (adv & n)",
+  "homework (n)", "honest (adj)", "honestly (adv)", "honey (n)", "hope (n & v)", "horrible (adj)",
+  "horror (adj)", "horse (n)", "hospital (n)", "hot (adj)", "hotel (n)", "hour (n)", "house (n)",
+  "housewife (n)", "housework (n)", "how (adv)", "however (adv)", "hug (n & v)", "huge (adj)",
+  "human (adj & n)", "humid (adj)", "hunger (n)", "hungry (adj)", "hunt (v)", "hurry (n & v)",
+  "hurt (adj & v)", "husband (n)", "hut (n)",
+
+  "I (pron)", "ice (n)", "ice cream (n)", "ice hockey (n)", "ice skates (n)", "ID (n)", "idea (n)",
+  "if (conj)", "ill (adj)", "illness (n)", "imagine (v)", "immediately (adv)", "important (adj)",
+  "improve (v)", "in (adv & prep)", "inch (n)", "include (v)", "including (prep)", "incorrect (adj)",
+  "increase (v)", "incredible (adj)", "incredibly (adv)", "indeed (adv)", "independent (adj)",
+  "individual (adj)", "indoor (adj)", "indoors (adv)", "industry (n)", "in fact (prep phr)",
+  "influence (n & v)", "inform (v)", "information (n)", "in front of (prep phr)", "ingredient (n)",
+  "in half (prep phr)", "initial (n)", "injure (v)", "ink (n)", "in love (prep phr)", "in order (prep phr)",
+  "insect (n)", "inside (adv & prep)", "instead (adv)", "instead of (prep)", "instructions (n pl)",
+  "instrument (n)", "intelligent (adj)", "intend (v)", "interested (adj)", "interesting (adj)",
+  "intermediate (adj)", "international (adj)", "internet (n)", "interrupt (v)", "interval (n)",
+  "interview (n & v)", "in the end (prep phr)", "in time (prep phr)", "into (prep)", "introduce (v)",
+  "introduction (n)", "in two (prep phr)", "invent (v)", "invention (n)", "invitation (n)", "invite (v)",
+  "involve (v)", "iron (n & v)", "ironing (n)", "island (n)", "issue (n)", "it (pron)", "item (n)",
+  "its (det)", "itself (pron)",
+
+  "jacket (n)", "jam (n)", "jazz (n)", "jealous (adj)", "jeans (n pl)", "jet (n)", "jewellery (n)", "job (n)",
+  "join (v)", "joke (n & v)", "journalist (n)", "journey (n)", "judge (n & v)", "juice (n)", "jump (n & v)",
+  "jumper (n)", "jungle (n)", "just (adv)",
+
+  "kangaroo (n)", "keen (adj)", "keep (v)", "key (n)", "keyboard (n)", "kick (v)", "kid (n)", "kind (adj & n)",
+  "king (n)", "kiss (n & v)", "kit (n)", "kitchen (n)", "kite (n)", "kitten (n)", "knee (n)", "knife (n)",
+  "knit (v)", "knock (v)", "know (v)", "knowledge (n)",
+
+  "label (n)", "laboratory (n)", "lack (n)", "ladder (n)", "lady (n)", "lake (n)", "lamb (n)", "lamp (n)",
+  "land (n & v)", "landscape (n)", "language (n)", "laptop (n)", "large (adj)", "last (adj, adv, det & v)",
+  "late (adj & adv)", "lately (adv)", "later (adj & adv)", "latest (adj)", "laugh (n & v)", "law (n)",
+  "lawyer (n)", "lay (v)", "lazy (adj)", "lead (v)", "leader (n)", "leaf (n)", "learn (v)",
+  "least (adj & adv)", "leather (n)", "leave (v)", "lecture (n)", "left (adj, adv & n)", "left-hand (adj)",
+  "leg (n)", "leisure (n)", "lemon (n)", "lemonade (n)", "lend (v)", "length (n)", "less (adv, det & pron)",
+  "lesson (n)", "let (v)", "letter (n)", "lettuce (n)", "level (n)", "library (n)", "licence (n)",
+  "lie (n & v)", "life (n)", "lift (n & v)", "light (adj, n & v)", "lighter (n)", "lightning (n)",
+  "like (prep & v)", "likely (adj)", "limit (n & v)", "limited (adj)", "line (n)", "link (n)", "lion (n)",
+  "lip (n)", "liquid (n)", "list (n)", "listen (v)", "literature (n)", "litre (n)", "litter (n)",
+  "little (adj, det & pron)", "live (v)", "live (adj)", "living room (n)", "load (n)", "loan (n)",
+  "local (adj)", "locate (v)", "location (n)", "lock (n & v)", "locker (n)", "logo (n)", "lonely (adj)",
+  "long (adj)", "look (n & v)", "look after (phr v)", "look at (phr v)", "look for (phr v)",
+  "look forward to (phr v)", "look like (v)", "look out (phr v)", "look up (phr v)", "loose (adj)",
+  "lorry (n)", "lose (v)", "lost (adj)", "lots / a lot (n)", "lottery (n)", "loud (adj)", "loudly (adv)",
+  "love (n & v)", "lovely (adj)", "low (adj)", "luck (n)", "luckily (adv)", "lucky (adj)", "luggage (n)",
+  "lunch (n)", "lunchtime (n)", "luxury (n)",
+
+  "machine (n)", "mad (adj)", "magazine (n)", "mail (n)", "main (adj)", "main course (n)", "make (v)",
+  "male (adj & n)", "mall (n)", "man (n)", "manage (v)", "manager (n)", "mango (n)", "many (det & pron)",
+  "map (n)", "mark (n)", "market (n)", "marriage (n)", "married (adj)", "marry (v)", "marvellous (adj)",
+  "match (n & v)", "maths (n)", "matter (n & v)", "maximum (adj & n)", "may (mv)", "maybe (adv)", "me (pron)",
+  "meal (n)", "mean (v)", "meat (n)", "mechanic (n)", "medicine (n)", "meet (v)", "meeting (n)", "melon (n)",
+  "member (n)", "memory (n)", "mend (v)", "mention (v)", "menu (n)", "message (n)", "mess (n)", "messy (adj)",
+  "metal (n)", "method (n)", "metre (n)", "microwave (n)", "midday (n)", "middle (n)", "middle-aged (adj)",
+  "midnight (n)", "might (mv)", "mild (adj)", "mile (n)", "milk (n)", "million (n)", "mind (n & v)",
+  "mine (pron)", "mineral water (n)", "minimum (adj & n)", "minus (prep)", "minute (n)", "mirror (n)",
+  "miserable (adj)", "miss (v)", "Miss (n)", "missing (adj)", "mistake (n)", "mix (v & n)", "mobile (n)",
+  "model (n)", "modern (adj)", "moment (n)", "money (n)", "monkey (n)", "monster (n)", "month (n)",
+  "monument (n)", "mood (n)", "moon (n)", "more (adv, det & pron)", "morning (n)", "mosquito (n)",
+  "most (adv, det & pron)", "mostly (adv)", "mother (n)", "motorbike (n)", "motorcycle (n)",
+  "motor-racing (n)", "motorway (n)", "mountain (n)", "mouse (n)", "moustache (n)", "mouth (n)", "move (v)",
+  "movie (n)", "movie star (n)", "MP3 player (n)", "Mr (n)", "Mrs (n)", "Ms (n)", "much (adv, det & pron)",
+  "mug (n)", "mum (n)", "museum (n)", "mushroom (n)", "music (n)", "musical (adj)", "musician (n)",
+  "must (mv)", "my (det)", "myself (pron)", "mystery (n)",
+
+  "name (n)", "national (adj)", "nationality (n)", "nature (n)", "near (adv & prep)", "nearby (adj & adv)",
+  "nearly (adv)", "neat (adj)", "necessary (adj)", "neck (n)", "necklace (n)", "need (v)", "negative (adj)",
+  "neighbour (n)", "neighbourhood (n)", "neither (adv, det, pron)", "nerve (n)", "nervous (adj)", "nest (n)",
+  "net (n)", "network (n)", "never (adv)", "new (adj)", "news (n)", "newspaper (n)", "next (adj & adv)",
+  "next to (prep)", "nice (adj)", "niece (n)", "night (n)", "nightclub (n)", "nightlife (n)", "nightmare (n)",
+  "no (adv, det & pron)", "nobody (pron)", "noise (n)", "noisy (adj)", "none (pron)", "noon (n)",
+  "no one (pron)", "normal (adj)", "normally (adv)", "north (adj, adv & n)", "northeast (adj & n)",
+  "northern (adj)", "northwest (adj & n)", "nose (n)", "not (adv)", "note (n & v)", "notebook (n)",
+  "nothing (pron)", "notice (n & v)", "novel (n)", "now (adv)", "number (n)", "nurse (n)",
+
+  "oh dear! (exclam)", "object (n)", "obvious (adj)", "obviously (adv)", "occasion (n)", "occasionally (adv)",
+  "occupation (n)", "ocean (n)", "o'clock (adv)", "of (prep)", "of course (adv)", "off (adv)", "offer (n & v)",
+  "office (n)", "officer (n)", "often (adv)", "oh (exclam)", "oil (n)", "OK / okay (adj & exclam)",
+  "old (adj)", "old-fashioned (adj)", "olive (n)", "omelette (n)", "on (adv & prep)", "on board (prep phr)",
+  "on business (prep phr)", "once (adv)", "one (det & pron)", "onion (n)", "online (adj & adv)", "only (adv)",
+  "open (adj & v)", "opera (n)", "opinion (n)", "opposite (adj)", "or (conj)", "orange (adj & n)",
+  "orchestra (n)", "order (n & v)", "ordinary (adj)", "organisation (n)", "organise (v)", "original (adj)",
+  "other (adj, pron & det)", "otherwise (adv)", "ought (mv)", "our (det)", "ours (pron)", "ourselves (pron)",
+  "out (adv)", "outdoor (adj)", "outdoors (adv)", "out of (prep)", "outside (adv)", "oven (n)",
+  "over (adv & prep)", "overnight (adj & adv)", "owe (v)", "own (adj, pron & v)", "owner (n)",
+
+  "pack (v)", "packet (n)", "page (n)", "pain (n)", "paint (n & v)", "painter (n)", "painting (n)", "pair (n)",
+  "palace (n)", "pale (adj)", "pan (n)", "pants (n)", "paper (n)", "paragraph (n)", "parcel (n)",
+  "pardon (exclam)", "parent (n)", "park (n & v)", "parking (n)", "part (n)", "partner (n)", "party (n)",
+  "pass (v)", "passenger (n)", "passport (n)", "past (adj, n & prep)", "pasta (n)", "path (n)",
+  "patient (adj & n)", "pattern (n)", "pause (v)", "pavement (n)", "pay (n & v)", "PC (n)", "pea (n)",
+  "peace (n)", "peach (n)", "peak (n)", "peanut (n)", "pear (n)", "pedestrian (n)", "peel (v)", "pen (n)",
+  "pencil (n)", "pence (n pl)", "pencil case (n)", "penfriend (n)", "penguin (n)", "penny (n)",
+  "people (n pl)", "pepper (n)", "per (prep)", "percent (adv)", "perfect (adj)", "perfectly (adv)",
+  "perform (v)", "performance (n)", "performer (n)", "perfume (n)", "perhaps (adv)", "period (n)",
+  "permanent (adj)", "permission (n)", "permit (v)", "person (n)", "personal (adj)", "personally (adv)",
+  "persuade (v)", "pet (n)", "petrol (n)", "pharmacy (n)", "phone (n & v)", "photo (n)", "photocopy (n)",
+  "photograph (n & v)", "photographer (n)", "photography (n)", "phrase (n)", "physics (n)", "piano (n)",
+  "pick (v)", "pick up (phr v)", "picnic (n)", "picture (n)", "pie (n)", "piece (n)", "pig (n)", "pile (n)",
+  "pill (n)", "pillow (n)", "pilot (n)", "pin (n & v)", "pineapple (n)", "pink (adj & n)", "pipe (n)",
+  "pirate (n)", "pitch (n)", "pity (n)", "pizza (n)", "place (n)", "plan (n & v)", "plane (n)", "planet (n)",
+  "plant (n & v)", "plastic (adj & n)", "plate (n)", "platform (n)", "play (n & v)", "player (n)",
+  "playground (n)", "pleasant (adj)", "please (v)", "pleased (adj)", "pleasure (n)", "plenty (pron)",
+  "plug (n)", "plus (prep)", "p.m. (adv)", "pocket (n)", "pocket money (n)", "podcast (n)", "poem (n)",
+  "poet (n)", "poetry (n)", "point (n & v)", "police (n)", "policeman (n)", "police officer (n)",
+  "police station (n)", "polite (adj)", "political (adj)", "politician (n)", "politics (n)", "pollution (n)",
+  "pool (n)", "poor (adj)", "pop (n)", "popular (adj)", "population (n)", "port (n)", "position (n)",
+  "positive (adj)", "possibility (n)", "possible (adj)", "possibly (adv)", "post (n & v)", "postcard (n)",
+  "poster (n)", "postman (n)", "post office (n)", "postpone (v)", "pot (n)", "potato (n)", "pound (n)",
+  "pour (v)", "powder (n)", "power (n)", "powerful (adj)", "practice (n)", "practise (v)", "pray (v)",
+  "prayer (n)", "predict (v)", "prefer (v)", "pregnant (adj)", "preparation (n)", "prepare (v)",
+  "prepared (adj)", "prescription (n)", "present (adj & n)", "press (v)", "pretty (adj)", "price (n)",
+  "print (v)", "printer (n)", "prize (n)", "probably (adv)", "problem (n)", "produce (v)", "product (n)",
+  "production (n)", "profession (n)", "professional (adj)", "professor (n)", "programme (n)", "progress (n)",
+  "prohibited (adj)", "project (n)", "promise (n & v)", "promote (v)", "pronounce (v)", "pronunciation (n)",
+  "proper (adj)", "properly (adv)", "property (n)", "protect (v)", "proud (adj)", "prove (v)", "provide (v)",
+  "public (adj & n)", "publish (v)", "pull (v)", "pullover (n)", "pump (n)", "punish (v)", "pupil (n)",
+  "puppy (n)", "pure (adj)", "purple (adj & n)", "purpose (n)", "purse (n)", "pyjamas (n pl)",
+
+  "qualification (n)", "qualified (adj)", "quality (n)", "quantity (n)", "quarter (n)", "queen (n)",
+  "question (n)", "questionnaire (n)", "queue (n)", "quick (adj)", "quickly (adv)", "quiet (adj)",
+  "quietly (adv)", "quit (v)", "quite (adv)", "quiz (n)",
+
+  "rabbit (n)", "race (n & v)", "racket (n)", "radio (n)", "rail (n)", "railway (n)", "rain (n & v)",
+  "raincoat (n)", "rainforest (n)", "raise (v)", "range (n)", "rap (n)", "rare (adj)", "rarely (adv)",
+  "rather (adv)", "raw (adj)", "reach (v)", "react (v)", "read (v)", "reader (n)", "reading (n)",
+  "ready (adj)", "real (adj)", "realise (v)", "realistic (adj)", "reality (n)", "really (adv)", "reason (n)",
+  "reasonable (adj)", "reasonably (adv)", "rebuild (v)", "receipt (n)", "receive (v)", "recent (adj)",
+  "reception (n)", "receptionist (n)", "recipe (n)", "recognise (v)", "recommend (v)", "record (n & v)",
+  "red (adj)", "refrigerator (n)", "relax (v)", "relaxation (n)", "relaxed (adj)", "reliable (adj)",
+  "relieved (adj)", "religion (n)", "rely (on) (v)", "remain (v)", "remember (v)", "remind (v)",
+  "remote control (n)", "remove (v)", "rent (n & v)", "repair (v)", "repeat (v)", "replace (v)",
+  "reply (n & v)", "report (n & v)", "reporter (n)", "request (n & v)", "require (v)", "rescue (n & v)",
+  "research (n & v)", "reservation (n)", "reserve (n & v)", "resort (n)", "respect (n & v)",
+  "responsible (adj)", "rest (n & v)", "restaurant (n)", "result (n)", "retire (v)", "return (n & v)",
+  "review (n)", "revise (v)", "revision (n)", "reward (n)", "rice (n)", "rich (adj)", "ride (n & v)",
+  "rider (n)", "right (adj, adv & n)", "right-hand (adj)", "ring (n & v)", "river (n)", "road (n)",
+  "roast (adj & v)", "rob (v)", "robot (n)", "rock (n)", "role (n)", "roll (n)", "romantic (adj)", "roof (n)",
+  "room (n)", "rope (n)", "rose (n)", "rough (adj)", "round (adj, adv & prep)", "roundabout (n)", "route (n)",
+  "routine (n)", "row (n)", "rubber (n)", "rubbish (n)", "rude (adj)", "rug (n)", "rugby (n)", "ruin (n)",
+  "rule (n & v)", "ruler (n)", "run (v)", "runner (n)", "run out (phr v)",
+
+  "something (v)", "sad (adj)", "safe (adj)", "sail (n & v)", "sailing (n)", "salad (n)", "sale (n)",
+  "salt (n)", "same (adj, pron & adv)", "sand (n)", "sandwich (n)", "satisfactory (adj)", "satisfied (adj)",
+  "sauce (n)", "saucepan (n)", "saucer (n)", "sausage (n)", "save (v)", "say (v)", "scared (adj)", "scarf (n)",
+  "scary (adj)", "scene (n)", "scenery (n)", "school (n)", "schoolchild (n)", "science (n)",
+  "science fiction (n)", "scientific (adj)", "scientist (n)", "scissors (n pl)", "scooter (n)",
+  "score (n & v)", "scream (n & v)", "screen (n)", "sculpture (n)", "sea (n)", "search (n & v)", "seaside (n)",
+  "season (n)", "seat (n)", "seat belt (n)", "second (adj, det & n)", "secretary (n)", "see (v)", "seem (v)",
+  "select (v)", "selfie (n)", "sell (v)", "send (v)", "sense (n)", "sensible (adj)", "sentence (n)",
+  "separate (adj)", "series (n)", "serious (adj)", "seriously (adv)", "serve (v)", "server (n)", "service (n)",
+  "session (n)", "set (n & v)", "set off (phr v)", "set out (phr v)", "several (det & pron)", "sew (v)",
+  "shade (n)", "shadow (n)", "shake (v)", "shall (mv)", "shame (n)", "shampoo (n)", "shape (n)", "share (v)",
+  "shark (n)", "sharp (adj)", "shave (v)", "she (pron)", "sheep (n)", "sheet (n)", "shelf (n)", "shine (v)",
+  "shiny (adj)", "ship (n)", "shirt (n)", "shock (n)", "shocked (adj)", "shocking (adj)", "shoe (n)",
+  "shoot (v)", "shop (n & v)", "shop assistant (n)", "shopping (n)", "shore (n)", "short (adj)",
+  "shortly (adv)", "shorts (n pl)", "should (mv)", "shoulder (n)", "shout (n & v)", "show (n & v)",
+  "shower (n)", "show up (phr v)", "shut (adj & v)", "shy (adj)", "sick (adj)", "side (n)", "sight (n)",
+  "sightseeing (n)", "sign (n & v)", "signal (n & v)", "signature (n)", "signpost (n)", "sign up (v)",
+  "silence (n)", "silent (adj)", "silk (adj)", "silly (adj)", "silver (adj & n)", "similar (adj)",
+  "simple (adj)", "since (conj & prep)", "sincerely (adv)", "sing (v)", "singer (n)", "single (n & adj)",
+  "sink (n & v)", "sister (n)", "sit (v)", "sit down (phr v)", "site (n)", "sitting room (n)", "size (n)",
+  "skate (n & v)", "skateboard (n & v)", "skateboarding (n)", "skating (n)", "ski (n & v)", "skiing (n)",
+  "skill (n)", "skin (n)", "skirt (n)", "sky (n)", "sleep (n & v)", "slice (n)", "slim (adj)", "slow (adj)",
+  "slowly (adv)", "small (adj)", "smart (adj)", "smell (n & v)", "smile (n & v)", "smoke (n & v)",
+  "smoking (n)", "smooth (adj)", "snack (n)", "snake (n)", "snow (n & v)", "snowboard (n & v)",
+  "snowboarding (n)", "so (conj)", "soap (n)", "soccer (n)", "social (adj)", "social media (n)", "sock (n)",
+  "sofa (n)", "soft (adj)", "soldier (n)", "some (det & pron)", "somebody (pron)", "someone (pron)",
+  "something (pron)", "sometimes (adv)", "somewhere (adv)", "son (n)", "song (n)", "soon (adv)", "sorry (adj)",
+  "sort (n)", "soul (n)", "sound (n & v)", "soup (n)", "south (adj & n)", "space (n)", "spare (adj)",
+  "speak (v)", "speaker (n)", "special (adj)", "specially (adv)", "species (n)", "spectacular (adj)",
+  "speech (n)", "speed (n)", "spell (v)", "spelling (n)", "spend (v)", "spicy (adj)", "spill (v)",
+  "spinach (n)", "spite (n)", "split up (phr v)", "spoil (v)", "spoon (n)", "sport (n)", "sports centre (n)",
+  "spot (n)", "spy (n)", "square (adj & n)", "squash (n)", "stadium (n)", "staff (n)", "stage (n)",
+  "stairs (n pl)", "stamp (n)", "stand (v)", "star (n & v)", "start (n & v)", "station (n)", "statue (n)",
+  "stay (n & v)", "steak (n)", "steal (v)", "steel (adj)", "steep (adj)", "step (n)", "stepmother (n)",
+  "step-sister (n)", "still (adj & adv)", "stir (v)", "stomach (n)", "stone (n)", "stop (n & v)", "store (n)",
+  "storm (n)", "story (n)", "straight (adj & adv)", "strange (adj)", "stranger (n)", "strawberry (n)",
+  "stream (n)", "street (n)", "strength (n)", "stress (n)", "stressed (adj)", "stressful (adj)", "stretch (v)",
+  "strict (adj)", "strike (v)", "string (n)", "strong (adj)", "student (n)", "studio (n)", "study (n & v)",
+  "stuff (n)", "stupid (adj)", "style (n)", "stylish (adj)", "subject (n)", "succeed (v)", "success (n)",
+  "successful (adj)", "such (det)", "suddenly (adv)", "sugar (n)", "suggest (v)", "suggestion (n)",
+  "suit (n & v)", "suitcase (n)", "summer (n)", "sun (n)", "sunglasses (n pl)", "sunny (adj)", "sunrise (n)",
+  "sunset (n)", "sunshine (n)", "supermarket (n)", "supper (n)", "support (n & v)", "supporter (n)",
+  "suppose (v)", "sure (adj)", "surface (n)", "surf (v)", "surfboard (n)", "surfing (n)", "surname (n)",
+  "surprise (n)", "surprised (adj)", "surprising (adj)", "surround (v)", "sweater (n)", "sweatshirt (n)",
+  "sweet (adj)", "swim (v)", "swimming (n)", "swimming costume (n)", "swimming pool (n)", "swimsuit (n)",
+  "switch (n & v)", "symbol (n)", "system (n)",
+
+  "table (n)", "table tennis (n)", "tablet (n)", "take (v)", "take off (phr v)", "take part (v)",
+  "talk (n & v)", "tall (adj)", "tasty (adj)", "taxi (n)", "tea (n)", "teach (v)", "teacher (n)",
+  "teaching (n)", "team (n)", "tear (n & v)", "technique (n)", "technology (n)", "teenager (n)",
+  "telephone (n & v)", "television (TV) (n)", "tell (v)", "temperature (n)", "tennis (n)", "tent (n)",
+  "term (n)", "terrible (adj)", "test (n)", "text (n & v)", "textbook (n)", "text message (n)",
+  "than (conj & prep)", "thank (v)", "thanks (exclam)", "thank you (exclam)", "that (conj & pron)",
+  "the (det)", "theatre (n)", "their (det)", "them (pron)", "themselves (pron)", "then (adv)", "there (adv)",
+  "these (det & pron)", "they (pron)", "thick (adj)", "thief (n)", "thin (adj)", "thing (n)", "think (v)",
+  "thirsty (adj)", "this (det & pron)", "those (det & pron)", "though (conj)", "thought (n)", "thumb (n)",
+  "thunder (n)", "thunderstorm (n)", "tick (n & v)", "ticket (n)", "tidy (adj & v)", "tidy up (phr v)",
+  "tie (n)", "tiger (n)", "tight (adj)", "tights (n pl)", "till (prep)", "time (n)", "timetable (n)",
+  "tired (adj)", "title (n)", "to (prep)", "toast (n)", "today (adv & n)", "toe (n)", "together (adv)",
+  "toilet (n)", "tomato (n)", "tomorrow (adv & n)", "tongue (n)", "tonight (adv & n)", "too (adv)",
+  "tooth (n)", "toothache (n)", "toothbrush (n)", "top (n)", "topic (n)", "torch (n)", "total (adj & n)",
+  "totally (adv)", "touch (v)", "tour (n & v)", "tour guide (n)", "tourism (n)", "tourist (n)",
+  "tourist information centre (n)", "towel (n)", "tower (n)", "town (n)", "toy (n)", "traffic (n)",
+  "traffic light (n)", "train (n & v)", "trainer (n)", "tram (n)", "transport (n)", "travel (v)", "tree (n)",
+  "trend (n)", "trick (n)", "trip (n)", "trouble (n)", "trousers (n pl)", "truck (n)", "true (adj)",
+  "trunk (n)", "trust (v)", "truth (n)", "try (v)", "T-shirt (n)", "tube (n)", "tuna (n)", "tune (n)",
+  "tunnel (n)", "turkey (n)", "turn (n & v)", "turn down (phr v)", "turn off (phr v)", "turn on (phr v)",
+  "turn up (phr v)", "twice (adv)", "twin (n)", "type (n & v)", "tyre (n)",
+
+  "ugly (adj)", "umbrella (n)", "uncle (n)", "under (prep)", "underground (n & adj)", "understand (v)",
+  "underwear (n)", "undress (v)", "unemployed (adj)", "unemployment (n)", "unexpected (adj)", "unfair (adj)",
+  "unfit (adj)", "unforgettable (adj)", "unfortunately (adv)", "unfriendly (adj)", "unhappy (n)",
+  "unhealthy (adj)", "uniform (n)", "university (n)", "unless (conj)", "unlikely (adj)", "unlucky (adj)",
+  "unnecessary (adj)", "unpack (v)", "unpleasant (adj)", "untidy (adj)", "until (prep & conj)",
+  "unusual (adj)", "unwell (adj)", "up (adv & prep)", "update (n & v)", "upload (n & v)", "upon (prep)",
+  "usually (adv)",
+
+  "v / versus (prep)", "vacation (n)", "valley (n)", "valuable (adj)", "value (n)", "van (n)", "vanilla (n)",
+  "variety (n)", "various (adj)", "vase (n)", "vegetable (n)", "vegetarian (n & adj)", "vehicle (n)",
+  "version (n)", "very (adv)", "vet (n)", "via (prep)", "video (n & v)", "video clip (n)", "view (n)",
+  "village (n)", "violin (n)", "visit (n & v)", "visitor (n)", "vocabulary (n)", "vowel (n)",
+
+  "wage(s) (n)", "wait (n & v)", "waiter (n)", "waiting room (n)", "waitress (n)", "wake (v)", "walk (n & v)",
+  "walking (n)", "wall (n)", "wallet (n)", "wardrobe (n)", "warm (adj)", "warn (v)", "warning (n)",
+  "wash (n & v)", "wash up (phr v)", "washing machine (n)", "washing-up (n)", "waste (adj & v)",
+  "watch (n & v)", "water (n & v)", "waterfall (n)", "wave (n & v)", "way (n)", "we (pron)", "weak (adj)",
+  "wear (v)", "wear out (phr v & adj)", "weather (n)", "weather forecast (n)", "web (n)", "webcam (n)",
+  "web page (n)", "website (n)", "wedding (n)", "week (n)", "weekday (n)", "weekend (n)", "weekly (adj & adv)",
+  "weigh (v)", "weight (n)", "welcome (n & v)", "well (adj, adv & exclam)", "west (adj, adv & n)", "wet (adj)",
+  "whale (n)", "what (det & pron)", "whatever (pron & det)", "wheel (n)", "when (adv)", "whenever (conj)",
+  "where (adv & conj)", "wherever (conj)", "whether (conj)", "which (pron & det)", "while (conj)",
+  "white (adj)", "who (pron)", "whole (adj & n)", "whose (det & pron)", "why (adv)", "wide (adj)", "wife (n)",
+  "wild (adj)", "wildlife (n)", "will (mv)", "willing (adj)", "win (v)", "wind (n)", "window (n)",
+  "windscreen (n)", "windsurfing (n)", "windy (adj)", "winner (n)", "winter (n)", "wish (n)", "with (prep)",
+  "without (prep)", "woman (n)", "wonderful (adj)", "wood (n)", "wooden (adj)", "wool (n)", "word (n)",
+  "work (n & v)", "worker (n)", "work out (phr v)", "world (n)", "worried (adj)", "worry (v)", "worse (adj)",
+  "worst (adj)", "would (mv)", "wow (exclam)", "write (v)", "write down (phr v)", "writer (n)", "writing (n)",
+  "wrong (adj)",
+
+  "yard (n)", "yeah (exclam)", "year (n)", "yellow (adj)", "yes (adv)", "yesterday (adv)", "yet (adv)",
+  "yoga (n)", "yog(h)urt (n)", "you (pron)", "you know (exclam)", "young (adj)", "your (det)", "yours (pron)",
+  "yourself (pron)", "youth (n)",
+
+  "zebra (n)", "zero (n)", "zone (n)", "zoo (n)",
+  ]
+};
+
+/* ---------- reading the entries ---------- */
+
+const TYPE_NAMES = {
+  "n": "noun", "v": "verb", "adj": "adjective", "adv": "adverb", "prep": "preposition",
+  "conj": "conjunction", "pron": "pronoun", "det": "determiner", "exclam": "exclamation",
+  "mv": "modal verb", "av": "auxiliary verb", "phr v": "phrasal verb",
+  "prep phr": "prepositional phrase", "n pl": "plural noun", "unc n": "uncountable noun",
+  "phrase": "phrase", "phr": "phrase"
+};
+
+/* Brackets that belong to the word itself, e.g. "as well (as)", "mobile (phone)". */
+const STAYS_IN_WORD = ["as", "that", "not", "phone", "computer", "TV", "cm", "kg", "km", "£", "me"];
+/* Extra ones that only apply at one level. */
+const STAYS_EXTRA = { b1: ["on", "with", "on/upon", "sth/sb", "DJ"] };
+
+function joinNames(names) {
+  return names.length > 1
+    ? names.slice(0, -1).join(", ") + " & " + names[names.length - 1]
+    : names[0] || "";
+}
+
+function parseEntry(raw, stays) {
+  const groups = [];
+  const head = raw.replace(/\s+\(([^)]*)\)/g, (match, inner) => {
+    inner = inner.trim();
+    if (stays.has(inner)) return inner === "me" ? "(me)" : " (" + inner + ")";
+    groups.push(inner);
+    return "";
+  }).trim();
+
+  const tokens = [], senses = [], regions = [];
+  for (const group of groups) {
+    if (/^(Br|Am) Eng/.test(group)) {
+      regions.push(group.replace("Br Eng", "UK").replace("Am Eng", "US"));
+      continue;
+    }
+    const [typePart, ...rest] = group.split(" – ");
+    const parts = typePart.split(/\s*[&,]\s*/);
+    if (parts.every((p) => TYPE_NAMES[p])) {
+      tokens.push(...parts);
+      if (rest.length) senses.push(rest.join(" – "));
+    } else {
+      senses.push(group);
+    }
+  }
+
+  const type = joinNames([...new Set(tokens)].map((t) => TYPE_NAMES[t]));
+  const lines = [];
+  if (type || senses.length) lines.push((type + (senses.length ? " (" + senses.join(", ") + ")" : "")).trim());
+  /* Show the other-country word where there is one ("US: cookie"); otherwise just flag the country. */
+  const variants = regions.filter((r) => r.includes(":"));
+  if (variants.length) lines.push(variants.join(", "));
+  else if (regions.length) lines.push(regions.map((r) => r + " English").join(", "));
+
+  const kinds = [];
+  if (tokens.some((t) => t === "n" || t === "n pl" || t === "unc n")) kinds.push("noun");
+  if (tokens.some((t) => t === "v" || t === "phr v")) kinds.push("verb");
+  if (tokens.includes("adj")) kinds.push("adjective");
+
+  return { head, type, meta: lines.join("\n"), kinds };
+}
+
+/* Each list is read the first time its level is chosen. */
+const parsed = {};
+function entriesFor(id) {
+  if (!parsed[id]) {
+    const stays = new Set(STAYS_IN_WORD.concat(STAYS_EXTRA[id] || []));
+    parsed[id] = LISTS[id].map((raw) => parseEntry(raw, stays));
+  }
+  return parsed[id];
+}
+
+/* Tile colours stay with the position, so "the green one" is always the first tile. */
+const COLOURS = ["#A8D5CB", "#F2D9A6", "#F4B5A0", "#C9C3EA", "#A9CCEB", "#F0C2D3", "#C7DE9F"];
+const MAX = COLOURS.length;
+
+const grid = document.getElementById("grid");
+const statusEl = document.getElementById("status");
+const countOptions = document.getElementById("count-options");
+const levelOptions = document.getElementById("level-options");
+const sourceEl = document.getElementById("source");
+const typeInputs = [...document.querySelectorAll("#type-options input")];
+
+let level = loadLevel();
+let ENTRIES = entriesFor(level);
+let count = loadCount();
+let pool = ENTRIES;
+let shown = [];
+let deck = [];
+
+/* ---------- picking ---------- */
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function updatePool() {
+  const chosen = typeInputs.filter((i) => i.checked).map((i) => i.value);
+  pool = chosen.length ? ENTRIES.filter((e) => chosen.some((c) => e.kinds.includes(c))) : ENTRIES;
+  if (!pool.length) pool = ENTRIES;
+  deck = [];
+}
+
+/* Changing level keeps the number of words and the word types, and picks a fresh set. */
+function setLevel(id) {
+  level = id;
+  ENTRIES = entriesFor(level);
+  saveLevel();
+  syncLevel();
+  updatePool();
+  shown = [];
+  newWords();
+}
+
+/* Draws from a shuffled deck so words don't come round again until the pool has been used. */
+function draw(avoid) {
+  for (let pass = 0; pass < 2; pass++) {
+    while (deck.length) {
+      const entry = deck.pop();
+      if (!avoid.includes(entry)) return entry;
+    }
+    deck = shuffle(pool.slice());
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function newWords() {
+  const previous = shown.slice();
+  const next = [];
+  for (let i = 0; i < count; i++) next.push(draw(next.concat(previous)));
+  shown = next;
+  render();
+}
+
+function swap(index) {
+  shown[index] = draw(shown);
+  render();
+}
+
+function setCount(n) {
+  count = n;
+  while (shown.length < count) shown.push(draw(shown));
+  shown.length = count;
+  saveCount();
+  syncRadios();
+  render();
+}
+
+/* ---------- storage ---------- */
+
+function loadCount() {
+  try {
+    const value = parseInt(localStorage.getItem("wordlist.count"), 10);
+    if (value >= 1 && value <= MAX) return value;
+  } catch (e) { /* storage unavailable */ }
+  return 3;
+}
+
+function saveCount() {
+  try { localStorage.setItem("wordlist.count", String(count)); } catch (e) { /* ignore */ }
+}
+
+/* The level comes from the link if it has one (wordlist.html?level=b1),
+   otherwise from the last visit, otherwise A2. */
+function loadLevel() {
+  const known = (id) => LEVELS.some((l) => l.id === id);
+  const fromLink = (new URLSearchParams(location.search).get("level") || "").toLowerCase();
+  if (known(fromLink)) return fromLink;
+  try {
+    const saved = localStorage.getItem("wordlist.level");
+    if (known(saved)) return saved;
+  } catch (e) { /* storage unavailable */ }
+  return known("a2") ? "a2" : LEVELS[0].id;
+}
+
+function saveLevel() {
+  try { localStorage.setItem("wordlist.level", level); } catch (e) { /* ignore */ }
+}
+
+/* ---------- rendering ---------- */
+
+function makeTile(index) {
+  const tile = document.createElement("button");
+  tile.type = "button";
+  tile.className = "tile";
+  tile.style.setProperty("--c", COLOURS[index]);
+  tile.innerHTML =
+    '<span class="swap" aria-hidden="true">Swap</span>' +
+    '<span class="text"><span class="word"></span><span class="meta"></span></span>';
+  tile.addEventListener("click", () => swap([...grid.children].indexOf(tile)));
+  return tile;
+}
+
+function render() {
+  while (grid.children.length < shown.length) grid.appendChild(makeTile(grid.children.length));
+  while (grid.children.length > shown.length) grid.lastElementChild.remove();
+
+  [...grid.children].forEach((tile, i) => {
+    const entry = shown[i];
+    if (tile.entry === entry) return;
+    tile.entry = entry;
+
+    /* A zero-width space after "/" lets long pairs like "centimetre/centimeter" wrap. */
+    tile.querySelector(".word").textContent = entry.head.replace(/\//g, "/\u200B");
+    tile.querySelector(".meta").textContent = entry.meta;
+    tile.setAttribute("aria-label", entry.head + (entry.type ? ", " + entry.type : "") + ", click to swap");
+
+    const text = tile.querySelector(".text");
+    text.classList.remove("fresh");
+    void text.offsetWidth;
+    text.classList.add("fresh");
+  });
+
+  layout();
+  statusEl.textContent = "Words: " + shown.map((e) => e.head + (e.type ? " (" + e.type + ")" : "")).join(", ");
+}
+
+function layout() {
+  const n = shown.length;
+  const w = window.innerWidth;
+  let cols;
+  if (w < 640) cols = Math.min(n, 2);
+  else if (w < 960) cols = n <= 3 ? n : (n === 7 ? 4 : (n === 4 ? 2 : 3));
+  else cols = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 3, 6: 3, 7: 4 }[n];
+
+  grid.style.setProperty("--cols", cols);
+  grid.style.setProperty("--rows", Math.ceil(n / cols));
+  fit();
+}
+
+/* One shared size for every word, shrunk tile-by-tile when a long word or phrase wouldn't fit. */
+function fit() {
+  const first = grid.firstElementChild;
+  if (!first) return;
+  const style = getComputedStyle(first);
+  const innerW = first.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const innerH = first.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const base = Math.max(22, Math.min(innerH * 0.3, innerW * 0.24, 170));
+
+  grid.querySelectorAll(".tile").forEach((tile) => {
+    const word = tile.querySelector(".word");
+    const text = tile.querySelector(".text");
+    let size = base;
+    word.style.fontSize = size + "px";
+    let guard = 0;
+    while (guard++ < 60 && size > 18 &&
+           (word.scrollWidth > word.clientWidth + 1 || text.offsetHeight > innerH + 1)) {
+      size *= 0.94;
+      word.style.fontSize = size + "px";
+    }
+  });
+}
+
+/* ---------- controls ---------- */
+
+for (let n = 1; n <= MAX; n++) {
+  const label = document.createElement("label");
+  label.innerHTML = '<input type="radio" name="count" value="' + n + '"><span>' + n + "</span>";
+  label.querySelector("input").addEventListener("change", () => setCount(n));
+  countOptions.appendChild(label);
+}
+
+LEVELS.forEach((l) => {
+  const label = document.createElement("label");
+  label.style.setProperty("--lv", l.colour);
+  label.innerHTML = '<input type="radio" name="level" value="' + l.id + '"><span>' + l.label + "</span>";
+  label.querySelector("input").addEventListener("change", () => setLevel(l.id));
+  levelOptions.appendChild(label);
+});
+
+function syncLevel() {
+  levelOptions.querySelectorAll("input").forEach((input) => { input.checked = input.value === level; });
+  sourceEl.textContent = LEVELS.find((l) => l.id === level).source;
+}
+
+function syncRadios() {
+  countOptions.querySelectorAll("input").forEach((input) => {
+    input.checked = Number(input.value) === count;
+  });
+}
+
+typeInputs.forEach((input) => input.addEventListener("change", () => {
+  updatePool();
+  newWords();
+}));
+
+document.getElementById("new-words").addEventListener("click", newWords);
+
+/* Keys: 1–7 change the number, N picks new words. */
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (/^[1-7]$/.test(event.key)) setCount(Number(event.key));
+  else if (event.key === "n" || event.key === "N") newWords();
+});
+
+let frame;
+window.addEventListener("resize", () => {
+  cancelAnimationFrame(frame);
+  frame = requestAnimationFrame(layout);
+});
+
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+
+/* ---------- start ---------- */
+
+syncLevel();
+syncRadios();
+newWords();
+</script>
+</body>
+</html>
