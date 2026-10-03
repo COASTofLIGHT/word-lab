@@ -26,6 +26,10 @@
     --second: #F0C2D3;   /* its opposite, once shown */
     --ask: #F2D9A6;      /* the questions */
     --late: #F4B5A0;     /* last ten seconds of the timer */
+    /* Two meanings */
+    --clue1: #A9CCEB;
+    --clue2: #C9C3EA;
+    --answer: #A8D5CB;   /* the word, once shown */
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -415,6 +419,40 @@
   .timer.done .after { display: block; }
   .unit { font-weight: 700; margin-left: -0.4rem; }
 
+  /* ---------- Two meanings ---------- */
+
+  /* A clue on each side, the word they share in the middle. */
+  .trio {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 0.85fr 1fr;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+  }
+
+  .clue {
+    container-type: size;
+    display: grid;
+    place-items: center;
+    min-height: 6rem;
+    padding: clamp(0.9rem, 2vw, 1.6rem);
+    border-radius: 0.7rem;
+    text-align: center;
+  }
+  .clue:first-child { background: var(--clue1); }
+  .clue:last-child { background: var(--clue2); }
+  .clue p {
+    margin: 0;
+    font-size: clamp(1.15rem, 2.4vw, 2rem);
+    font-size: clamp(1.15rem, min(9cqi, 15cqb), 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .trio .second.shown { background: var(--answer); }
+
   .sr {
     position: absolute;
     width: 1px;
@@ -427,7 +465,7 @@
   /* ---------- Smaller screens ---------- */
 
   /* The tabs drop to their own row, flush with the frame's left edge. */
-  @media (max-width: 860px) {
+  @media (max-width: 1000px) {
     .tabs { order: 3; flex-basis: 100%; }
     .back { margin-bottom: 0.6rem; }
     .frame { border-top-left-radius: 0; }
@@ -437,11 +475,16 @@
   @media (max-width: 720px) {
     html, body { height: auto; overflow: auto; }
     .page { height: auto; min-height: 100vh; min-height: 100dvh; }
-    .tab { padding: 0 0.85rem; font-size: 0.95rem; }
+    /* Four tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
+    .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: 0 0 auto; padding: 0 0.5rem; font-size: 0.85rem; }
     .stage { flex-direction: column; min-height: 24rem; }
     #words-tile, #linker-tile { flex: 1 1 0; }
-    .pair { grid-template-columns: 1fr; }
+    .pair, .trio { grid-template-columns: 1fr; }
+    .trio .box { order: 3; }   /* clue, clue, then the word */
     .box { min-height: 8.5rem; }
+    .clue { min-height: 7rem; }
     .timer { flex-wrap: wrap; }
     .push { margin-left: 0; }
     .tip { margin-left: 0; flex-basis: 100%; }
@@ -530,6 +573,31 @@
       </div>
     </section>
 
+    <!-- Two meanings: two clues, one word. -->
+    <section class="game" id="meanings-game" role="tabpanel" aria-labelledby="tab-meanings" hidden>
+      <div class="trio">
+        <div class="clue"><p id="clue1"></p></div>
+        <div class="box second" id="m-box">
+          <button type="button" class="cover" id="m-cover" aria-label="Show the word"><span class="big">?</span></button>
+          <span class="big" id="m-word" hidden></span>
+        </div>
+        <div class="clue"><p id="clue2"></p></div>
+      </div>
+
+      <div class="ask" id="m-ask" aria-live="polite">
+        <p id="m-line"></p>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn-primary" id="m-show">Show the word</button>
+        <div class="switch push" role="group" aria-label="Level">
+          <button type="button" data-level="a2" class="on" aria-pressed="true">A2</button>
+          <button type="button" data-level="b1" aria-pressed="false">B1</button>
+        </div>
+        <button type="button" class="btn" id="m-next">New word</button>
+      </div>
+    </section>
+
   </div>
 
   <p class="sr" role="status" id="status"></p>
@@ -537,14 +605,16 @@
 
 <script>
 /* ---------------------------------------------------------------
-   Three games on one page, chosen with the tabs at the top.
-   A link can open a tab directly: ?mode=pairs, ?mode=odd or
-   ?mode=opposites. Otherwise the page opens on the last one used.
+   Four games on one page, chosen with the tabs at the top.
+   A link can open a tab directly: ?mode=pairs, ?mode=odd,
+   ?mode=opposites or ?mode=meanings. Otherwise the page opens on
+   the last one used.
 ---------------------------------------------------------------- */
 const GAMES = [
   { id: "pairs", label: "Pairs" },
   { id: "odd", label: "Odd one out" },
-  { id: "opposites", label: "Opposites" }
+  { id: "opposites", label: "Opposites" },
+  { id: "meanings", label: "Two meanings" }
 ];
 
 /* ---------------------------------------------------------------
@@ -898,6 +968,105 @@ const CREATIVE_WORDS = [
   "window", "windsurfing", "wing", "winner", "winter", "woman", "wood", "wool", "word", "worker",
   "world", "writer", "writing", "year", "yoghurt", "zebra", "zoo"
 ];
+/* ---------------------------------------------------------------
+   TWO MEANINGS
+
+   One word with two different meanings. Each line is:
+   ["word", "a clue for one meaning", "a clue for the other"],
+   The clues are shown first; the word is the reveal.
+
+   A2: both meanings are in the Cambridge A2 Key list (the last
+   three have a second meaning that is a little harder).
+   B1: words whose second meaning comes in at B1 Preliminary.
+---------------------------------------------------------------- */
+const MEANINGS = {
+  a2: [
+    ["back", "A part of your body. You can't see it.", "The opposite of front."],
+    ["bat", "An animal that flies at night.", "You hit a ball with it."],
+    ["book", "You read it.", "You do this to get a hotel room."],
+    ["break", "A short rest between lessons.", "You do this to a glass when it falls."],
+    ["can", "\u201CI ___ swim.\u201D", "Cola comes in one."],
+    ["change", "Money you get back in a shop.", "You do this with your clothes after sport."],
+    ["club", "A group of people with the same hobby.", "A place to dance at night."],
+    ["coach", "A comfortable bus for long journeys.", "A person who trains a sports team."],
+    ["cold", "The opposite of hot.", "You are ill with this in winter. Your nose is red."],
+    ["cool", "A little cold.", "Great: \u201CThat's a really ___ T-shirt!\u201D"],
+    ["exercise", "You do it to keep fit.", "You do it in your English book."],
+    ["floor", "You walk on it in a room.", "\u201CMy flat is on the third ___.\u201D"],
+    ["free", "It costs nothing.", "Not busy: \u201CAre you ___ on Saturday?\u201D"],
+    ["glasses", "You wear them to see better.", "You drink water or juice from them."],
+    ["hard", "The opposite of soft.", "Difficult."],
+    ["hot", "The opposite of cold.", "Food with a lot of chilli is this."],
+    ["key", "You open a door with it.", "You touch it to write a letter on a computer."],
+    ["kind", "Friendly and helpful to other people.", "\u201CWhat ___ of music do you like?\u201D"],
+    ["left", "The opposite of right.", "\u201CShe ___ the house at six o'clock.\u201D"],
+    ["letter", "A, B and C are examples.", "You write it and put it in an envelope."],
+    ["light", "You turn it on when it's dark.", "Not heavy."],
+    ["like", "\u201CI ___ pizza.\u201D", "\u201CShe looks ___ her mum.\u201D"],
+    ["May / may", "The month after April.", "\u201CIt ___ rain tomorrow.\u201D"],
+    ["miss", "You do this to a bus when you're late.", "You feel this when a friend is far away."],
+    ["mouse", "A small animal with a long tail.", "You use it with a computer."],
+    ["orange", "A round fruit. You can make juice from it.", "The colour of a carrot."],
+    ["park", "A place in a town with trees and grass.", "You do this with a car when you arrive."],
+    ["pepper", "It's black and it sits next to the salt.", "A red, green or yellow vegetable."],
+    ["play", "You do this with a game or a guitar.", "A story with actors in a theatre."],
+    ["post", "You do this with a letter.", "You do this with a photo on social media."],
+    ["right", "The opposite of left.", "Correct, not wrong."],
+    ["ring", "You wear it on your finger.", "A phone does this when someone calls."],
+    ["rock", "Music with loud guitars.", "It's hard and grey. Mountains are made of it."],
+    ["save", "You do this with money you don't spend.", "You do this with your work on a computer."],
+    ["second", "After first, before third.", "There are sixty in a minute."],
+    ["smart", "Clever.", "Wearing nice clothes, for example a suit."],
+    ["square", "It has four sides, all the same.", "An open place in the middle of a town."],
+    ["star", "You see it in the sky at night.", "A very famous actor or singer."],
+    ["train", "It travels on a railway.", "You do this to get better at a sport."],
+    ["trainer", "A shoe for doing sport.", "A person who helps you get fit."],
+    ["watch", "You wear it and it tells you the time.", "You do this with a film or a football match."],
+    ["fan", "A person who loves a team or a singer.", "It moves the air and keeps you cool in summer."],
+    ["top", "The highest part of a mountain.", "A T-shirt or a jumper is one."],
+    ["present", "You get one on your birthday.", "Now. Not the past and not the future."]
+  ],
+
+  b1: [
+    ["bright", "Full of light or strong colour.", "Clever: \u201CShe's a very ___ student.\u201D"],
+    ["capital", "The most important city in a country.", "A big letter, like A, B or C."],
+    ["close", "The opposite of open.", "Near: \u201CThe school is very ___ to my house.\u201D"],
+    ["course", "\u201CI'm doing a cooking ___ this year.\u201D", "One part of a meal: first, main or last."],
+    ["cross", "You do this to get to the other side of the road.", "A shape like + or x."],
+    ["date", "\u201CWhat's the ___ today?\u201D \u201CThe fifth of May.\u201D", "A romantic evening with someone you like."],
+    ["dear", "The first word of a letter.", "\u201COh ___! I've lost my keys.\u201D"],
+    ["fair", "Hair that is light in colour, not dark.", "\u201CThat's not ___! He got more than me.\u201D"],
+    ["fine", "\u201CHow are you?\u201D \u201CI'm ___, thanks.\u201D", "Money you pay for parking in the wrong place."],
+    ["fit", "Healthy and strong.", "\u201CThese jeans don't ___ me. They're too small.\u201D"],
+    ["flat", "A home on one floor of a building.", "No hills or mountains: \u201CThe land here is very ___.\u201D"],
+    ["fly", "Birds and planes do this.", "A small insect that loves your food."],
+    ["funny", "It makes you laugh.", "Strange: \u201CThis milk smells ___.\u201D"],
+    ["iron", "A hard, strong metal.", "You use it to make your shirt smooth."],
+    ["jam", "Sweet fruit you put on bread.", "A long line of cars that can't move."],
+    ["last", "The opposite of first.", "\u201CThe film will ___ two hours.\u201D"],
+    ["lie", "You do this on your bed.", "You do this when you don't tell the truth."],
+    ["lift", "It takes you up and down in a building.", "You do this to pick up something heavy."],
+    ["match", "A game of football or tennis.", "\u201CYour shoes ___ your bag. They're the same colour.\u201D"],
+    ["mean", "\u201CWhat does this word ___?\u201D", "Not kind: \u201CDon't be so ___ to your brother.\u201D"],
+    ["note", "A short message on a piece of paper.", "Paper money: \u201Ca ten-euro ___\u201D."],
+    ["order", "You do this in a restaurant.", "A, B, C, D: the letters are in the right ___."],
+    ["patient", "A doctor looks after this person.", "You can wait a long time and not get angry."],
+    ["point", "\u201COur team got one ___ for the draw.\u201D", "You do this with your finger to show something."],
+    ["pretty", "Nice to look at.", "Quite: \u201CIt's ___ cold today.\u201D"],
+    ["rest", "You do this when you are tired.", "\u201CI ate two biscuits. You can have the ___.\u201D"],
+    ["room", "A kitchen or a bedroom is one.", "Space: \u201CIs there ___ for me in the car?\u201D"],
+    ["sign", "It gives drivers information by the road.", "You do this with your name at the end of a form."],
+    ["sink", "You wash the dishes in it.", "A boat with a hole in it does this."],
+    ["stick", "A long, thin piece of wood.", "You do this with glue and paper."],
+    ["tablet", "A small computer with no keyboard.", "A small medicine you take with water."],
+    ["tie", "You wear it round your neck with a shirt.", "You do this with your shoes before you run."],
+    ["tip", "Extra money you leave for a waiter.", "A useful piece of advice."],
+    ["trunk", "An elephant's long nose.", "The thick, brown part of a tree."],
+    ["type", "A kind or sort of thing.", "You do this on a keyboard."],
+    ["wave", "Surfers ride it on the sea.", "You do this with your hand to say hello or goodbye."]
+  ]
+};
+
 const $ = (id) => document.getElementById(id);
 
 function shuffle(list) {
@@ -926,6 +1095,7 @@ let mode = loadMode();
 const tabsEl = $("tabs");
 const linkerGame = $("linker-game");
 const oppositesGame = $("opposites-game");
+const meaningsGame = $("meanings-game");
 const statusEl = $("status");
 
 
@@ -1252,25 +1422,93 @@ function showOppositesGame() {
 
 
 /* ===============================================================
+   Two meanings
+================================================================ */
+
+const clue1El = $("clue1"), clue2El = $("clue2");
+const mBox = $("m-box"), mCover = $("m-cover"), mWordEl = $("m-word");
+const mAsk = $("m-ask"), mLine = $("m-line"), mShowBtn = $("m-show"), mNextBtn = $("m-next");
+
+let level = "a2";
+let mEntry = null;        // the word and clues on screen (null until the tab is first opened)
+let mShown = false;
+const mDecks = { a2: [], b1: [] };
+
+function mSay(text) {
+  mLine.textContent = text;
+  mAsk.classList.remove("fresh");
+  void mAsk.offsetWidth;
+  mAsk.classList.add("fresh");
+}
+
+// 1. Two clues. What's the word?
+function newMeaning() {
+  if (!mDecks[level].length) mDecks[level] = shuffle(MEANINGS[level].slice());
+  mEntry = mDecks[level].pop();
+  clue1El.textContent = mEntry[1];
+  clue2El.textContent = mEntry[2];
+  mBox.style.setProperty("--n", Math.max(mEntry[0].length, 5));
+  mBox.classList.remove("shown");
+  mCover.hidden = false;
+  mWordEl.hidden = true;
+  mShown = false;
+  mShowBtn.hidden = false;
+  mNextBtn.className = "btn";
+  mSay("One word, two meanings. What's the word?");
+}
+
+// 2. The word, then a sentence for each meaning.
+function showMeaning() {
+  if (!mEntry || mShown) return;
+  mWordEl.textContent = mEntry[0];
+  mWordEl.hidden = false;
+  mCover.hidden = true;
+  mBox.classList.add("shown");
+  mShown = true;
+  mShowBtn.hidden = true;
+  mNextBtn.className = "btn-primary";
+  mSay("Now make one sentence for each meaning.");
+}
+
+mShowBtn.addEventListener("click", showMeaning);
+mCover.addEventListener("click", showMeaning);
+mNextBtn.addEventListener("click", newMeaning);
+
+document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => {
+  level = b.dataset.level;
+  document.querySelectorAll("[data-level]").forEach((x) => {
+    x.classList.toggle("on", x === b);
+    x.setAttribute("aria-pressed", x === b);
+  });
+  newMeaning();
+}));
+
+function showMeaningsGame() {
+  if (!mEntry) newMeaning();   // first visit; after that it carries on where it left off
+}
+
+
+/* ===============================================================
    The tabs
 ================================================================ */
 
 function applyMode() {
   const opposites = mode === "opposites";
+  const meanings = mode === "meanings";
   tabsEl.querySelectorAll(".tab").forEach((tab) => {
     const on = tab.id === "tab-" + mode;
     tab.setAttribute("aria-selected", on);
     tab.tabIndex = on ? 0 : -1;
+    if (on && tabsEl.scrollWidth > tabsEl.clientWidth) tab.scrollIntoView({ block: "nearest", inline: "nearest" });
   });
-  linkerGame.hidden = opposites;
+  linkerGame.hidden = opposites || meanings;
   oppositesGame.hidden = !opposites;
-  if (opposites) {
-    statusEl.textContent = "";
-    showOppositesGame();
-  } else {
-    if (ticking) { stopTimer(); paint(); }   // leaving Opposites pauses its timer
-    showLinkerGame();
-  }
+  meaningsGame.hidden = !meanings;
+  if (!opposites && ticking) { stopTimer(); paint(); }   // leaving Opposites pauses its timer
+  if (opposites || meanings) statusEl.textContent = "";
+  if (opposites) showOppositesGame();
+  else if (meanings) showMeaningsGame();
+  else showLinkerGame();
 }
 
 function chooseMode(id) {
@@ -1285,7 +1523,7 @@ GAMES.forEach((game) => {
   tab.className = "tab";
   tab.id = "tab-" + game.id;
   tab.setAttribute("role", "tab");
-  tab.setAttribute("aria-controls", game.id === "opposites" ? "opposites-game" : "linker-game");
+  tab.setAttribute("aria-controls", MODES[game.id] ? "linker-game" : game.id + "-game");
   tab.textContent = game.label;
   tab.addEventListener("click", () => chooseMode(game.id));
   tabsEl.appendChild(tab);
@@ -1301,8 +1539,8 @@ tabsEl.addEventListener("keydown", (event) => {
 });
 
 /* ---------- keyboard ----------
-   Space or Enter moves the game on: a new set of words, or in Opposites the reveal and then a new word.
-   L gives a new linker. N gives a new word in Opposites. */
+   Space or Enter moves the game on: a new set of words, or in Opposites and Two meanings
+   the reveal and then a new word. L gives a new linker. N gives a new word. */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const target = event.target.closest ? event.target : document.body;
@@ -1313,6 +1551,9 @@ document.addEventListener("keydown", (event) => {
   if (mode === "opposites") {
     if (press) { event.preventDefault(); if (stage === "guess") showOpposite(false); else newWord(); }
     else if (event.key === "n" || event.key === "N") newWord();
+  } else if (mode === "meanings") {
+    if (press) { event.preventDefault(); if (mShown) newMeaning(); else showMeaning(); }
+    else if (event.key === "n" || event.key === "N") newMeaning();
   } else {
     if (press) { event.preventDefault(); nextWords(); }
     else if (event.key === "l" || event.key === "L") nextLinker();
