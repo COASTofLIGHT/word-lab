@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Similar but Different</title>
+<title>Similar Different</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
 <style>
   :root {
     --mist: #EDF3F2;
+    --paper: #FFFFFF;
     --ink: #10303A;
     --ink-soft: #456670;
     --line: #5F808A;
@@ -17,12 +18,19 @@
     --sea-deep: #124F5E;
     --focus: #0B62A4;
     --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
-    /* Tile colours: set by the mode (see MODES in the script) */
+    /* Pairs and Odd one out: tile colours are set by the game (see MODES in the script) */
     --words-c: #F4B5A0;
     --linker-c: #C9C3EA;
+    /* Opposites */
+    --first: #C7DE9F;    /* the word on the left */
+    --second: #F0C2D3;   /* its opposite, once shown */
+    --ask: #F2D9A6;      /* the questions */
+    --late: #F4B5A0;     /* last ten seconds of the timer */
   }
 
   *, *::before, *::after { box-sizing: border-box; }
+
+  [hidden] { display: none !important; }
 
   html, body {
     height: 100%;
@@ -47,41 +55,89 @@
     flex-direction: column;
   }
 
-  .back {
-    display: inline-block;
+  /* ---------- Title, tabs and the way back ---------- */
+
+  .top {
     flex: 0 0 auto;
-    margin-bottom: 0.5rem;
-    color: var(--ink-soft);
-    font-size: 0.9rem;
-    text-decoration: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    column-gap: clamp(1rem, 2.5vw, 2rem);
   }
-  .back:hover { text-decoration: underline; }
-  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-  header { flex: 0 0 auto; }
-
-  header h1 {
-    margin: 0;
+  .top h1 {
+    margin: 0 0 0.6rem;
     font-size: clamp(1.4rem, 2.8vw, 2.1rem);
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.05;
   }
 
-  header p {
-    margin: 0.35rem 0 0;
+  .back {
+    margin: 0 0 0.75rem auto;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* Tabs: the chosen one joins on to the frame underneath. */
+  .tabs { display: flex; gap: 0.2rem; }
+
+  .tab {
+    height: 2.75rem;
+    padding: 0 1.15rem;
+    border: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab:hover { background: rgba(255, 255, 255, 0.55); color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--paper); color: var(--ink); }
+  .tab:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  /* ---------- The frame: one game at a time ---------- */
+
+  .frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(0.7rem, 1.6vw, 1.1rem);
+    border-radius: 0.9rem;
+    background: var(--paper);
+  }
+
+  .game {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.55rem, 1.5vh, 0.9rem);
+  }
+
+  .intro {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0 0.15rem;
     color: var(--ink-soft);
     font-size: clamp(1rem, 1.9vw, 1.3rem);
     line-height: 1.3;
-    max-width: 62rem;
   }
 
   .controls {
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.6rem;
-    margin-top: 0.75rem;
   }
 
   .btn, .btn-primary {
@@ -111,20 +167,36 @@
   .btn:active, .btn-primary:active { transform: translateY(1px); }
   .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
-  /* Mode picker: the chosen mode takes its tile colour */
-  .modes { display: flex; align-items: center; gap: 0.4rem; margin-right: 1.4rem; }
-  .modes-label { margin-right: 0.3rem; font-weight: 600; white-space: nowrap; }
-  .modes label { position: relative; display: block; }
-  .modes input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-  .modes label span {
-    display: grid; place-items: center;
-    height: 2.6rem; padding: 0 1rem;
-    border: 2px solid var(--line); border-radius: 0.6rem;
-    font-size: 0.95rem; font-weight: 700; white-space: nowrap;
+  .push { margin-left: auto; }
+
+  .tip {
+    margin: 0 0 0 auto;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
   }
-  .modes input:not(:checked):hover + span { border-color: var(--ink); }
-  .modes input:checked + span { background: var(--mc); border-color: var(--ink); }
-  .modes input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  /* Two-way switches: Classic / Creative, and the minutes */
+  .switch {
+    display: inline-flex;
+    height: 2.6rem;
+    border: 2px solid var(--line);
+    border-radius: 0.6rem;
+    overflow: hidden;
+  }
+  .switch button {
+    padding: 0 0.95rem;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .switch button.on { background: var(--ink); color: #fff; }
+  .switch button:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  /* ---------- Pairs and Odd one out ---------- */
 
   .stage {
     flex: 1 1 auto;
@@ -132,7 +204,6 @@
     display: flex;
     align-items: stretch;
     gap: clamp(0.6rem, 1.6vw, 1.1rem);
-    margin-top: 0.75rem;
   }
 
   .tile {
@@ -144,7 +215,7 @@
     height: 100%;
     padding: clamp(1rem, 2.6vw, 2rem);
     border: 0;
-    border-radius: 0.9rem;
+    border-radius: 0.7rem;
     overflow: hidden;
     color: var(--ink);
     font: inherit;
@@ -199,13 +270,150 @@
   }
   .fresh { animation: settle 0.22s ease-out; }
 
-  footer {
-    flex: 0 0 auto;
-    margin-top: 0.6rem;
-    color: var(--ink-soft);
-    font-size: 0.85rem;
+  /* ---------- Opposites ---------- */
+
+  .pair {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+  }
+
+  .box {
+    container-type: size;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-height: 6rem;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+    border-radius: 0.7rem;
     text-align: center;
   }
+
+  /* Both words share one size: --n is the longest run of letters, --l the number of lines. */
+  .big {
+    font-size: clamp(2rem, 6vw, 5rem);
+    font-size: clamp(1.6rem, min(calc(150cqi / var(--n, 8)), calc(60cqb / var(--l, 1))), 8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    text-wrap: balance;
+  }
+
+  .first { background: var(--first); }
+
+  /* The second box is covered by a "?" button until it is opened. */
+  .second {
+    position: relative;
+    border: 3px dashed rgba(16, 48, 58, 0.3);
+  }
+  .second:hover { border-color: var(--ink-soft); }
+  .second.shown { background: var(--second); border-color: transparent; }
+
+  .cover {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    cursor: pointer;
+  }
+  .cover .big { font-weight: 700; }
+  .cover:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  .second.shown .big { animation: arrive 0.35s ease-out both; }
+  @keyframes arrive { from { opacity: 0; transform: scale(0.9); } }
+
+  /* Creative: the class's own opposite is typed straight into the box. */
+  .own {
+    width: 100%;
+    padding: 0.08em 0;
+    border: 0;
+    border-top: 3px solid transparent;      /* balances the line below, so the word sits level with its partner */
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    line-height: 1.15;
+    text-align: center;
+  }
+  .own::placeholder { color: rgba(16, 48, 58, 0.4); opacity: 1; }
+  .own:focus { outline: none; border-bottom-color: rgba(16, 48, 58, 0.4); }
+  .hint {
+    margin: 0.5rem 0 0;
+    color: var(--ink-soft);
+    font-size: clamp(0.9rem, 1.3vw, 1.05rem);
+  }
+
+  /* The questions */
+  .ask {
+    flex: 0 0 auto;
+    padding: clamp(0.8rem, 1.8vw, 1.25rem) clamp(1rem, 2.2vw, 1.6rem);
+    border-radius: 0.7rem;
+    background: var(--ask);
+  }
+  .ask p {
+    margin: 0;
+    font-size: clamp(1.1rem, min(2.3vw, 3.8vh), 1.9rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .ask p + p { margin-top: 0.3em; }
+  .ask.fresh { animation: none; }
+  .ask.fresh p { animation: settle 0.3s ease-out both; }
+  .ask.fresh p + p { animation-delay: 0.08s; }
+
+  /* Timer */
+  .timer {
+    margin-top: clamp(0.5rem, 1.4vh, 0.9rem);
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+  }
+  .time {
+    font-size: clamp(1.8rem, min(4vw, 6vh), 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    min-width: 3.3ch;
+  }
+  .track {
+    flex: 1;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: rgba(16, 48, 58, 0.15);
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    width: 100%;
+    border-radius: 999px;
+    background: var(--ink);
+    transition: width 0.25s linear, background-color 0.3s ease;
+  }
+  .timer.late .fill { background: var(--late); }
+  /* When time is up, the message takes the place of the bar. */
+  .after {
+    display: none;
+    flex: 1;
+    margin: 0;
+    font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .timer.done .track { display: none; }
+  .timer.done .after { display: block; }
+  .unit { font-weight: 700; margin-left: -0.4rem; }
 
   .sr {
     position: absolute;
@@ -216,52 +424,131 @@
     white-space: nowrap;
   }
 
+  /* ---------- Smaller screens ---------- */
+
+  /* The tabs drop to their own row, flush with the frame's left edge. */
+  @media (max-width: 860px) {
+    .tabs { order: 3; flex-basis: 100%; }
+    .back { margin-bottom: 0.6rem; }
+    .frame { border-top-left-radius: 0; }
+  }
+
+  /* Phones: everything stacks and the page scrolls if it needs to. */
   @media (max-width: 720px) {
-    .stage { flex-direction: column; }
+    html, body { height: auto; overflow: auto; }
+    .page { height: auto; min-height: 100vh; min-height: 100dvh; }
+    .tab { padding: 0 0.85rem; font-size: 0.95rem; }
+    .stage { flex-direction: column; min-height: 24rem; }
     #words-tile, #linker-tile { flex: 1 1 0; }
+    .pair { grid-template-columns: 1fr; }
+    .box { min-height: 8.5rem; }
+    .timer { flex-wrap: wrap; }
+    .push { margin-left: 0; }
+    .tip { margin-left: 0; flex-basis: 100%; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .fresh { animation: none; }
+    .fresh, .ask.fresh p, .second.shown .big { animation: none; }
+    .fill { transition: none; }
   }
 </style>
 </head>
 <body>
 <main class="page">
-  <a class="back" href="./">&larr; Word Lab</a>
 
-  <header>
-    <h1>Similar but different</h1>
-    <p id="intro"></p>
-  </header>
-
-  <div class="controls">
-    <div class="modes" role="radiogroup" aria-labelledby="mode-label" id="mode-options">
-      <span class="modes-label" id="mode-label">Play mode</span>
-    </div>
-    <button type="button" class="btn" id="new-words-btn"></button>
-    <button type="button" class="btn" id="new-linker-btn">New linker</button>
-    <button type="button" class="btn-primary" id="random-btn">Random</button>
+  <div class="top">
+    <h1>Similar Different</h1>
+    <div class="tabs" role="tablist" aria-label="Games" id="tabs"></div>
+    <a class="back" href="./">&larr; Word Lab</a>
   </div>
 
-  <div class="stage">
-    <button type="button" class="tile" id="words-tile">
-      <span class="tag" aria-hidden="true" id="words-tag"></span>
-      <span class="words" id="words"></span>
-    </button>
-    <button type="button" class="tile" id="linker-tile" aria-label="Click for the next linker">
-      <span class="tag" aria-hidden="true">Linker</span>
-      <span class="linker" id="linker"></span>
-    </button>
+  <div class="frame">
+
+    <!-- Pairs and Odd one out share this panel: words on the left, a linker on the right. -->
+    <section class="game" id="linker-game" role="tabpanel">
+      <p class="intro" id="intro"></p>
+
+      <div class="stage">
+        <button type="button" class="tile" id="words-tile">
+          <span class="tag" aria-hidden="true" id="words-tag"></span>
+          <span class="words" id="words"></span>
+        </button>
+        <button type="button" class="tile" id="linker-tile" aria-label="Click for the next linker">
+          <span class="tag" aria-hidden="true">Linker</span>
+          <span class="linker" id="linker"></span>
+        </button>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn" id="new-words-btn"></button>
+        <button type="button" class="btn" id="new-linker-btn">New linker</button>
+        <button type="button" class="btn-primary" id="random-btn">Random</button>
+        <p class="tip" id="tip"></p>
+      </div>
+    </section>
+
+    <!-- Opposites: one word, then its opposite, then the questions. -->
+    <section class="game" id="opposites-game" role="tabpanel" aria-labelledby="tab-opposites" hidden>
+      <div class="pair" id="pair">
+        <div class="box first"><span class="big" id="first"></span></div>
+        <div class="box second" id="second">
+          <button type="button" class="cover" id="cover"><span class="big">?</span></button>
+          <span class="big" id="second-word" hidden></span>
+          <input class="big own" id="own" type="text" maxlength="24" placeholder="?" aria-label="Your opposite"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" hidden>
+          <p class="hint" id="hint" hidden>Type your opposite here</p>
+        </div>
+      </div>
+
+      <div class="ask" id="ask" aria-live="polite">
+        <p id="line1"></p>
+        <p id="line2"></p>
+
+        <div class="timer" id="timer" hidden>
+          <div class="time" id="time" role="timer" aria-live="off">1:00</div>
+          <div class="track" aria-hidden="true"><div class="fill" id="fill"></div></div>
+          <p class="after" id="after" aria-live="polite"></p>
+          <div class="switch" role="group" aria-label="Minutes">
+            <button type="button" data-min="1" aria-label="1 minute" class="on">1</button>
+            <button type="button" data-min="2" aria-label="2 minutes">2</button>
+          </div>
+          <span class="unit">min</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn-primary" id="show">Show the opposite</button>
+        <button type="button" class="btn" id="sides" hidden>Take sides</button>
+        <button type="button" class="btn-primary" id="start" hidden>Start</button>
+        <button type="button" class="btn" id="reset" hidden>Reset</button>
+        <button type="button" class="btn" id="sound" aria-pressed="true" hidden>Sound on</button>
+        <div class="switch push" role="group" aria-label="Kind of opposite">
+          <button type="button" data-kind="classic" class="on" aria-pressed="true">Classic</button>
+          <button type="button" data-kind="creative" aria-pressed="false">Creative</button>
+        </div>
+        <button type="button" class="btn" id="next">New word</button>
+      </div>
+    </section>
+
   </div>
 
-  <footer id="tip"></footer>
   <p class="sr" role="status" id="status"></p>
 </main>
 
 <script>
 /* ---------------------------------------------------------------
-   Two activities on one page, chosen with the buttons at the top.
+   Three games on one page, chosen with the tabs at the top.
+   A link can open a tab directly: ?mode=pairs, ?mode=odd or
+   ?mode=opposites. Otherwise the page opens on the last one used.
+---------------------------------------------------------------- */
+const GAMES = [
+  { id: "pairs", label: "Pairs" },
+  { id: "odd", label: "Odd one out" },
+  { id: "opposites", label: "Opposites" }
+];
+
+/* ---------------------------------------------------------------
+   PAIRS and ODD ONE OUT
 
    pairs: two things that are similar in some ways and different in
    others — one array of two strings per line.
@@ -270,7 +557,7 @@
    open to more than one valid answer, same as the classroom game)
    — one array of three strings per line.
 
-   Each mode has its own linkers, which cycle independently of the
+   Each has its own linkers, which cycle independently of the
    words, so any set can be explained with an easier or harder
    linker. Add or remove words and linkers freely.
 ---------------------------------------------------------------- */
@@ -415,13 +702,203 @@ const MODES = {
   }
 };
 
-const wordsTile = document.getElementById("words-tile");
-const linkerTile = document.getElementById("linker-tile");
-const wordsEl = document.getElementById("words");
-const linkerEl = document.getElementById("linker");
-const statusEl = document.getElementById("status");
-const newWordsBtn = document.getElementById("new-words-btn");
-const modeOptions = document.getElementById("mode-options");
+/* ---------------------------------------------------------------
+   OPPOSITES
+
+   Classic: pairs of opposites. Either word can come up first.
+   To add one, add a line: ["word", "opposite"],
+---------------------------------------------------------------- */
+const OPPOSITES = [
+  ["day", "night"],
+  ["indoors", "outdoors"],
+  ["breakfast", "dinner"],
+  ["speak", "listen"],
+  ["daughter", "son"],
+  ["buy", "sell"],
+  ["now", "then"],
+  ["cheap", "expensive"],
+  ["tidy", "messy"],
+  ["deep", "shallow"],
+  ["summer", "winter"],
+
+  ["morning", "evening"],
+  ["city", "countryside"],
+  ["hot", "cold"],
+  ["early", "late"],
+  ["fast", "slow"],
+  ["big", "small"],
+  ["old", "new"],
+  ["young", "old"],
+  ["win", "lose"],
+  ["give", "receive"],
+  ["question", "answer"],
+  ["teach", "learn"],
+  ["work", "play"],
+  ["sweet", "sour"],
+  ["loud", "quiet"],
+  ["long", "short"],
+  ["alone", "together"],
+  ["beginning", "end"],
+  ["sun", "rain"],
+  ["land", "sea"],
+  ["sunrise", "sunset"],
+  ["weekday", "weekend"],
+  ["spring", "autumn"],
+  ["north", "south"],
+  ["up", "down"],
+  ["left", "right"],
+  ["first", "last"],
+  ["before", "after"],
+  ["push", "pull"],
+  ["open", "closed"],
+  ["remember", "forget"],
+  ["arrive", "leave"],
+  ["stay", "go"],
+  ["home", "away"],
+  ["borrow", "lend"],
+  ["save", "spend"],
+  ["sit", "stand"],
+  ["asleep", "awake"],
+  ["light", "dark"],
+  ["heavy", "light"],
+  ["hard", "soft"],
+  ["easy", "difficult"],
+  ["wet", "dry"],
+  ["full", "empty"],
+  ["past", "future"],
+  ["always", "never"],
+  ["everything", "nothing"],
+  ["more", "less"],
+  ["black", "white"],
+  ["laugh", "cry"],
+  ["love", "hate"],
+  ["true", "false"],
+  ["real", "imaginary"],
+  ["yes", "no"],
+  ["hello", "goodbye"],
+  ["teacher", "student"],
+  ["child", "adult"],
+  ["king", "queen"],
+  ["hero", "villain"],
+  ["front", "back"],
+  ["top", "bottom"],
+  ["near", "far"],
+  ["high", "low"],
+  ["modern", "old-fashioned"],
+  ["online", "offline"],
+  ["public", "private"],
+  ["raw", "cooked"],
+  ["lead", "follow"],
+  ["read", "write"],
+  ["shout", "whisper"],
+  ["lost", "found"],
+  ["same", "different"],
+  ["serious", "funny"],
+  ["shy", "confident"],
+  ["heads", "tails"]
+];
+/* ---------------------------------------------------------------
+   Creative: the nouns from the Cambridge A2 Key list, the same
+   ones the A2 Sentence Builder uses. There is no set opposite, so
+   the class decides. To add or remove a word, change this list.
+---------------------------------------------------------------- */
+const CREATIVE_WORDS = [
+  "accident", "accommodation", "activity", "actor", "ad", "address", "adult", "adventure", "advert",
+  "advertisement", "advice", "aeroplane", "afternoon", "age", "air", "airport", "alarm clock",
+  "album", "ambulance", "animal", "apartment", "apartment building", "app", "apple", "appointment",
+  "area", "arm", "armchair", "art", "article", "artist", "assistant", "aunt", "autumn", "baby",
+  "backpack", "badminton", "bag", "ball", "balloon", "banana", "band", "bank", "barbecue",
+  "baseball", "basketball", "bat", "bath", "bathroom", "battery", "beach", "bean", "bear", "beard",
+  "bed", "bedroom", "bee", "beetle", "beginner", "beginning", "belt", "bicycle", "bike", "bin",
+  "biology", "bird", "birth", "birthday", "biscuit", "blackboard", "blanket", "block", "blog",
+  "blood", "blouse", "board game", "boat", "body", "book", "bookcase", "bookshelf", "bookshop",
+  "bookstore", "boot", "boss", "bottle", "bowl", "box", "boy", "boyfriend", "bracelet", "brain",
+  "bread", "breakfast", "bridge", "brother", "building", "burger", "bus", "bus station", "bus stop",
+  "business", "business person", "businessman", "businesswoman", "butter", "butterfly", "cabinet",
+  "café", "cafeteria", "cake", "calendar", "camel", "camera", "camping", "campsite", "cap",
+  "capital", "car", "car park", "card", "career", "carpet", "carrot", "cartoon", "cash", "castle",
+  "cat", "CD", "CD player", "ceiling", "celebrity", "centre", "century", "cereal", "chain", "chair",
+  "channel", "character", "chatroom", "cheese", "chef", "chemist", "chemistry", "cheque", "chess",
+  "chicken", "child", "chilli", "chips", "chocolate", "cinema", "circle", "circus", "city",
+  "city centre", "class", "classmate", "classroom", "cleaner", "climbing", "clock", "clothes",
+  "cloud", "clown", "club", "coach", "coast", "coat", "coffee", "cola", "colleague", "college",
+  "colour", "comb", "comedy", "comic", "company", "competition", "computer", "concert",
+  "conversation", "cooker", "cooking", "corner", "costume", "country", "countryside", "course",
+  "cousin", "cow", "cream", "creature", "credit card", "cricket", "crocodile", "crossing", "crowd",
+  "cup", "cupboard", "curry", "curtain", "customer", "cycling", "dad", "dance", "dancer", "dancing",
+  "danger", "daughter", "day", "degree", "dentist", "department", "department store", "desert",
+  "desk", "dessert", "details", "diary", "dictionary", "difference", "digital camera",
+  "dining room", "dinner", "dinosaur", "diploma", "directions", "disco", "discount", "dish",
+  "doctor", "document", "dog", "doll", "dollar", "dolphin", "donkey", "door", "drawer", "drawing",
+  "dream", "dress", "drink", "driver", "driving licence", "drum", "duck", "DVD", "DVD player",
+  "eagle", "ear", "earring", "egg", "electricity", "elephant", "email", "engine", "engineer",
+  "entrance", "envelope", "environment", "equipment", "euro", "evening", "event", "exam", "example",
+  "exhibition", "exit", "experience", "experiment", "explorer", "eye", "face", "factory", "family",
+  "farm", "farmer", "fashion", "fast food", "father", "feelings", "festival", "field", "film",
+  "finger", "fire", "first name", "fish", "fishing", "flat", "flight", "floor", "flower", "fog",
+  "folder", "food", "foot", "football", "football player", "footballer", "forest", "fork", "fridge",
+  "friend", "frog", "fruit", "fur", "furniture", "gallery", "game", "garage", "garden", "garlic",
+  "gate", "geography", "gift", "giraffe", "girl", "girlfriend", "glass", "glasses", "glove", "goal",
+  "goat", "gold", "golf", "grade", "grandad", "grandchild", "granddaughter", "grandfather",
+  "grandma", "grandmother", "grandpa", "grandparent", "grandson", "granny", "grape", "grass",
+  "ground", "group", "guest", "guest-house", "guide", "guidebook", "guitar", "guy", "gym", "hair",
+  "hall", "hand", "handbag", "harbour", "hat", "head", "headache", "headphones", "headteacher",
+  "health", "heart", "heating", "helicopter", "hill", "hip hop", "hippo", "history", "hobby",
+  "hockey", "holiday", "home", "homework", "honey", "hoodie", "horse", "hospital", "hotel", "house",
+  "housewife", "husband", "ice", "ice cream", "ice skating", "ID card", "idea", "information",
+  "ingredient", "insect", "instructions", "instrument", "internet", "invention", "invitation",
+  "island", "jacket", "jam", "jazz", "jeans", "jellyfish", "jewellery", "job", "journalist",
+  "journey", "juice", "jumper", "kangaroo", "key", "keyboard", "kid", "king", "kit", "kitchen",
+  "kite", "kitten", "knife", "lake", "lamp", "language", "laptop", "leather", "leg", "lemon",
+  "lemonade", "lesson", "letter", "library", "licence", "life", "lift", "light", "link", "lion",
+  "list", "living room", "lizard", "lorry", "luggage", "lunch", "lunchtime", "machine", "magazine",
+  "mail", "main course", "make-up", "man", "manager", "mango", "map", "market", "match", "maths",
+  "meal", "meat", "mechanic", "medicine", "meeting", "melon", "member", "memory", "menu", "message",
+  "metal", "microphone", "midday", "midnight", "milk", "mineral water", "mirror", "mistake",
+  "mobile phone", "money", "monkey", "month", "moon", "morning", "mother", "motorbike", "motorway",
+  "mountain", "mouse", "mouth", "MP3 player", "mug", "mum", "museum", "mushroom", "music",
+  "musician", "name", "nationality", "nature", "neck", "necklace", "neighbour", "nest", "news",
+  "newspaper", "night", "noise", "noon", "nose", "notebook", "nurse", "ocean", "octopus", "office",
+  "oil", "omelette", "onion", "opera", "opinion", "orange", "oven", "page", "pain", "painter",
+  "painting", "panda", "paper", "paragraph", "parent", "park", "parrot", "partner", "party",
+  "passenger", "passport", "password", "pasta", "path", "pear", "pen", "pencil", "pencil case",
+  "penfriend", "penguin", "people", "pepper", "performance", "perfume", "person", "pet", "petrol",
+  "petrol station", "pharmacy", "phone", "photo", "photographer", "photography", "physics", "piano",
+  "picnic", "picture", "pillow", "pilot", "pizza", "place", "plane", "plant", "plastic", "plate",
+  "platform", "player", "playground", "pocket", "polar bear", "police", "police car",
+  "police officer", "police station", "pool", "post office", "postcard", "poster", "potato",
+  "practice", "present", "price", "printer", "prize", "problem", "programme", "project", "pupil",
+  "puppy", "purse", "puzzle", "queen", "question", "quiz", "rabbit", "racket", "radio", "railway",
+  "rain", "raincoat", "rainforest", "rap", "reading", "reason", "receipt", "receptionist", "recipe",
+  "refrigerator", "restaurant", "review", "rice", "riding", "river", "road", "rock", "roof", "room",
+  "roundabout", "rubber", "rubbish", "rugby", "ruler", "runner", "running", "sailing", "salad",
+  "sale", "salt", "sandwich", "sauce", "sausage", "scarf", "school", "schoolchild", "science",
+  "scientist", "scissors", "scooter", "screen", "sea", "season", "seat", "secretary", "selfie",
+  "sentence", "shampoo", "shark", "sheep", "shelf", "ship", "shirt", "shoe", "shop assistant",
+  "shopper", "shopping", "shopping centre", "shorts", "shower", "sightseeing", "silver", "singer",
+  "singing", "sink", "sister", "sitting room", "size", "skateboard", "skateboarding", "skating",
+  "skiing", "skirt", "sky", "slice", "snack", "snail", "snake", "snow", "snowboard", "snowboarding",
+  "soap", "social media", "sock", "sofa", "software", "son", "song", "soup", "speaker", "spelling",
+  "spider", "spoon", "sport", "sports centre", "spring", "stadium", "staff", "stairs", "stamp",
+  "star", "station", "steak", "stomach", "stomach ache", "store", "storm", "story", "strawberry",
+  "street", "stripes", "student", "subject", "success", "sugar", "suit", "suitcase", "summer",
+  "sun", "sunglasses", "supermarket", "supper", "surfboard", "surfboarding", "surfing", "surname",
+  "surprise", "swan", "sweater", "sweet", "swimming", "swimming costume", "swimming pool",
+  "swimsuit", "table", "table tennis", "tablet", "tail", "taxi", "tea", "teacher", "team",
+  "technology", "teenager", "telephone", "temperature", "tennis", "tennis player", "tent", "term",
+  "test", "text message", "textbook", "theatre", "thunderstorm", "ticket", "tie", "tiger", "tights",
+  "time", "timetable", "title", "toast", "toe", "toilet", "tomato", "tooth", "toothache",
+  "toothbrush", "topic", "tortoise", "tour", "tour guide", "tourist", "tourist information centre",
+  "towel", "town", "toy", "traffic", "traffic light", "train", "trainer", "training", "tram",
+  "transport", "tree", "trip", "trousers", "T-shirt", "TV", "tyre", "umbrella", "uncle",
+  "underground", "uniform", "university", "vegetable", "video", "video game", "view", "village",
+  "violin", "visitor", "vocabulary", "volleyball", "waiter", "waitress", "walking", "wall",
+  "wallet", "wardrobe", "washing machine", "washing-up", "watch", "water", "weather", "web page",
+  "website", "week", "weekday", "weekend", "whale", "wheel", "wife", "wifi", "wildlife", "wind",
+  "window", "windsurfing", "wing", "winner", "winter", "woman", "wood", "wool", "word", "worker",
+  "world", "writer", "writing", "year", "yoghurt", "zebra", "zoo"
+];
+const $ = (id) => document.getElementById(id);
 
 function shuffle(list) {
   for (let i = list.length - 1; i > 0; i--) {
@@ -431,21 +908,38 @@ function shuffle(list) {
   return list;
 }
 
-/* ---------- mode: from the link if it has one (?mode=odd), otherwise the last one used, otherwise pairs ---------- */
+/* ---------- which game: from the link if it has one (?mode=odd), otherwise the last one used, otherwise pairs ---------- */
 
 function loadMode() {
+  const known = (id) => GAMES.some((g) => g.id === id);
   const fromLink = (new URLSearchParams(location.search).get("mode") || "").toLowerCase();
-  if (MODES[fromLink]) return fromLink;
+  if (known(fromLink)) return fromLink;
   try {
     const saved = localStorage.getItem("similar.mode");
-    if (MODES[saved]) return saved;
+    if (known(saved)) return saved;
   } catch (e) { /* storage unavailable */ }
   return "pairs";
 }
 
 let mode = loadMode();
 
-/* Each mode keeps its own place, so switching back carries on where it left off. */
+const tabsEl = $("tabs");
+const linkerGame = $("linker-game");
+const oppositesGame = $("opposites-game");
+const statusEl = $("status");
+
+
+/* ===============================================================
+   Pairs and Odd one out
+================================================================ */
+
+const wordsTile = $("words-tile");
+const linkerTile = $("linker-tile");
+const wordsEl = $("words");
+const linkerEl = $("linker");
+const newWordsBtn = $("new-words-btn");
+
+/* Each game keeps its own place, so switching back carries on where it left off. */
 const state = {};
 Object.keys(MODES).forEach((id) => {
   state[id] = { deck: [], current: null, linkerOrder: shuffle(MODES[id].linkers.slice()), linkerPos: 0 };
@@ -502,39 +996,11 @@ function announce() {
   statusEl.textContent = MODES[mode].tag + ": " + words + ". Linker: " + st.linkerOrder[st.linkerPos];
 }
 
-/* ---------- switching mode ---------- */
-
-function applyMode() {
-  const m = MODES[mode];
-  document.getElementById("intro").textContent = m.intro;
-  document.getElementById("words-tag").textContent = m.tag;
-  document.getElementById("tip").textContent = m.tip;
-  newWordsBtn.textContent = m.newLabel;
-  wordsTile.setAttribute("aria-label", m.tileLabel);
-  document.documentElement.style.setProperty("--words-c", m.wordsColour);
-  document.documentElement.style.setProperty("--linker-c", m.linkerColour);
-  modeOptions.querySelectorAll("input").forEach((input) => { input.checked = input.value === mode; });
-  if (state[mode].current) showWords(); else nextWords();
-  showLinker();
-}
-
-Object.keys(MODES).forEach((id) => {
-  const label = document.createElement("label");
-  label.style.setProperty("--mc", MODES[id].wordsColour);
-  label.innerHTML = '<input type="radio" name="mode" value="' + id + '"><span>' + MODES[id].label + "</span>";
-  label.querySelector("input").addEventListener("change", () => {
-    mode = id;
-    try { localStorage.setItem("similar.mode", mode); } catch (e) { /* ignore */ }
-    applyMode();
-  });
-  modeOptions.appendChild(label);
-});
-
 /* ---------- sizing: shrink each panel's text to fit, then let it grow back on resize ---------- */
 
 function fitWords() {
   const items = [...wordsEl.children];
-  if (!items.length) return;
+  if (!items.length || !MODES[mode]) return;
   const style = getComputedStyle(wordsTile);
   const innerW = wordsTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
   const innerH = wordsTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
@@ -574,17 +1040,10 @@ function fitLinker() {
 wordsTile.addEventListener("click", nextWords);
 linkerTile.addEventListener("click", nextLinker);
 newWordsBtn.addEventListener("click", nextWords);
-document.getElementById("new-linker-btn").addEventListener("click", nextLinker);
-document.getElementById("random-btn").addEventListener("click", () => {
+$("new-linker-btn").addEventListener("click", nextLinker);
+$("random-btn").addEventListener("click", () => {
   nextWords();
   nextLinker();
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.target.closest && event.target.closest("button, input") && (event.code === "Space" || event.code === "Enter")) return;
-  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); nextWords(); }
-  else if (event.key === "l" || event.key === "L") nextLinker();
 });
 
 let resizeFrame;
@@ -599,6 +1058,266 @@ if (window.ResizeObserver) {
   new ResizeObserver(scheduleRefit).observe(wordsTile);
   new ResizeObserver(scheduleRefit).observe(linkerTile);
 }
+
+function showLinkerGame() {
+  const m = MODES[mode];
+  $("intro").textContent = m.intro;
+  $("words-tag").textContent = m.tag;
+  $("tip").textContent = m.tip;
+  newWordsBtn.textContent = m.newLabel;
+  wordsTile.setAttribute("aria-label", m.tileLabel);
+  document.documentElement.style.setProperty("--words-c", m.wordsColour);
+  document.documentElement.style.setProperty("--linker-c", m.linkerColour);
+  linkerGame.setAttribute("aria-labelledby", "tab-" + mode);
+  if (state[mode].current) showWords(); else nextWords();
+  showLinker();
+}
+
+
+/* ===============================================================
+   Opposites
+================================================================ */
+
+const pairEl = $("pair"), firstEl = $("first"), secondBox = $("second"), secondWordEl = $("second-word");
+const coverBtn = $("cover"), ownEl = $("own"), hintEl = $("hint");
+const askEl = $("ask"), line1 = $("line1"), line2 = $("line2");
+const timerEl = $("timer"), timeEl = $("time"), fillEl = $("fill"), afterEl = $("after");
+const showBtn = $("show"), sidesBtn = $("sides"), startBtn = $("start");
+const resetBtn = $("reset"), soundBtn = $("sound"), nextBtn = $("next");
+
+let kind = "classic";   // classic: a set opposite. creative: the class decides.
+let stage = "";         // guess -> talk -> sides ("" until the tab is first opened)
+let word = "", opposite = "";
+const decks = { classic: [], creative: [] };
+
+/* Deals every pair or word once before any comes round again. */
+function deal() {
+  const list = kind === "classic" ? OPPOSITES : CREATIVE_WORDS;
+  if (!decks[kind].length) decks[kind] = shuffle(list.slice());
+  return decks[kind].pop();
+}
+
+/* ---------- timer ---------- */
+
+let length = 60;      // seconds chosen
+let left = 60;        // seconds left
+let endAt = 0, ticking = null;
+let sound = true, audio = null;
+
+function paint() {
+  const s = Math.ceil(left);
+  timeEl.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  fillEl.style.width = (left / length) * 100 + "%";
+  timerEl.classList.toggle("late", left > 0 && left <= 10);
+  timerEl.classList.toggle("done", left <= 0);
+  startBtn.textContent = ticking ? "Pause" : left <= 0 ? "Start again" : left < length ? "Carry on" : "Start";
+  afterEl.textContent = left <= 0 ? "Time's up. Who had the better reasons?" : "";
+}
+
+function stopTimer() { clearInterval(ticking); ticking = null; }
+
+function chime() {
+  if (!sound || !audio) return;
+  [660, 880].forEach((freq, i) => {
+    const osc = audio.createOscillator(), gain = audio.createGain();
+    const t = audio.currentTime + i * 0.28;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t); osc.stop(t + 0.75);
+  });
+}
+
+function step() {
+  left = Math.max(0, (endAt - Date.now()) / 1000);
+  if (left <= 0) { stopTimer(); chime(); }
+  paint();
+}
+
+function startPause() {
+  if (ticking) { stopTimer(); paint(); return; }
+  if (left <= 0) left = length;
+  // Browsers only allow sound after a click, so the sound is set up here.
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) { audio = null; }
+  endAt = Date.now() + left * 1000;
+  ticking = setInterval(step, 200);
+  paint();
+}
+
+function resetTimer() { stopTimer(); left = length; paint(); }
+
+startBtn.addEventListener("click", startPause);
+resetBtn.addEventListener("click", resetTimer);
+document.querySelectorAll("[data-min]").forEach((b) => b.addEventListener("click", () => {
+  length = Number(b.dataset.min) * 60;
+  document.querySelectorAll("[data-min]").forEach((x) => x.classList.toggle("on", x === b));
+  resetTimer();
+}));
+soundBtn.addEventListener("click", () => {
+  sound = !sound;
+  soundBtn.textContent = sound ? "Sound on" : "Sound off";
+  soundBtn.setAttribute("aria-pressed", sound);
+});
+
+/* ---------- the three stages ---------- */
+
+function say(a, b) {
+  line1.textContent = a;
+  line2.textContent = b || "\u00A0";   // keeps the box the same height
+  askEl.classList.remove("fresh");
+  void askEl.offsetWidth;
+  askEl.classList.add("fresh");
+}
+
+function setStage(name) {
+  stage = name;
+  const sides = name === "sides";
+  showBtn.hidden = name !== "guess";
+  sidesBtn.hidden = name !== "talk";
+  timerEl.hidden = startBtn.hidden = resetBtn.hidden = soundBtn.hidden = !sides;
+  // "New word" becomes the main button once there is nothing left to show.
+  nextBtn.className = name === "talk" ? "btn-primary" : "btn";
+  resetTimer();
+}
+
+/* Both words share one size: wide enough for the longest word, short enough for the most lines. */
+function fitOpposites() {
+  const parts = word.split(" ");
+  const longest = (t) => Math.max(...t.split(" ").map((w) => w.length));
+  const other = kind === "classic" ? longest(opposite) : ownEl.value.length;
+  pairEl.style.setProperty("--n", Math.max(longest(word), other, 5));
+  pairEl.style.setProperty("--l", kind === "classic" ? Math.max(parts.length, opposite.split(" ").length) : parts.length);
+}
+
+// 1. One word. What's the opposite?
+function newWord() {
+  const creative = kind === "creative";
+  const dealt = deal();
+  [word, opposite] = creative ? [dealt, ""] : shuffle(dealt.slice());
+  firstEl.textContent = word;
+  ownEl.value = "";
+  secondBox.classList.remove("shown");
+  coverBtn.hidden = false;
+  secondWordEl.hidden = ownEl.hidden = hintEl.hidden = true;
+  showBtn.textContent = creative ? "Show the questions" : "Show the opposite";
+  coverBtn.setAttribute("aria-label", showBtn.textContent);
+  fitOpposites();
+  setStage("guess");
+  if (creative) say("What's the opposite, in your opinion?", "There's no wrong answer.");
+  else say("What's the opposite?", "");
+}
+
+// 2. The opposite (or a space to write the class's own), and the questions.
+function showOpposite(typeNow) {
+  if (stage !== "guess") return;
+  const creative = kind === "creative";
+  coverBtn.hidden = true;
+  secondWordEl.textContent = opposite;
+  secondWordEl.hidden = creative;
+  ownEl.hidden = hintEl.hidden = !creative;
+  secondBox.classList.add("shown");
+  setStage("talk");
+  say("Give an example of the difference between the two words.", "Which one is better, and why?");
+  if (creative && typeNow) ownEl.focus();
+}
+
+// 3. One word each, against the clock.
+function takeSides() {
+  setStage("sides");
+  say("With a partner, choose one word each.", "Argue why your word is better.");
+}
+
+showBtn.addEventListener("click", () => showOpposite(false));
+coverBtn.addEventListener("click", () => showOpposite(true));   // tapping the box means "let me write in it"
+sidesBtn.addEventListener("click", takeSides);
+nextBtn.addEventListener("click", newWord);
+
+ownEl.addEventListener("input", () => { hintEl.hidden = ownEl.value !== ""; fitOpposites(); });
+ownEl.addEventListener("keydown", (e) => { if (e.key === "Enter") ownEl.blur(); });
+
+document.querySelectorAll("[data-kind]").forEach((b) => b.addEventListener("click", () => {
+  kind = b.dataset.kind;
+  document.querySelectorAll("[data-kind]").forEach((x) => {
+    x.classList.toggle("on", x === b);
+    x.setAttribute("aria-pressed", x === b);
+  });
+  newWord();
+}));
+
+function showOppositesGame() {
+  if (!stage) newWord();   // first visit; after that it carries on where it left off
+}
+
+
+/* ===============================================================
+   The tabs
+================================================================ */
+
+function applyMode() {
+  const opposites = mode === "opposites";
+  tabsEl.querySelectorAll(".tab").forEach((tab) => {
+    const on = tab.id === "tab-" + mode;
+    tab.setAttribute("aria-selected", on);
+    tab.tabIndex = on ? 0 : -1;
+  });
+  linkerGame.hidden = opposites;
+  oppositesGame.hidden = !opposites;
+  if (opposites) {
+    statusEl.textContent = "";
+    showOppositesGame();
+  } else {
+    if (ticking) { stopTimer(); paint(); }   // leaving Opposites pauses its timer
+    showLinkerGame();
+  }
+}
+
+function chooseMode(id) {
+  mode = id;
+  try { localStorage.setItem("similar.mode", mode); } catch (e) { /* ignore */ }
+  applyMode();
+}
+
+GAMES.forEach((game) => {
+  const tab = document.createElement("button");
+  tab.type = "button";
+  tab.className = "tab";
+  tab.id = "tab-" + game.id;
+  tab.setAttribute("role", "tab");
+  tab.setAttribute("aria-controls", game.id === "opposites" ? "opposites-game" : "linker-game");
+  tab.textContent = game.label;
+  tab.addEventListener("click", () => chooseMode(game.id));
+  tabsEl.appendChild(tab);
+});
+
+/* Left and right arrows move between the tabs when one of them has the focus. */
+tabsEl.addEventListener("keydown", (event) => {
+  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  const at = GAMES.findIndex((g) => g.id === mode);
+  const to = GAMES[(at + (event.key === "ArrowRight" ? 1 : GAMES.length - 1)) % GAMES.length];
+  chooseMode(to.id);
+  $("tab-" + to.id).focus();
+});
+
+/* ---------- keyboard ----------
+   Space or Enter moves the game on: a new set of words, or in Opposites the reveal and then a new word.
+   L gives a new linker. N gives a new word in Opposites. */
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const target = event.target.closest ? event.target : document.body;
+  if (target.closest("input[type='text']")) return;   // typing an opposite, not giving an order
+  const press = event.code === "Space" || event.code === "Enter";
+  if (press && target.closest("button, input")) return;
+
+  if (mode === "opposites") {
+    if (press) { event.preventDefault(); if (stage === "guess") showOpposite(false); else newWord(); }
+    else if (event.key === "n" || event.key === "N") newWord();
+  } else {
+    if (press) { event.preventDefault(); nextWords(); }
+    else if (event.key === "l" || event.key === "L") nextLinker();
+  }
+});
 
 applyMode();
 </script>
