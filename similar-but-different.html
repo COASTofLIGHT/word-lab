@@ -17,7 +17,8 @@
     --sea-deep: #124F5E;
     --focus: #0B62A4;
     --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --pair-c: #F4B5A0;
+    /* Tile colours: set by the mode (see MODES in the script) */
+    --words-c: #F4B5A0;
     --linker-c: #C9C3EA;
   }
 
@@ -110,6 +111,20 @@
   .btn:active, .btn-primary:active { transform: translateY(1px); }
   .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
+  /* Mode picker: the chosen mode takes its tile colour */
+  .modes { display: flex; align-items: center; gap: 0.4rem; margin-right: 0.6rem; }
+  .modes label { position: relative; display: block; }
+  .modes input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .modes label span {
+    display: grid; place-items: center;
+    height: 2.6rem; padding: 0 1rem;
+    border: 2px solid var(--line); border-radius: 0.6rem;
+    font-size: 0.95rem; font-weight: 700; white-space: nowrap;
+  }
+  .modes input:not(:checked):hover + span { border-color: var(--ink); }
+  .modes input:checked + span { background: var(--mc); border-color: var(--ink); }
+  .modes input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
+
   .stage {
     flex: 1 1 auto;
     min-height: 0;
@@ -138,7 +153,7 @@
   .tile:hover { filter: brightness(0.97); }
   .tile:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
 
-  #pair-tile { flex: 1.3 1 0; background: var(--pair-c); }
+  #words-tile { flex: 1.3 1 0; background: var(--words-c); }
   #linker-tile { flex: 1 1 0; background: var(--linker-c); }
 
   .tag {
@@ -152,7 +167,7 @@
     opacity: 0.5;
   }
 
-  .pair {
+  .words {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -161,7 +176,7 @@
     max-height: 100%;
   }
 
-  .pair .word {
+  .words .word {
     font-weight: 800;
     line-height: 1.08;
     letter-spacing: -0.02em;
@@ -202,7 +217,7 @@
 
   @media (max-width: 720px) {
     .stage { flex-direction: column; }
-    #pair-tile, #linker-tile { flex: 1 1 0; }
+    #words-tile, #linker-tile { flex: 1 1 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -212,23 +227,24 @@
 </head>
 <body>
 <main class="page">
-   <a class="back" href="https://coastoflight.github.io/word-lab/index.html">&larr; Word Lab</a>
+  <a class="back" href="./">&larr; Word Lab</a>
 
   <header>
     <h1>Similar but different</h1>
-    <p>How are they similar? How are they different? Use the word on the right in your explanation.</p>
+    <p id="intro"></p>
   </header>
 
   <div class="controls">
-    <button type="button" class="btn" id="new-pair-btn">New pair</button>
+    <div class="modes" role="radiogroup" aria-label="Activity" id="mode-options"></div>
+    <button type="button" class="btn" id="new-words-btn"></button>
     <button type="button" class="btn" id="new-linker-btn">New linker</button>
     <button type="button" class="btn-primary" id="random-btn">Random</button>
   </div>
 
   <div class="stage">
-    <button type="button" class="tile" id="pair-tile" aria-label="Click for a new pair">
-      <span class="tag" aria-hidden="true">Pair</span>
-      <span class="pair" id="pair"></span>
+    <button type="button" class="tile" id="words-tile">
+      <span class="tag" aria-hidden="true" id="words-tag"></span>
+      <span class="words" id="words"></span>
     </button>
     <button type="button" class="tile" id="linker-tile" aria-label="Click for the next linker">
       <span class="tag" aria-hidden="true">Linker</span>
@@ -236,78 +252,173 @@
     </button>
   </div>
 
-  <footer>Click the pair for a new one. Click the linker for another way to explain it.</footer>
+  <footer id="tip"></footer>
   <p class="sr" role="status" id="status"></p>
 </main>
 
 <script>
 /* ---------------------------------------------------------------
-   Pairs: two things that are similar in some ways and different in
-   others. Add or remove a pair freely — one array of two strings
-   per line.
----------------------------------------------------------------- */
-const PAIRS = [
-  ["February", "July"],
-  ["cat", "dog"],
-  ["Cadiz", "El Puerto"],
-  ["carrot", "strawberry"],
-  ["France", "Argentina"],
-  ["nose", "feet"],
-  ["knife", "sword"],
-  ["coffee", "lemonade"],
-  ["teacher", "student"],
-  ["contacts", "glasses"],
-  ["message", "letter"],
-  ["talking", "shouting"],
-  ["bracelet", "ring"],
-  ["button", "zip"],
-  ["basket", "bucket"],
-  ["lamp", "torch"],
-  ["Saturday", "May"],
-  ["drawing", "photograph"],
-  ["cash", "coins"],
-  ["traffic light", "stop sign"],
-  ["coffee", "soda"],
-  ["map", "globe"],
-  ["lift", "escalator"],
-  ["sofa", "bed"],
-  ["Manchester", "Barcelona"],
-  ["Nintendo", "Sony"],
-  ["iPhone", "Android"],
-  ["Netflix", "YouTube"],
-  ["Instagram", "Snapchat"],
-  ["Spotify", "Apple Music"],
-  ["PlayStation", "Xbox"],
-  ["WhatsApp", "Telegram"],
-  ["Uber", "taxi"],
-  ["Amazon", "local shop"],
-  ["Zoom", "phone call"],
-  ["e-book", "audiobook"]
-];
+   Two activities on one page, chosen with the buttons at the top.
 
-/* ---------------------------------------------------------------
-   Linkers: cycle independently of the pairs, so any pair can be
-   explained with an easier or harder linker. Add or remove freely
-   — one per line.
----------------------------------------------------------------- */
-const LINKERS = [
-  "however",
-  "but",
-  "on the one hand / on the other hand",
-  "the main difference",
-  "both",
-  "whereas",
-  "while",
-  "in contrast",
-  "a similarity is",
-  "a difference is"
-];
+   pairs: two things that are similar in some ways and different in
+   others — one array of two strings per line.
 
-const pairTile = document.getElementById("pair-tile");
+   odd: three words, one of which is the odd one out (deliberately
+   open to more than one valid answer, same as the classroom game)
+   — one array of three strings per line.
+
+   Each mode has its own linkers, which cycle independently of the
+   words, so any set can be explained with an easier or harder
+   linker. Add or remove words and linkers freely.
+---------------------------------------------------------------- */
+const MODES = {
+  pairs: {
+    label: "Pairs",
+    intro: "How are they similar? How are they different? Use the word on the right in your explanation.",
+    tag: "Pair",
+    newLabel: "New pair",
+    tileLabel: "Click for a new pair",
+    tip: "Click the pair for a new one. Click the linker for another way to explain it.",
+    wordsColour: "#F4B5A0",
+    linkerColour: "#C9C3EA",
+    maxSize: 130,
+    linkers: [
+      "however",
+      "but",
+      "on the one hand / on the other hand",
+      "the main difference",
+      "both",
+      "whereas",
+      "while",
+      "in contrast",
+      "a similarity is",
+      "a difference is"
+    ],
+    sets: [
+    ["February", "July"],
+    ["cat", "dog"],
+    ["Cadiz", "El Puerto"],
+    ["carrot", "strawberry"],
+    ["France", "Argentina"],
+    ["nose", "feet"],
+    ["knife", "sword"],
+    ["coffee", "lemonade"],
+    ["teacher", "student"],
+    ["contacts", "glasses"],
+    ["message", "letter"],
+    ["talking", "shouting"],
+    ["bracelet", "ring"],
+    ["button", "zip"],
+    ["basket", "bucket"],
+    ["lamp", "torch"],
+    ["Saturday", "May"],
+    ["drawing", "photograph"],
+    ["cash", "coins"],
+    ["traffic light", "stop sign"],
+    ["coffee", "soda"],
+    ["map", "globe"],
+    ["lift", "escalator"],
+    ["sofa", "bed"],
+    ["Manchester", "Barcelona"],
+    ["Nintendo", "Sony"],
+    ["iPhone", "Android"],
+    ["Netflix", "YouTube"],
+    ["Instagram", "Snapchat"],
+    ["Spotify", "Apple Music"],
+    ["PlayStation", "Xbox"],
+    ["WhatsApp", "Telegram"],
+    ["Uber", "taxi"],
+    ["Amazon", "local shop"],
+    ["Zoom", "phone call"],
+    ["e-book", "audiobook"]
+    ]
+  },
+
+  odd: {
+    label: "Odd one out",
+    intro: "Which word is different from the others, and why? Explain your answer using the word on the right.",
+    tag: "Words",
+    newLabel: "New set",
+    tileLabel: "Click for a new set of words",
+    tip: "Click the words for a new set. Click the linker for another way to explain it.",
+    wordsColour: "#A8D5CB",
+    linkerColour: "#A9CCEB",
+    maxSize: 120,
+    linkers: [
+      "however",
+      "but",
+      "on the other hand",
+      "neither",
+      "although",
+      "the difference",
+      "both",
+      "whereas",
+      "unlike",
+      "while",
+      "in contrast"
+    ],
+    sets: [
+    ["February", "April", "Monday"],
+    ["cat", "dog", "turtle"],
+    ["dolphin", "shark", "elephant"],
+    ["aubergine", "carrot", "strawberry"],
+    ["Argentina", "Italy", "Spain"],
+    ["ear", "nose", "feet"],
+    ["teaspoon", "fork", "knife"],
+    ["coffee", "hot chocolate", "lemonade"],
+    ["doctor", "teacher", "student"],
+    ["potato", "banana", "apple"],
+    ["drum", "guitar", "violin"],
+    ["red", "green", "square"],
+    ["lion", "tiger", "goldfish"],
+    ["train", "bicycle", "bus"],
+    ["mother", "brother", "teacher"],
+    ["happy", "angry", "tall"],
+    ["rain", "wind", "snow"],
+    ["hammer", "screwdriver", "spoon"],
+    ["whale", "shark", "crocodile"],
+    ["run", "sleep", "jumo"],
+    ["tennis", "football", "chess"],
+    ["shirt", "trousers", "umbrella"],
+    ["pen", "pencil", "ruler"],
+    ["north", "purple", "south"],
+    ["mountain", "river", "lamp"],
+    ["uncle", "cousin", "dentist"],
+    ["sad", "excited", "short"],
+    ["thunder", "lightning", "breeze"],
+    ["keyboard", "mouse", "sofa"],
+    ["orange", "scarf", "banana"],
+    ["wolf", "fox", "rabbit"],
+    ["maths", "art", "science"],
+    ["September", "October", "Sunday"],
+    ["Thursday", "autumn", "spring"],
+    ["bee", "butterfly", "spider"],
+    ["bat", "eagle", "blackbird"],
+    ["cow", "sheep", "wolf"],
+    ["rose", "tulip", "oak"],
+    ["novel", "painting", "poem"],
+    ["stamp", "dollar", "euro"],
+    ["thunderstorm", "hurricane", "drizzle"],
+    ["Africa", "Asia", "France"],
+    ["triangle", "red", "rectangle"],
+    ["wardrobe", "cupboard", "oven"],
+    ["laptop", "book", "tablet"],
+    ["jazz", "ballet", "rock"],
+    ["birthday", "wedding", "English class"],
+    ["north", "east", "up"],
+    ["brave", "kind", "exhausted"],
+    ["speak", "shout", "walk"]
+    ]
+  }
+};
+
+const wordsTile = document.getElementById("words-tile");
 const linkerTile = document.getElementById("linker-tile");
-const pairEl = document.getElementById("pair");
+const wordsEl = document.getElementById("words");
 const linkerEl = document.getElementById("linker");
 const statusEl = document.getElementById("status");
+const newWordsBtn = document.getElementById("new-words-btn");
+const modeOptions = document.getElementById("mode-options");
 
 function shuffle(list) {
   for (let i = list.length - 1; i > 0; i--) {
@@ -317,34 +428,53 @@ function shuffle(list) {
   return list;
 }
 
-/* ---------- pair: draws from a shuffled deck so pairs don't repeat until the pool is used ---------- */
+/* ---------- mode: from the link if it has one (?mode=odd), otherwise the last one used, otherwise pairs ---------- */
 
-let pairDeck = [];
-let currentPair = null;
+function loadMode() {
+  const fromLink = (new URLSearchParams(location.search).get("mode") || "").toLowerCase();
+  if (MODES[fromLink]) return fromLink;
+  try {
+    const saved = localStorage.getItem("similar.mode");
+    if (MODES[saved]) return saved;
+  } catch (e) { /* storage unavailable */ }
+  return "pairs";
+}
 
-function nextPair() {
-  if (!pairDeck.length) pairDeck = shuffle(PAIRS.slice());
-  let pair = pairDeck.pop();
-  if (pair === currentPair && pairDeck.length) pair = pairDeck.pop();
-  currentPair = pair;
+let mode = loadMode();
 
-  pairEl.innerHTML = pair.map(() => '<span class="word"></span>').join("");
-  [...pairEl.children].forEach((el, i) => { el.textContent = pair[i]; });
-  pairEl.classList.remove("fresh");
-  void pairEl.offsetWidth;
-  pairEl.classList.add("fresh");
+/* Each mode keeps its own place, so switching back carries on where it left off. */
+const state = {};
+Object.keys(MODES).forEach((id) => {
+  state[id] = { deck: [], current: null, linkerOrder: shuffle(MODES[id].linkers.slice()), linkerPos: 0 };
+});
 
-  fitPair();
+/* ---------- words: drawn from a shuffled deck so sets don't repeat until the pool is used ---------- */
+
+function showWords() {
+  const set = state[mode].current;
+  wordsEl.innerHTML = set.map(() => '<span class="word"></span>').join("");
+  [...wordsEl.children].forEach((el, i) => { el.textContent = set[i]; });
+  wordsEl.classList.remove("fresh");
+  void wordsEl.offsetWidth;
+  wordsEl.classList.add("fresh");
+  fitWords();
+}
+
+function nextWords() {
+  const st = state[mode];
+  if (!st.deck.length) st.deck = shuffle(MODES[mode].sets.slice());
+  let set = st.deck.pop();
+  if (set === st.current && st.deck.length) set = st.deck.pop();
+  st.current = set;
+  showWords();
   announce();
 }
 
 /* ---------- linker: cycles through a shuffled order, then reshuffles and starts again ---------- */
 
-let linkerOrder = shuffle(LINKERS.slice());
-let linkerPos = 0;
-
 function showLinker() {
-  linkerEl.textContent = linkerOrder[linkerPos];
+  const st = state[mode];
+  linkerEl.textContent = st.linkerOrder[st.linkerPos];
   linkerEl.classList.remove("fresh");
   void linkerEl.offsetWidth;
   linkerEl.classList.add("fresh");
@@ -353,38 +483,67 @@ function showLinker() {
 }
 
 function nextLinker() {
-  if (linkerPos < linkerOrder.length - 1) {
-    linkerPos++;
+  const st = state[mode];
+  if (st.linkerPos < st.linkerOrder.length - 1) {
+    st.linkerPos++;
   } else {
-    linkerOrder = shuffle(LINKERS.slice());
-    linkerPos = 0;
+    st.linkerOrder = shuffle(MODES[mode].linkers.slice());
+    st.linkerPos = 0;
   }
   showLinker();
 }
 
 function announce() {
-  const pair = currentPair ? currentPair.join(", ") : "";
-  const linker = linkerOrder[linkerPos];
-  statusEl.textContent = "Pair: " + pair + ". Linker: " + linker;
+  const st = state[mode];
+  const words = st.current ? st.current.join(", ") : "";
+  statusEl.textContent = MODES[mode].tag + ": " + words + ". Linker: " + st.linkerOrder[st.linkerPos];
 }
+
+/* ---------- switching mode ---------- */
+
+function applyMode() {
+  const m = MODES[mode];
+  document.getElementById("intro").textContent = m.intro;
+  document.getElementById("words-tag").textContent = m.tag;
+  document.getElementById("tip").textContent = m.tip;
+  newWordsBtn.textContent = m.newLabel;
+  wordsTile.setAttribute("aria-label", m.tileLabel);
+  document.documentElement.style.setProperty("--words-c", m.wordsColour);
+  document.documentElement.style.setProperty("--linker-c", m.linkerColour);
+  modeOptions.querySelectorAll("input").forEach((input) => { input.checked = input.value === mode; });
+  if (state[mode].current) showWords(); else nextWords();
+  showLinker();
+}
+
+Object.keys(MODES).forEach((id) => {
+  const label = document.createElement("label");
+  label.style.setProperty("--mc", MODES[id].wordsColour);
+  label.innerHTML = '<input type="radio" name="mode" value="' + id + '"><span>' + MODES[id].label + "</span>";
+  label.querySelector("input").addEventListener("change", () => {
+    mode = id;
+    try { localStorage.setItem("similar.mode", mode); } catch (e) { /* ignore */ }
+    applyMode();
+  });
+  modeOptions.appendChild(label);
+});
 
 /* ---------- sizing: shrink each panel's text to fit, then let it grow back on resize ---------- */
 
-function fitPair() {
-  const items = [...pairEl.children];
+function fitWords() {
+  const items = [...wordsEl.children];
   if (!items.length) return;
-  const style = getComputedStyle(pairTile);
-  const innerW = pairTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-  const innerH = pairTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const style = getComputedStyle(wordsTile);
+  const innerW = wordsTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const innerH = wordsTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
   if (innerW <= 0 || innerH <= 0) return;
 
-  let size = Math.min(innerH / items.length * 0.62, innerW * 0.26, 130);
+  let size = Math.min(innerH / items.length * 0.62, innerW * 0.26, MODES[mode].maxSize);
   size = Math.max(size, 16);
   items.forEach((el) => { el.style.fontSize = size + "px"; });
 
   let guard = 0;
   while (guard++ < 60 && size > 15) {
-    const totalH = pairEl.scrollHeight;
+    const totalH = wordsEl.scrollHeight;
     const maxLineW = Math.max(...items.map((el) => el.scrollWidth));
     if (totalH <= innerH + 1 && maxLineW <= innerW + 1) break;
     size *= 0.94;
@@ -409,36 +568,36 @@ function fitLinker() {
   }
 }
 
-pairTile.addEventListener("click", nextPair);
+wordsTile.addEventListener("click", nextWords);
 linkerTile.addEventListener("click", nextLinker);
-document.getElementById("new-pair-btn").addEventListener("click", nextPair);
+newWordsBtn.addEventListener("click", nextWords);
 document.getElementById("new-linker-btn").addEventListener("click", nextLinker);
 document.getElementById("random-btn").addEventListener("click", () => {
-  nextPair();
+  nextWords();
   nextLinker();
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); nextPair(); }
+  if (event.target.closest && event.target.closest("button, input") && (event.code === "Space" || event.code === "Enter")) return;
+  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); nextWords(); }
   else if (event.key === "l" || event.key === "L") nextLinker();
 });
 
 let resizeFrame;
 function scheduleRefit() {
   cancelAnimationFrame(resizeFrame);
-  resizeFrame = requestAnimationFrame(() => { fitPair(); fitLinker(); });
+  resizeFrame = requestAnimationFrame(() => { fitWords(); fitLinker(); });
 }
 window.addEventListener("resize", scheduleRefit);
 window.addEventListener("orientationchange", scheduleRefit);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleRefit);
 if (window.ResizeObserver) {
-  new ResizeObserver(scheduleRefit).observe(pairTile);
+  new ResizeObserver(scheduleRefit).observe(wordsTile);
   new ResizeObserver(scheduleRefit).observe(linkerTile);
 }
 
-nextPair();
-showLinker();
+applyMode();
 </script>
 </body>
 </html>
