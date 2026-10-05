@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which is More…? Activities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --line: #5F808A;
+    --sea: #17677A;
+    --sea-deep: #124F5E;
+    --focus: #0B62A4;
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --words-c: #B7DDB6;   /* the two activities (B2 green) */
+    --adj-c: #A9CCEB;     /* the adjective */
+    --say-c: #F2D9A6;     /* the language box */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page {
+    max-width: 1300px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    padding: clamp(0.85rem, 2.6vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.55rem, 1.5vh, 0.9rem);
+  }
+
+  .top {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .top h1 {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.8vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .back {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .intro {
+    flex: 0 0 auto;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: clamp(1rem, 1.9vw, 1.3rem);
+    line-height: 1.3;
+  }
+
+  /* ---------- The two tiles ---------- */
+
+  .stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
+  }
+
+  .tile {
+    container-type: size;
+    position: relative;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-width: 0;
+    padding: clamp(1rem, 2.6vw, 2rem);
+    border: 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    color: var(--ink);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+  }
+  .tile:hover { filter: brightness(0.97); }
+  .tile:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+  #words-tile { flex: 1.3 1 0; background: var(--words-c); }
+  #adj-tile { flex: 1 1 0; background: var(--adj-c); }
+
+  .tag {
+    position: absolute;
+    top: 1.1rem;
+    left: 1.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  /* The activities are phrases, so they may wrap onto two lines each.
+     fitWords() in the script picks the biggest size that fits the tile. */
+  .words {
+    display: grid;
+    justify-items: center;
+    width: 100%;
+    font-size: 3rem;
+  }
+  .words .word, .adj {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+  }
+  .words .word {
+    max-width: 100%;
+    font-size: 1em;
+    text-wrap: balance;
+  }
+  .words .or {
+    margin: 0.35em 0;
+    color: var(--ink-soft);
+    font-size: max(1rem, 0.42em);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  /* The adjective sizes itself to its tile: --n is its length in letters. */
+  .adj {
+    white-space: nowrap;
+    font-size: clamp(1.3rem, 4vw, 3.5rem);
+    font-size: clamp(1rem, min(calc(140cqi / var(--n, 8)), 34cqb), 7rem);
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(0.4rem); }
+    to   { opacity: 1; transform: none; }
+  }
+  .fresh { animation: settle 0.22s ease-out; }
+
+  /* ---------- The language box ---------- */
+
+  .lang {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 1.25fr 1.25fr 0.85fr;
+    gap: 0.5rem clamp(1rem, 2.4vw, 2rem);
+    margin: 0;
+    padding: clamp(0.7rem, 1.6vw, 1.1rem) clamp(1rem, 2.2vw, 1.6rem);
+    border-radius: 0.9rem;
+    background: var(--say-c);
+  }
+  .lang[hidden] { display: none; }
+
+  .lang-group { min-width: 0; }
+
+  .lang-label {
+    margin: 0 0 0.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .lang-line {
+    margin: 0;
+    font-size: clamp(1rem, min(1.65vw, 2.9vh), 1.35rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+  }
+
+  /* The current adjective, dropped into each pattern. */
+  .slot {
+    padding: 0.05em 0.35em;
+    border-radius: 0.35rem;
+    background: var(--adj-c);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  .controls {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .btn, .btn-primary {
+    height: 2.6rem;
+    padding: 0 1.3rem;
+    border-radius: 0.6rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  .btn:hover { border-color: var(--ink); }
+  .btn-primary {
+    background: var(--sea);
+    color: #fff;
+    border: 0;
+  }
+  .btn-primary:hover { background: var(--sea-deep); }
+  .btn:active, .btn-primary:active { transform: translateY(1px); }
+  .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .tip {
+    margin: 0 0 0 auto;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* Phones: the tiles stack and the page scrolls if it needs to. */
+  @media (max-width: 720px) {
+    html, body { height: auto; overflow: auto; }
+    .page { height: auto; min-height: 100vh; min-height: 100dvh; }
+    .stage { flex-direction: column; min-height: 24rem; }
+    #words-tile, #adj-tile { flex: 1 1 0; min-height: 9rem; }
+    .lang { grid-template-columns: 1fr; }
+    .tip { margin-left: 0; flex-basis: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fresh { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <div class="top">
+    <h1>Which is More…?</h1>
+    <a class="back" href="./">&larr; Word Lab</a>
+  </div>
+
+  <p class="intro">Look at the two activities and the adjective. Which one is more…? Compare them and say why.</p>
+
+  <div class="stage">
+    <button type="button" class="tile" id="words-tile" aria-label="Click for two new activities">
+      <span class="tag" aria-hidden="true">Which one?</span>
+      <span class="words" id="words"></span>
+    </button>
+    <button type="button" class="tile" id="adj-tile" aria-label="Click for a new adjective">
+      <span class="tag" aria-hidden="true">Adjective</span>
+      <span class="adj" id="adj"></span>
+    </button>
+  </div>
+
+  <section class="lang" id="lang" aria-label="Language for making comparisons">
+    <div class="lang-group">
+      <p class="lang-label">A big difference</p>
+      <p class="lang-line">much / far / a lot <span class="slot" data-form="comp"></span> than</p>
+      <p class="lang-line">not nearly as <span class="slot" data-form="base"></span> as</p>
+    </div>
+    <div class="lang-group">
+      <p class="lang-label">A small difference</p>
+      <p class="lang-line">a bit / slightly <span class="slot" data-form="comp"></span> than</p>
+      <p class="lang-line">not quite as <span class="slot" data-form="base"></span> as</p>
+    </div>
+    <div class="lang-group">
+      <p class="lang-label">No difference</p>
+      <p class="lang-line">just as <span class="slot" data-form="base"></span> as</p>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button type="button" class="btn" id="new-words-btn">New pair</button>
+    <button type="button" class="btn" id="new-adj-btn">New adjective</button>
+    <button type="button" class="btn-primary" id="random-btn">Random</button>
+    <button type="button" class="btn" id="lang-btn" aria-controls="lang" aria-expanded="true">Hide language</button>
+    <p class="tip">Click a tile to change it.</p>
+  </div>
+
+  <p class="sr" role="status" id="status"></p>
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   Two activities and one adjective, for practising the language of
+   making comparisons at B2. The pairs are fixed; the adjective is
+   random, so some combinations are obvious and some are strange.
+   The strange ones are often the best to argue about.
+
+   PAIRS: each line is ["one activity", "the other activity"].
+   Add or remove freely. Short phrases look best on the tile.
+---------------------------------------------------------------- */
+const PAIRS = [
+  /* sport and exercise */
+  ["watching football", "playing football"],
+  ["team sports", "individual sports"],
+  ["going to the gym", "exercising outdoors"],
+  ["swimming in the sea", "swimming in a pool"],
+  ["cycling", "running"],
+  ["skiing", "surfing"],
+  ["sport at the stadium", "sport on TV"],
+  ["a walk in the countryside", "a walk around the city"],
+  ["yoga", "martial arts"],
+  ["winning a match", "passing an exam"],
+
+  /* screens and entertainment */
+  ["a film on Netflix", "a film at the cinema"],
+  ["reading the book", "watching the film"],
+  ["a series", "a film"],
+  ["video games", "board games"],
+  ["gaming alone", "gaming with friends"],
+  ["watching videos", "making videos"],
+  ["short videos", "long videos"],
+  ["a podcast", "a playlist"],
+  ["music at a concert", "music on headphones"],
+  ["a paper book", "an audiobook"],
+  ["a comedy", "a horror film"],
+
+  /* food */
+  ["dinner in", "dinner out"],
+  ["cooking a meal", "ordering a takeaway"],
+  ["a picnic", "a barbecue"],
+  ["baking a cake", "cooking dinner"],
+  ["fast food", "home-made food"],
+
+  /* friends and family */
+  ["a big party", "a quiet night in"],
+  ["texting a friend", "calling a friend"],
+  ["meeting friends in town", "chatting online"],
+  ["one close friend", "a big group of friends"],
+  ["a sleepover", "a day trip"],
+  ["a weekend with family", "a weekend with friends"],
+
+  /* holidays and days out */
+  ["a beach holiday", "a city break"],
+  ["camping", "staying in a hotel"],
+  ["travelling by train", "travelling by plane"],
+  ["a day at the beach", "a day in the mountains"],
+  ["a theme park", "a water park"],
+  ["visiting a museum", "visiting a zoo"],
+  ["a music festival", "a football final"],
+  ["summer holidays", "winter holidays"],
+
+  /* hobbies and free time */
+  ["playing an instrument", "singing"],
+  ["drawing", "taking photos"],
+  ["learning a language", "learning an instrument"],
+  ["dancing", "karaoke"],
+  ["shopping online", "shopping in town"],
+  ["getting up early", "staying up late"],
+  ["a lazy Sunday", "a busy Saturday"],
+  ["having a dog", "having a cat"],
+  ["playing chess", "playing cards"],
+  ["learning from videos", "learning in a class"],
+  ["studying alone", "studying with friends"],
+  ["a weekend with no phone", "a weekend with no friends"]
+];
+
+/* ---------------------------------------------------------------
+   ADJECTIVES: each line is ["adjective", "its comparative"].
+   Both forms appear in the language box.
+---------------------------------------------------------------- */
+const ADJECTIVES = [
+  /* -er */
+  ["cheap", "cheaper"], ["healthy", "healthier"], ["easy", "easier"], ["hard", "harder"],
+  ["safe", "safer"], ["risky", "riskier"], ["noisy", "noisier"], ["cool", "cooler"],
+  ["funny", "funnier"], ["lonely", "lonelier"], ["messy", "messier"],
+
+  /* irregular */
+  ["good", "better"], ["bad", "worse"], ["fun", "more fun"], ["good for you", "better for you"],
+
+  /* -ing adjectives */
+  ["relaxing", "more relaxing"], ["exciting", "more exciting"], ["tiring", "more tiring"],
+  ["boring", "more boring"], ["satisfying", "more satisfying"], ["entertaining", "more entertaining"],
+  ["challenging", "more challenging"], ["rewarding", "more rewarding"], ["interesting", "more interesting"],
+  ["exhausting", "more exhausting"], ["frustrating", "more frustrating"], ["motivating", "more motivating"],
+  ["annoying", "more annoying"], ["embarrassing", "more embarrassing"], ["time-consuming", "more time-consuming"],
+
+  /* more … */
+  ["enjoyable", "more enjoyable"], ["sociable", "more sociable"], ["expensive", "more expensive"],
+  ["stressful", "more stressful"], ["popular", "more popular"], ["addictive", "more addictive"],
+  ["competitive", "more competitive"], ["convenient", "more convenient"], ["memorable", "more memorable"],
+  ["creative", "more creative"], ["dangerous", "more dangerous"], ["useful", "more useful"],
+  ["comfortable", "more comfortable"], ["special", "more special"], ["impressive", "more impressive"],
+  ["worthwhile", "more worthwhile"], ["energetic", "more energetic"], ["peaceful", "more peaceful"],
+  ["educational", "more educational"], ["old-fashioned", "more old-fashioned"],
+  ["adventurous", "more adventurous"], ["difficult", "more difficult"], ["important", "more important"]
+];
+
+const $ = (id) => document.getElementById(id);
+const wordsTile = $("words-tile"), adjTile = $("adj-tile");
+const wordsEl = $("words"), adjEl = $("adj"), statusEl = $("status");
+const langEl = $("lang"), langBtn = $("lang-btn");
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+/* Pairs and adjectives are dealt from shuffled decks, so nothing repeats until the deck runs out. */
+let pairDeck = [], adjDeck = [];
+let pair = ["", ""], adjective = ["", ""];
+
+function replay(el) {
+  el.classList.remove("fresh");
+  void el.offsetWidth;
+  el.classList.add("fresh");
+}
+
+function announce() {
+  statusEl.textContent = pair.join(" or ") + ". Adjective: " + adjective[0];
+}
+
+/* Find the biggest text size at which both activities fit the tile,
+   each on no more than two lines. */
+function fitWords() {
+  const style = getComputedStyle(wordsTile);
+  const room = parseFloat(style.fontSize) * 1.6;            // space for the "Which one?" tag
+  const maxW = wordsTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const maxH = wordsTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - room;
+  if (maxW <= 0 || maxH <= 0) return;
+  const lines = wordsEl.querySelectorAll(".word");
+  const fits = (px) => {
+    wordsEl.style.fontSize = px + "px";
+    if (wordsEl.scrollWidth > maxW + 1 || wordsEl.offsetHeight > maxH) return false;
+    for (const line of lines) {
+      if (line.scrollWidth > maxW + 1 || line.offsetHeight > px * 1.08 * 2.2) return false;
+    }
+    return true;
+  };
+  let low = 14, high = 120;
+  while (high - low > 1) {
+    const mid = (low + high) / 2;
+    if (fits(mid)) low = mid; else high = mid;
+  }
+  wordsEl.style.fontSize = Math.floor(low) + "px";
+}
+
+function nextPair() {
+  if (!pairDeck.length) pairDeck = shuffle(PAIRS.slice());
+  pair = pairDeck.pop();
+  wordsEl.innerHTML = '<span class="word"></span><span class="or">or</span><span class="word"></span>';
+  const spans = wordsEl.querySelectorAll(".word");
+  spans[0].textContent = pair[0];
+  spans[1].textContent = pair[1];
+  fitWords();
+  replay(wordsEl);
+  announce();
+}
+
+function nextAdjective() {
+  if (!adjDeck.length) adjDeck = shuffle(ADJECTIVES.slice());
+  adjective = adjDeck.pop();
+  adjEl.textContent = adjective[0];
+  adjTile.style.setProperty("--n", Math.max(adjective[0].length, 6));
+  // The language box always shows the patterns with the current adjective.
+  langEl.querySelectorAll(".slot").forEach((slot) => {
+    slot.textContent = slot.dataset.form === "comp" ? adjective[1] : adjective[0];
+  });
+  replay(adjEl);
+  announce();
+}
+
+function toggleLanguage() {
+  const show = langEl.hidden;
+  langEl.hidden = !show;
+  langBtn.textContent = show ? "Hide language" : "Show language";
+  langBtn.setAttribute("aria-expanded", String(show));
+}
+
+wordsTile.addEventListener("click", nextPair);
+adjTile.addEventListener("click", nextAdjective);
+$("new-words-btn").addEventListener("click", nextPair);
+$("new-adj-btn").addEventListener("click", nextAdjective);
+$("random-btn").addEventListener("click", () => { nextPair(); nextAdjective(); });
+langBtn.addEventListener("click", toggleLanguage);
+
+/* Space or Enter: everything new. P: new pair. A: new adjective. L: show or hide the language box. */
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const press = event.code === "Space" || event.code === "Enter";
+  if (press && event.target.closest && event.target.closest("button, a")) return;
+  const key = event.key.toLowerCase();
+  if (press) { event.preventDefault(); nextPair(); nextAdjective(); }
+  else if (key === "p") nextPair();
+  else if (key === "a") nextAdjective();
+  else if (key === "l") toggleLanguage();
+});
+
+/* The tile changes size when the window does, or when the language box opens, closes or wraps. */
+if ("ResizeObserver" in window) new ResizeObserver(fitWords).observe(wordsTile);
+else window.addEventListener("resize", fitWords);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitWords);
+
+nextPair();
+nextAdjective();
+</script>
+</body>
+</html>
