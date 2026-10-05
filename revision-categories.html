@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revision Categories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --a1: #F2D9A6; /* sand yellow */
+    --a2: #F4B5A0; /* coral orange */
+    --b1: #A9CCEB; /* sky blue */
+    --b2: #A8D5CB; /* sea green */
+    --board: var(--a1);
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--mist); color: var(--ink); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+
+  .page {
+    height: 100%; max-width: 1400px; margin: 0 auto;
+    padding: clamp(0.75rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2.25rem);
+    display: flex; flex-direction: column; gap: clamp(0.5rem, 1.5vh, 1rem);
+  }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .top h1 { margin: 0; font-size: clamp(1.5rem, 2.8vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .back { color: var(--ink-soft); font-size: 0.95rem; text-decoration: none; white-space: nowrap; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .board {
+    flex: 1; min-height: 0; background: var(--board); border-radius: 0.9rem;
+    padding: clamp(1rem, 3vw, 2.5rem); display: flex; flex-direction: column; gap: clamp(0.75rem, 2vh, 1.5rem);
+    transition: background-color 0.3s ease;
+  }
+  .prompt { margin: 0; font-size: clamp(1rem, 1.6vw, 1.3rem); color: var(--ink-soft); font-weight: 600; }
+
+  .play {
+    flex: 1; min-height: 0; display: grid; grid-template-columns: auto 1fr;
+    align-items: center; gap: clamp(1rem, 4vw, 3.5rem);
+  }
+
+  /* The letter */
+  .letter {
+    width: clamp(7rem, min(24vw, 38vh), 17rem); aspect-ratio: 1;
+    display: grid; place-items: center; border-radius: 0.9rem;
+    background: var(--ink); color: var(--board);
+    font-size: clamp(5rem, min(18vw, 29vh), 13rem); font-weight: 800; line-height: 1;
+    transition: color 0.3s ease;
+  }
+  .letter span { display: block; }
+  .letter span.pop { animation: pop 0.35s ease-out; }
+  @keyframes pop { from { transform: scale(0.6) rotate(-8deg); opacity: 0; } }
+
+  /* The sentences */
+  .list {
+    margin: 0; padding: 0; list-style: none; counter-reset: s;
+    max-height: 100%; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 0.55em;
+    font-size: clamp(1.8rem, min(5vw, 8vh), 4.2rem);
+  }
+  .list[data-n="2"] { font-size: clamp(1.6rem, min(4.2vw, 6.4vh), 3.4rem); }
+  .list[data-n="3"] { font-size: clamp(1.4rem, min(3.6vw, 5.2vh), 2.8rem); }
+  .list[data-n="4"] { font-size: clamp(1.25rem, min(3.1vw, 4.3vh), 2.4rem); }
+  .list[data-n="5"] { font-size: clamp(1.15rem, min(2.8vw, 3.7vh), 2.1rem); }
+
+  .list li {
+    counter-increment: s; display: grid; grid-template-columns: auto 1fr; column-gap: 0.6em;
+    font-weight: 700; letter-spacing: -0.02em; line-height: 1.15;
+  }
+  .list li.new { animation: rise 0.3s ease-out; }
+  @keyframes rise { from { transform: translateY(0.4em); opacity: 0; } }
+  .list li::before {
+    content: counter(s); grid-row: 1 / span 2;
+    font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  }
+  .list[data-n="1"] li { grid-template-columns: 1fr; }
+  .list[data-n="1"] li::before { content: none; }
+  .text { margin: 0; text-wrap: balance; }
+  .gap {
+    display: inline-block; width: 3.2em; height: 0.9em; vertical-align: baseline;
+    border-bottom: 0.09em solid var(--ink);
+  }
+  .chip {
+    display: inline-block; min-width: 1.35em; padding: 0 0.28em; border-radius: 0.22em; text-align: center;
+    background: var(--ink); color: var(--board); font-weight: 800;
+  }
+  .ideas {
+    margin: 0.2em 0 0; font-size: 0.62em; font-weight: 600; letter-spacing: 0; color: var(--ink-soft);
+  }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  button.btn {
+    font: inherit; font-weight: 600; font-size: 1rem; padding: 0.55em 1.1em; border-radius: 0.6rem;
+    border: 2px solid var(--ink); background: var(--ink); color: var(--mist); cursor: pointer;
+  }
+  button.btn.ghost { background: transparent; color: var(--ink); }
+  button.btn:hover { filter: brightness(1.15); }
+  button.btn:disabled { opacity: 0.35; cursor: default; filter: none; }
+  button.btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .level { display: inline-flex; border: 2px solid var(--ink); border-radius: 0.6rem; overflow: hidden; }
+  .level[hidden] { display: none; }
+  .lv { font: inherit; font-weight: 700; font-size: 1rem; padding: 0.45em 1em; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+  .lv.on { background: var(--ink); color: var(--mist); }
+  .lv:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+  .count { font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 700px) {
+    html, body, .page { height: auto; }
+    .play { grid-template-columns: 1fr; justify-items: start; }
+    .list { max-height: none; min-height: 30vh; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .letter span.pop, .list li.new { animation: none; }
+    .board, .letter { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <h1>Revision Categories</h1>
+    <a class="back" href="https://coastoflight.github.io/word-lab">&larr; Word Lab</a>
+  </div>
+
+  <section class="board">
+    <p class="prompt" id="prompt"></p>
+
+    <div class="play">
+      <div class="letter" aria-live="polite"><span id="letter"></span></div>
+      <ol class="list" id="list"></ol>
+    </div>
+  </section>
+
+  <div class="bar">
+    <div class="controls">
+      <button class="btn ghost" id="newLetter">New letter</button>
+      <button class="btn ghost" id="add">Add a sentence</button>
+      <span class="count" id="count"></span>
+      <button class="btn ghost" id="ideas">Show ideas</button>
+      <button class="btn" id="next">Next</button>
+    </div>
+    <div class="level" id="level" role="group" aria-label="Level" hidden></div>
+  </div>
+
+</div>
+
+<script>
+  /*
+    THE SENTENCES
+    Each entry is: ["The sentence, with ___ for the gap", "answers, separated, by, commas"]
+
+    The answers do two jobs:
+      1. They decide which letters can come up. A sentence only ever gets a letter
+         that has at least one answer here, so the challenge is always possible.
+      2. They are what "Show ideas" reveals.
+    Students can of course say any word that fits. These are just the safe ones.
+
+    Write [letter] in a sentence to show the letter of the round inside it.
+
+    A1 has its own list. A2 is the A1 list plus A2_NEW. To add B1 or B2, make a
+    list in the same format and add it to PACKS at the bottom. Its button appears
+    by itself.
+  */
+  const A1 = [
+      ["Hello! I'm from ___.",
+        "Argentina, Australia, Belgium, Brazil, Canada, Chile, China, Colombia, Cuba, Denmark, Egypt, England, Finland, France, Germany, Greece, Hungary, India, Ireland, Italy, Jamaica, Japan, Kenya, London, Madrid, Mexico, Morocco, New York, Norway, Oman, Paris, Peru, Poland, Portugal, Qatar, Rome, Russia, Scotland, Spain, Sweden, Tokyo, Turkey, Ukraine, Uruguay, Venezuela, Vietnam, Wales, Yemen, Zambia"],
+      ["My friend's name is ___.",
+        "Alex, Anna, Ben, Betty, Charlie, Clare, Daisy, Dan, Emma, Eva, Frank, Fred, George, Grace, Harry, Holly, Isabel, Ivan, Jack, Jane, Katy, Kim, Lily, Lucy, Mary, Matt, Nick, Nora, Oliver, Olivia, Pat, Paul, Robert, Rosa, Sally, Sam, Tina, Tom, Vicky, Victor, Wendy, William, Yolanda, Zoe"],
+      ["At the zoo I can see a / an ___.",
+        "bat, bear, bird, camel, crocodile, dolphin, duck, eagle, elephant, fish, frog, giraffe, goat, hippo, horse, insect, jellyfish, kangaroo, lion, lizard, monkey, mouse, octopus, panda, parrot, penguin, rabbit, rhino, shark, snake, spider, tiger, tortoise, whale, zebra"],
+      ["My favourite food is ___.",
+        "apples, bananas, bread, burgers, cake, cheese, chicken, chocolate, eggs, fish, fries, grapes, ice cream, jam, kiwis, lemons, mangoes, meatballs, noodles, oranges, pancakes, pasta, pizza, rice, salad, sandwiches, sausages, soup, tomatoes, watermelon, yoghurt"],
+      ["I've got a / an ___ in my bag.",
+        "apple, ball, banana, book, camera, comb, crayon, doll, drink, eraser, game, hat, jacket, key, kite, lemon, map, orange, pen, pencil, phone, rubber, ruler, sandwich, scarf, tablet, toy, umbrella, watch"],
+      ["Today I'm wearing my ___.",
+        "belt, boots, cap, coat, dress, glasses, gloves, hat, helmet, jacket, jeans, necklace, pyjamas, ring, scarf, shirt, shoes, shorts, skirt, socks, sweater, T-shirt, trainers, trousers, uniform, watch"],
+      ["In my bedroom there is a / an ___.",
+        "armchair, bed, bookcase, box, chair, clock, computer, cupboard, desk, door, fan, guitar, keyboard, lamp, mat, mirror, painting, picture, poster, radio, robot, rug, shelf, table, teddy bear, toy, wall, window"],
+      ["In my town there is a / an ___.",
+        "airport, bank, bridge, bus station, café, castle, cinema, farm, funfair, garden, hospital, hotel, lake, library, market, museum, park, playground, post office, restaurant, river, school, shop, square, stadium, station, supermarket, swimming pool, theatre, university, zoo"],
+      ["I like ___ing.",
+        "baking, camping, climbing, cooking, dancing, drawing, eating, fishing, flying, helping, jumping, laughing, learning, listening, painting, playing, reading, riding, running, sailing, shopping, singing, skating, skiing, sleeping, swimming, talking, travelling, walking, watching, writing"],
+      ["I can ___ very well.",
+        "catch, climb, cook, count, dance, draw, eat, fish, hop, jump, kick, laugh, paint, play, read, ride, run, sail, sing, skate, ski, sleep, spell, swim, talk, throw, walk, whistle, write"],
+      ["My teacher is very ___.",
+        "amazing, angry, beautiful, brave, busy, careful, clever, cool, different, excellent, famous, friendly, funny, good, great, happy, hungry, important, interesting, kind, loud, lucky, naughty, nice, old, pretty, quiet, sad, short, strange, strong, tall, tired, unhappy, wonderful, young"],
+      ["It is ___ today.",
+        "cloudy, cold, dry, foggy, Friday, hot, Monday, nice, rainy, Saturday, snowy, Sunday, sunny, Thursday, Tuesday, warm, Wednesday, wet, windy"],
+      ["I love my ___.",
+        "aunt, baby, bike, brother, cat, cousin, dad, dog, family, friends, garden, grandma, grandpa, house, kitten, mum, pet, phone, room, school, sister, teacher, toys, uncle, village"],
+      ["My ___ hurts.",
+        "arm, back, ear, elbow, eye, face, finger, foot, hand, head, knee, leg, mouth, neck, nose, shoulder, stomach, toe, tooth, tummy"],
+      ["I go to school by ___.",
+        "bike, boat, bus, car, helicopter, lorry, motorbike, plane, rocket, ship, taxi, tractor, train, van"],
+      ["I want to be a / an ___.",
+        "actor, artist, astronaut, clown, cook, dancer, dentist, doctor, driver, engineer, farmer, firefighter, footballer, journalist, king, mechanic, nurse, photographer, pilot, pirate, police officer, queen, singer, teacher, vet, waiter, zookeeper"],
+      ["The cat is ___ the box.",
+        "above, behind, below, in, in front of, inside, near, next to, on, opposite, outside, under"],
+      ["My birthday is in ___.",
+        "April, August, autumn, December, February, January, July, June, March, May, November, October, September, spring, summer, winter"],
+      ["I play ___.",
+        "badminton, baseball, basketball, board games, cards, chess, computer games, football, golf, hockey, music, rugby, table tennis, tennis, video games, volleyball"],
+      ["I've got ___ pencils.",
+        "eight, eleven, fifteen, fifty, five, four, lots of, many, nine, seven, six, sixteen, some, ten, thirteen, thirty, three, twelve, twenty, two"],
+      ["___ is my favourite colour.",
+        "Black, Blue, Brown, Gold, Green, Grey, Orange, Pink, Purple, Red, Silver, White, Yellow"],
+      ["A / An ___ is bigger than a mouse.",
+        "apple, bear, bus, car, cat, dog, door, elephant, football, giraffe, horse, house, jacket, kangaroo, lion, monkey, octopus, panda, rabbit, sheep, tiger, tree, umbrella, van, whale, zebra"],
+      ["A word with 3 letters. It starts with [letter].",
+        "arm, bag, bed, big, box, boy, bus, car, cat, cow, cup, dad, day, dog, ear, egg, eye, fan, fly, fun, get, gym, hat, hot, ice, ill, jam, key, leg, man, map, mum, new, not, old, one, pen, pet, pig, red, run, sad, sea, six, sun, tea, ten, toy, two, use, van, wet, who, why, yes, you, zoo"],
+      ["A word with a double letter, like LL or EE. It starts with [letter].",
+        "apple, ball, book, carrot, cheese, coffee, dinner, doll, door, dress, egg, foot, football, funny, giraffe, glasses, green, happy, hippo, ill, jellyfish, kitten, letter, little, look, mirror, moon, need, noodles, off, parrot, pool, puppy, queen, rabbit, room, school, sheep, small, sunny, tall, three, tree, umbrella, village, volleyball, wall, weekend, yellow, zoo"],
+      ["A word that starts with [letter] and ends in Y.",
+        "angry, any, baby, body, boy, busy, city, cloudy, day, dry, easy, every, family, fly, funny, grey, happy, hobby, hockey, hungry, January, key, library, lorry, lucky, many, monkey, my, naughty, only, party, play, pretty, puppy, quickly, rainy, slowly, sorry, story, sunny, thirsty, today, toy, try, ugly, usually, very, why, windy, yesterday"]
+  ];
+
+  // A2 uses every A1 sentence plus these.
+  const A2_NEW = [
+      ["Yesterday I ___ something interesting.",
+        "ate, bought, built, cooked, did, drank, drew, found, got, heard, learned, made, painted, read, saw, tried, watched, wrote"],
+      ["Maths is not as ___ as English.",
+        "amazing, bad, boring, cool, difficult, easy, exciting, fun, good, great, hard, important, interesting, nice, popular, simple, strange, useful"],
+      ["I don't have much ___.",
+        "bread, butter, cheese, chocolate, coffee, energy, food, free time, fruit, hair, homework, ice, information, jam, juice, luck, luggage, milk, money, oil, paper, pasta, rice, salt, space, sugar, tea, time, water, work"],
+      ["My ___ escaped and we can't find it.",
+        "bird, cat, chicken, cow, dog, duck, goat, hamster, horse, kitten, lizard, mouse, parrot, pet, pig, puppy, rabbit, rat, sheep, snake, spider, tortoise"],
+      ["I'm ___er than my best friend.",
+        "bigger, busier, cleverer, cooler, faster, funnier, happier, kinder, lazier, louder, luckier, nicer, noisier, older, quieter, shorter, slower, smaller, stronger, taller, tidier, younger"],
+      ["My friend is the ___est person in the class.",
+        "busiest, cleverest, coolest, fastest, friendliest, funniest, greatest, happiest, kindest, laziest, loudest, luckiest, nicest, noisiest, oldest, quietest, shortest, slowest, smallest, strongest, tallest, tidiest, youngest"],
+      ["This weekend I'm going to ___.",
+        "bake, clean, cook, cycle, dance, draw, eat, go shopping, help, paint, party, play, practise, read, relax, rest, run, sail, shop, sing, skate, sleep, study, swim, travel, walk, work, write"],
+      ["I usually ___ before I go to bed.",
+        "brush my teeth, chat, dance, do my homework, draw, eat, have a shower, listen to music, play, read, relax, study, text my friends, wash, watch TV, write"],
+      ["You shouldn't ___ in class.",
+        "chat, cheat, cry, dance, drink, eat, fight, jump, laugh, play, run, shout, sing, sleep, talk, text, whistle"],
+      ["I ___ play computer games.",
+        "always, don't, hardly ever, never, often, rarely, sometimes, usually"],
+      ["He always speaks very ___.",
+        "badly, beautifully, carefully, clearly, fast, loudly, nicely, politely, quickly, quietly, slowly, well"],
+      ["I feel ___ on Monday mornings.",
+        "angry, awful, bad, bored, busy, cold, excited, fine, good, great, happy, hungry, ill, lazy, nervous, OK, ready, sad, sick, sleepy, strange, terrible, tired, unhappy, well, worried"],
+      ["I can say hello in ___.",
+        "Arabic, Basque, Catalan, Chinese, Dutch, English, French, Galician, German, Greek, Hindi, Irish, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Spanish, Swedish, Turkish, Welsh"],
+      ["I'm afraid of ___.",
+        "bats, bees, birds, cats, clowns, dentists, dogs, exams, fire, flying, ghosts, heights, horses, insects, mice, monsters, rats, sharks, snakes, spiders, storms, wasps, water, zombies"],
+      ["I've never eaten ___.",
+        "avocado, chilli, crocodile, curry, duck, fish, garlic, honey, insects, kangaroo, lemons, mushrooms, noodles, octopus, onions, pancakes, rabbit, sausages, snake, spiders, sushi, turkey, watermelon"],
+      ["Last night I had a dream about a / an ___.",
+        "alien, bear, castle, dragon, elephant, football match, ghost, horse, island, journey, king, lion, monster, octopus, party, queen, robot, shark, spider, tiger, unicorn, volcano, wizard, zombie"],
+      ["My favourite subject is ___.",
+        "art, biology, chemistry, drama, English, French, geography, history, IT, maths, music, PE, physics, science, Spanish, sport, technology"],
+      ["I'm interested in ___.",
+        "animals, art, books, cars, computers, cooking, dance, drawing, fashion, films, football, history, languages, music, nature, photography, reading, science, space, sport, technology, travel, video games"],
+      ["On holiday I always take my ___.",
+        "bag, book, camera, cap, guitar, hat, headphones, jacket, laptop, map, money, passport, phone, suitcase, sunglasses, swimsuit, tablet, tent, ticket, toothbrush, towel, umbrella, wallet"],
+      ["I can't come to school. I've got a ___.",
+        "broken arm, cold, cough, fever, headache, problem, stomach ache, temperature, toothache"],
+      ["When I'm older, I'll have a / an ___.",
+        "boat, business, car, cat, dog, family, farm, flat, garden, helicopter, horse, house, job, motorbike, pet, plane, pool, restaurant, robot, shop, van"],
+      ["A / An ___ is more expensive than a pizza.",
+        "bike, boat, camera, car, coat, computer, flat, guitar, helicopter, horse, house, jacket, keyboard, laptop, motorbike, phone, piano, plane, ring, tablet, television, watch"],
+      ["See you ___!",
+        "after class, at school, in the morning, later, next week, on Monday, soon, this afternoon, tomorrow, tonight"],
+      ["A word with 5 letters. It starts with [letter].",
+        "apple, beach, bread, chair, clock, dance, drink, eight, fruit, green, happy, house, juice, knife, lemon, money, music, night, onion, party, queen, river, sugar, table, uncle, video, water, young, zebra"],
+      ["A word that starts with [letter] and ends in E.",
+        "apple, bike, cake, dance, eye, face, game, horse, ice, juice, knife, lake, mouse, nurse, orange, phone, rice, snake, table, uncle, village, write"]
+  ];
+
+  const PACKS = {
+    a1: A1,
+    a2: [...A1, ...A2_NEW]
+  };
+
+  const MAX = 5;                 // most sentences in one challenge
+  const LEVEL_NAMES = { a1: "A1", a2: "A2", b1: "B1", b2: "B2" };
+
+  // Turn each entry into { text, byLetter: { P: ["pasta", "pizza"], ... } }
+  const frames = {};
+  for (const lv in PACKS) {
+    frames[lv] = PACKS[lv].map(([text, answers]) => {
+      const byLetter = {};
+      answers.split(/\s*,\s*/).filter(Boolean).forEach(a => {
+        const k = a.charAt(0).toUpperCase();
+        (byLetter[k] = byLetter[k] || []).push(a);
+      });
+      return { text, byLetter };
+    });
+  }
+  const levels = Object.keys(LEVEL_NAMES).filter(lv => frames[lv] && frames[lv].length);
+
+  let level = levels[0];
+  let letter = "";
+  let shown = [];          // which sentences are on the board (positions in the level's list)
+  let showIdeas = false;
+  let lastAdded = -1;
+  const decks = {};        // a shuffled pile per level, so sentences don't repeat until all are used
+
+  const $ = id => document.getElementById(id);
+  const listEl = $("list"), letterEl = $("letter"), promptEl = $("prompt"), countEl = $("count");
+  const btnLetter = $("newLetter"), btnAdd = $("add"), btnIdeas = $("ideas"), btnNext = $("next");
+
+  const rand = n => Math.floor(Math.random() * n);
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  function draw() {
+    if (!decks[level] || !decks[level].length) {
+      const d = shuffle(frames[level].map((_, i) => i));
+      // don't start the new pile with the sentence we just had
+      if (d.length > 1 && d[d.length - 1] === shown[0]) [d[0], d[d.length - 1]] = [d[d.length - 1], d[0]];
+      decks[level] = d;
+    }
+    return decks[level].pop();
+  }
+
+  // Letters that work for every sentence on the board. Letters with more
+  // possible answers come up a little more often.
+  function lettersFor(list) {
+    const first = frames[level][list[0]].byLetter, out = {};
+    for (const k in first) {
+      let w = 3;
+      for (const i of list) {
+        const a = frames[level][i].byLetter[k];
+        w = Math.min(w, a ? a.length : 0);
+      }
+      if (w > 0) out[k] = w;
+    }
+    return out;
+  }
+  function pickLetter(options, avoid) {
+    let keys = Object.keys(options).filter(k => k !== avoid);
+    if (!keys.length) keys = Object.keys(options);
+    let r = Math.random() * keys.reduce((s, k) => s + options[k], 0);
+    for (const k of keys) { r -= options[k]; if (r < 0) return k; }
+    return keys[keys.length - 1];
+  }
+  const canAdd = () => frames[level]
+    .map((f, i) => i)
+    .filter(i => !shown.includes(i) && frames[level][i].byLetter[letter]);
+
+  function next() {
+    shown = [draw()];
+    letter = pickLetter(lettersFor(shown), letter);
+    showIdeas = false; lastAdded = -1;
+    render(true);
+  }
+  function newLetter() {
+    const options = lettersFor(shown);
+    if (Object.keys(options).length < 2) return;
+    letter = pickLetter(options, letter);
+    showIdeas = false; lastAdded = -1;
+    render(true);
+  }
+  function add() {
+    if (shown.length >= MAX) return;
+    const options = canAdd();
+    if (!options.length) return;
+    lastAdded = options[rand(options.length)];
+    shown.push(lastAdded);
+    render(false);
+  }
+
+  function sentenceNode(text) {
+    const p = document.createElement("p");
+    p.className = "text";
+    text.split(/(___|\[letter\])/).forEach(part => {
+      if (part === "___") { const g = document.createElement("span"); g.className = "gap"; p.append(g); }
+      else if (part === "[letter]") { const c = document.createElement("span"); c.className = "chip"; c.textContent = letter; p.append(c); }
+      else p.append(part);
+    });
+    return p;
+  }
+
+  function render(letterChanged) {
+    document.documentElement.style.setProperty("--board", `var(--${level})`);
+
+    letterEl.textContent = letter;
+    if (letterChanged) {
+      letterEl.classList.remove("pop"); void letterEl.offsetWidth; letterEl.classList.add("pop");
+    }
+
+    listEl.dataset.n = shown.length;
+    listEl.innerHTML = "";
+    shown.forEach(i => {
+      const f = frames[level][i], li = document.createElement("li");
+      if (i === lastAdded) li.className = "new";
+      li.append(sentenceNode(f.text));
+      if (showIdeas) {
+        const p = document.createElement("p");
+        p.className = "ideas";
+        p.textContent = shuffle(f.byLetter[letter].slice()).slice(0, 3).join(", ");
+        li.append(p);
+      }
+      listEl.append(li);
+    });
+    lastAdded = -1;
+
+    promptEl.textContent = shown.length === 1
+      ? "Think of a word that starts with this letter."
+      : "Same letter. A different word for each one.";
+
+    countEl.textContent = `${shown.length} / ${MAX}`;
+    btnAdd.disabled = shown.length >= MAX || !canAdd().length;
+    btnLetter.disabled = Object.keys(lettersFor(shown)).length < 2;
+    btnIdeas.textContent = showIdeas ? "Hide ideas" : "Show ideas";
+  }
+
+  btnNext.addEventListener("click", next);
+  btnLetter.addEventListener("click", newLetter);
+  btnAdd.addEventListener("click", add);
+  btnIdeas.addEventListener("click", () => { showIdeas = !showIdeas; render(false); });
+
+  // Keys: right arrow = Next, L = New letter, + = Add a sentence
+  document.addEventListener("keydown", e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "ArrowRight") next();
+    else if (e.key === "l" || e.key === "L") newLetter();
+    else if (e.key === "+" || e.key === "=") add();
+  });
+
+  // Level buttons appear once there is more than one level in PACKS
+  const levelEl = $("level");
+  if (levels.length > 1) {
+    levelEl.hidden = false;
+    levels.forEach(lv => {
+      const b = document.createElement("button");
+      b.className = "lv" + (lv === level ? " on" : "");
+      b.textContent = LEVEL_NAMES[lv];
+      b.addEventListener("click", () => {
+        level = lv;
+        levelEl.querySelectorAll(".lv").forEach(x => x.classList.toggle("on", x === b));
+        next();
+      });
+      levelEl.append(b);
+    });
+  }
+
+  next();
+</script>
+</body>
+</html>
