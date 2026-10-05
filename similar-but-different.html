@@ -26,6 +26,9 @@
     --second: #F0C2D3;   /* its opposite, once shown */
     --ask: #F2D9A6;      /* the questions */
     --late: #F4B5A0;     /* last ten seconds of the timer */
+    /* Which is more */
+    --acts-c: #C7DE9F;   /* the two activities */
+    --adj-c: #A9CCEB;    /* the adjective, on its tile and in the language box */
     /* Two meanings */
     --clue1: #A9CCEB;
     --clue2: #C9C3EA;
@@ -274,6 +277,70 @@
   }
   .fresh { animation: settle 0.22s ease-out; }
 
+  /* ---------- Which is more ---------- */
+
+  #acts-tile { flex: 1.3 1 0; background: var(--acts-c); }
+  #adj-tile { flex: 1 1 0; background: var(--adj-c); }
+
+  /* The activities are phrases, so each may wrap onto two lines.
+     fitActs() in the script picks the biggest size that fits the tile. */
+  .acts {
+    display: grid;
+    justify-items: center;
+    width: 100%;
+    font-size: 3rem;
+  }
+  .acts .act, .adj {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    max-width: 100%;
+  }
+  .acts .act { text-wrap: balance; }
+  .acts .or {
+    margin: 0.35em 0;
+    color: var(--ink-soft);
+    font-size: max(1rem, 0.42em);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .adj { white-space: nowrap; }
+
+  /* The language box: three ways to compare, with the adjective dropped in. */
+  .lang {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 1.25fr 1.25fr 0.85fr;
+    gap: 0.5rem clamp(1rem, 2.4vw, 2rem);
+    padding: clamp(0.7rem, 1.6vw, 1.1rem) clamp(1rem, 2.2vw, 1.6rem);
+    border-radius: 0.7rem;
+    background: var(--ask);
+  }
+  .lang-group { min-width: 0; }
+  .lang-label {
+    margin: 0 0 0.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+  .lang-line {
+    margin: 0;
+    font-size: clamp(1rem, min(1.65vw, 2.9vh), 1.35rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+  }
+  .keep { white-space: nowrap; }   /* the adjective never leaves "than" or "as" alone on a line */
+  .slot {
+    padding: 0.05em 0.35em;
+    border-radius: 0.35rem;
+    background: var(--adj-c);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
   /* ---------- Opposites ---------- */
 
   .pair {
@@ -465,7 +532,7 @@
   /* ---------- Smaller screens ---------- */
 
   /* The tabs drop to their own row, flush with the frame's left edge. */
-  @media (max-width: 1000px) {
+  @media (max-width: 1240px) {
     .tabs { order: 3; flex-basis: 100%; }
     .back { margin-bottom: 0.6rem; }
     .frame { border-top-left-radius: 0; }
@@ -475,13 +542,13 @@
   @media (max-width: 720px) {
     html, body { height: auto; overflow: auto; }
     .page { height: auto; min-height: 100vh; min-height: 100dvh; }
-    /* Four tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
+    /* Five tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
     .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { flex: 0 0 auto; padding: 0 0.5rem; font-size: 0.85rem; }
     .stage { flex-direction: column; min-height: 24rem; }
-    #words-tile, #linker-tile { flex: 1 1 0; }
-    .pair, .trio { grid-template-columns: 1fr; }
+    #words-tile, #linker-tile, #acts-tile, #adj-tile { flex: 1 1 0; }
+    .pair, .trio, .lang { grid-template-columns: 1fr; }
     .trio .box { order: 3; }   /* clue, clue, then the word */
     .box { min-height: 8.5rem; }
     .clue { min-height: 7rem; }
@@ -527,6 +594,47 @@
         <button type="button" class="btn" id="new-linker-btn">New linker</button>
         <button type="button" class="btn-primary" id="random-btn">Random</button>
         <p class="tip" id="tip"></p>
+      </div>
+    </section>
+
+    <!-- Which is more: two activities, an adjective, and the language to compare them. -->
+    <section class="game" id="more-game" role="tabpanel" aria-labelledby="tab-more" hidden>
+      <p class="intro">Look at the two activities and the adjective. Which one is more…? Compare them and say why.</p>
+
+      <div class="stage">
+        <button type="button" class="tile" id="acts-tile" aria-label="Click for two new activities">
+          <span class="tag" aria-hidden="true">Which one?</span>
+          <span class="acts" id="acts"></span>
+        </button>
+        <button type="button" class="tile" id="adj-tile" aria-label="Click for a new adjective">
+          <span class="tag" aria-hidden="true">Adjective</span>
+          <span class="adj" id="adj"></span>
+        </button>
+      </div>
+
+      <div class="lang" id="lang" role="group" aria-label="Language for making comparisons">
+        <div class="lang-group">
+          <p class="lang-label">A big difference</p>
+          <p class="lang-line">much / far / a lot <span class="keep"><span class="slot" data-form="comp"></span> than</span></p>
+          <p class="lang-line">not nearly as <span class="keep"><span class="slot" data-form="base"></span> as</span></p>
+        </div>
+        <div class="lang-group">
+          <p class="lang-label">A small difference</p>
+          <p class="lang-line">a bit / slightly <span class="keep"><span class="slot" data-form="comp"></span> than</span></p>
+          <p class="lang-line">not quite as <span class="keep"><span class="slot" data-form="base"></span> as</span></p>
+        </div>
+        <div class="lang-group">
+          <p class="lang-label">No difference</p>
+          <p class="lang-line">just as <span class="keep"><span class="slot" data-form="base"></span> as</span></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn" id="more-pair-btn">New pair</button>
+        <button type="button" class="btn" id="more-adj-btn">New adjective</button>
+        <button type="button" class="btn-primary" id="more-random-btn">Random</button>
+        <button type="button" class="btn" id="lang-btn" aria-controls="lang" aria-expanded="true">Hide language</button>
+        <p class="tip">Click the pair for a new one. Click the adjective for another way to compare them.</p>
       </div>
     </section>
 
@@ -605,14 +713,15 @@
 
 <script>
 /* ---------------------------------------------------------------
-   Four games on one page, chosen with the tabs at the top.
+   Five games on one page, chosen with the tabs at the top.
    A link can open a tab directly: ?mode=pairs, ?mode=odd,
-   ?mode=opposites or ?mode=meanings. Otherwise the page opens on
-   the last one used.
+   ?mode=more, ?mode=opposites or ?mode=meanings. Otherwise the
+   page opens on the last one used.
 ---------------------------------------------------------------- */
 const GAMES = [
   { id: "pairs", label: "Pairs" },
   { id: "odd", label: "Odd one out" },
+  { id: "more", label: "Which is more" },
   { id: "opposites", label: "Opposites" },
   { id: "meanings", label: "Two meanings" }
 ];
@@ -771,6 +880,114 @@ const MODES = {
     ]
   }
 };
+
+/* ---------------------------------------------------------------
+   WHICH IS MORE
+
+   Two activities and one adjective, for practising the language of
+   making comparisons (B2). The pairs are fixed; the adjective is
+   random, so some combinations are obvious and some are strange.
+   The strange ones are often the best to argue about.
+
+   MORE_PAIRS: each line is ["one activity", "the other activity"].
+   Add or remove freely. Short phrases look best on the tile.
+---------------------------------------------------------------- */
+const MORE_PAIRS = [
+  /* sport and exercise */
+  ["watching football", "playing football"],
+  ["team sports", "individual sports"],
+  ["going to the gym", "exercising outdoors"],
+  ["swimming in the sea", "swimming in a pool"],
+  ["cycling", "running"],
+  ["skiing", "surfing"],
+  ["sport at the stadium", "sport on TV"],
+  ["a walk in the countryside", "a walk around the city"],
+  ["yoga", "martial arts"],
+  ["winning a match", "passing an exam"],
+
+  /* screens and entertainment */
+  ["a film on Netflix", "a film at the cinema"],
+  ["reading the book", "watching the film"],
+  ["a series", "a film"],
+  ["video games", "board games"],
+  ["gaming alone", "gaming with friends"],
+  ["watching videos", "making videos"],
+  ["short videos", "long videos"],
+  ["a podcast", "a playlist"],
+  ["music at a concert", "music on headphones"],
+  ["a paper book", "an audiobook"],
+  ["a comedy", "a horror film"],
+
+  /* food */
+  ["dinner in", "dinner out"],
+  ["cooking a meal", "ordering a takeaway"],
+  ["a picnic", "a barbecue"],
+  ["baking a cake", "cooking dinner"],
+  ["fast food", "home-made food"],
+
+  /* friends and family */
+  ["a big party", "a quiet night in"],
+  ["texting a friend", "calling a friend"],
+  ["meeting friends in town", "chatting online"],
+  ["one close friend", "a big group of friends"],
+  ["a sleepover", "a day trip"],
+  ["a weekend with family", "a weekend with friends"],
+
+  /* holidays and days out */
+  ["a beach holiday", "a city break"],
+  ["camping", "staying in a hotel"],
+  ["travelling by train", "travelling by plane"],
+  ["a day at the beach", "a day in the mountains"],
+  ["a theme park", "a water park"],
+  ["visiting a museum", "visiting a zoo"],
+  ["a music festival", "a football final"],
+  ["summer holidays", "winter holidays"],
+
+  /* hobbies and free time */
+  ["playing an instrument", "singing"],
+  ["drawing", "taking photos"],
+  ["learning a language", "learning an instrument"],
+  ["dancing", "karaoke"],
+  ["shopping online", "shopping in town"],
+  ["getting up early", "staying up late"],
+  ["a lazy Sunday", "a busy Saturday"],
+  ["having a dog", "having a cat"],
+  ["playing chess", "playing cards"],
+  ["learning from videos", "learning in a class"],
+  ["studying alone", "studying with friends"],
+  ["a weekend with no phone", "a weekend with no friends"]
+];
+
+/* ---------------------------------------------------------------
+   MORE_ADJECTIVES: each line is ["adjective", "its comparative"].
+   Both forms appear in the language box.
+---------------------------------------------------------------- */
+const MORE_ADJECTIVES = [
+  /* -er */
+  ["cheap", "cheaper"], ["healthy", "healthier"], ["easy", "easier"], ["hard", "harder"],
+  ["safe", "safer"], ["risky", "riskier"], ["noisy", "noisier"], ["cool", "cooler"],
+  ["funny", "funnier"], ["lonely", "lonelier"], ["messy", "messier"],
+
+  /* irregular */
+  ["good", "better"], ["bad", "worse"], ["fun", "more fun"], ["good for you", "better for you"],
+
+  /* -ing adjectives */
+  ["relaxing", "more relaxing"], ["exciting", "more exciting"], ["tiring", "more tiring"],
+  ["boring", "more boring"], ["satisfying", "more satisfying"], ["entertaining", "more entertaining"],
+  ["challenging", "more challenging"], ["rewarding", "more rewarding"], ["interesting", "more interesting"],
+  ["exhausting", "more exhausting"], ["frustrating", "more frustrating"], ["motivating", "more motivating"],
+  ["annoying", "more annoying"], ["embarrassing", "more embarrassing"], ["time-consuming", "more time-consuming"],
+
+  /* more … */
+  ["enjoyable", "more enjoyable"], ["sociable", "more sociable"], ["expensive", "more expensive"],
+  ["stressful", "more stressful"], ["popular", "more popular"], ["addictive", "more addictive"],
+  ["competitive", "more competitive"], ["convenient", "more convenient"], ["memorable", "more memorable"],
+  ["creative", "more creative"], ["dangerous", "more dangerous"], ["useful", "more useful"],
+  ["comfortable", "more comfortable"], ["special", "more special"], ["impressive", "more impressive"],
+  ["worthwhile", "more worthwhile"], ["energetic", "more energetic"], ["peaceful", "more peaceful"],
+  ["educational", "more educational"], ["old-fashioned", "more old-fashioned"],
+  ["adventurous", "more adventurous"], ["difficult", "more difficult"], ["important", "more important"]
+];
 
 /* ---------------------------------------------------------------
    OPPOSITES
@@ -1094,6 +1311,7 @@ let mode = loadMode();
 
 const tabsEl = $("tabs");
 const linkerGame = $("linker-game");
+const moreGame = $("more-game");
 const oppositesGame = $("opposites-game");
 const meaningsGame = $("meanings-game");
 const statusEl = $("status");
@@ -1241,6 +1459,124 @@ function showLinkerGame() {
   linkerGame.setAttribute("aria-labelledby", "tab-" + mode);
   if (state[mode].current) showWords(); else nextWords();
   showLinker();
+}
+
+
+/* ===============================================================
+   Which is more
+================================================================ */
+
+const actsTile = $("acts-tile"), adjTile = $("adj-tile");
+const actsEl = $("acts"), adjEl = $("adj");
+const langEl = $("lang"), langBtn = $("lang-btn");
+
+/* Pairs and adjectives are dealt from shuffled decks, so nothing repeats until the deck runs out. */
+const more = { pairDeck: [], adjDeck: [], pair: null, adjective: null };
+
+function replay(el) {
+  el.classList.remove("fresh");
+  void el.offsetWidth;
+  el.classList.add("fresh");
+}
+
+function announceMore() {
+  if (!more.pair || !more.adjective) return;
+  statusEl.textContent = more.pair.join(" or ") + ". Adjective: " + more.adjective[0];
+}
+
+/* The biggest text size at which both activities fit the tile, each on no more than two lines. */
+function fitActs() {
+  const lines = [...actsEl.querySelectorAll(".act")];
+  if (!lines.length) return;
+  const style = getComputedStyle(actsTile);
+  const room = parseFloat(style.fontSize) * 1.6;            // space for the "Which one?" tag
+  const maxW = actsTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const maxH = actsTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - room;
+  if (maxW <= 0 || maxH <= 0) return;
+  const fits = (px) => {
+    actsEl.style.fontSize = px + "px";
+    if (actsEl.scrollWidth > maxW + 1 || actsEl.offsetHeight > maxH) return false;
+    return lines.every((line) => line.scrollWidth <= maxW + 1 && line.offsetHeight <= px * 1.08 * 2.2);
+  };
+  let low = 14, high = 120;
+  while (high - low > 1) {
+    const mid = (low + high) / 2;
+    if (fits(mid)) low = mid; else high = mid;
+  }
+  actsEl.style.fontSize = Math.floor(low) + "px";
+}
+
+/* The adjective stays on one line and shrinks until it fits. */
+function fitAdjective() {
+  const style = getComputedStyle(adjTile);
+  const innerW = adjTile.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const innerH = adjTile.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  if (innerW <= 0 || innerH <= 0) return;
+  let size = Math.max(Math.min(innerH * 0.4, innerW * 0.22, 110), 16);
+  adjEl.style.fontSize = size + "px";
+  let guard = 0;
+  while (guard++ < 60 && size > 15 && adjEl.scrollWidth > innerW + 1) {
+    size *= 0.94;
+    adjEl.style.fontSize = size + "px";
+  }
+}
+
+function nextMorePair() {
+  if (!more.pairDeck.length) more.pairDeck = shuffle(MORE_PAIRS.slice());
+  more.pair = more.pairDeck.pop();
+  actsEl.innerHTML = '<span class="act"></span><span class="or">or</span><span class="act"></span>';
+  const spans = actsEl.querySelectorAll(".act");
+  spans[0].textContent = more.pair[0];
+  spans[1].textContent = more.pair[1];
+  fitActs();
+  replay(actsEl);
+  announceMore();
+}
+
+function nextMoreAdjective() {
+  if (!more.adjDeck.length) more.adjDeck = shuffle(MORE_ADJECTIVES.slice());
+  more.adjective = more.adjDeck.pop();
+  adjEl.textContent = more.adjective[0];
+  // The language box always shows the patterns with the current adjective.
+  langEl.querySelectorAll(".slot").forEach((slot) => {
+    slot.textContent = slot.dataset.form === "comp" ? more.adjective[1] : more.adjective[0];
+  });
+  fitAdjective();
+  replay(adjEl);
+  announceMore();
+}
+
+function toggleLanguage() {
+  const show = langEl.hidden;
+  langEl.hidden = !show;
+  langBtn.textContent = show ? "Hide language" : "Show language";
+  langBtn.setAttribute("aria-expanded", String(show));
+}
+
+actsTile.addEventListener("click", nextMorePair);
+adjTile.addEventListener("click", nextMoreAdjective);
+$("more-pair-btn").addEventListener("click", nextMorePair);
+$("more-adj-btn").addEventListener("click", nextMoreAdjective);
+$("more-random-btn").addEventListener("click", () => { nextMorePair(); nextMoreAdjective(); });
+langBtn.addEventListener("click", toggleLanguage);
+
+/* The tiles change size with the window, and when the language box opens, closes or wraps. */
+let moreFrame;
+function scheduleMoreRefit() {
+  cancelAnimationFrame(moreFrame);
+  moreFrame = requestAnimationFrame(() => { fitActs(); fitAdjective(); });
+}
+window.addEventListener("resize", scheduleMoreRefit);
+window.addEventListener("orientationchange", scheduleMoreRefit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleMoreRefit);
+if (window.ResizeObserver) {
+  new ResizeObserver(scheduleMoreRefit).observe(actsTile);
+  new ResizeObserver(scheduleMoreRefit).observe(adjTile);
+}
+
+function showMoreGame() {
+  if (!more.pair) { nextMorePair(); nextMoreAdjective(); }   // first visit; after that it carries on where it left off
+  else { fitActs(); fitAdjective(); announceMore(); }
 }
 
 
@@ -1495,19 +1831,22 @@ function showMeaningsGame() {
 function applyMode() {
   const opposites = mode === "opposites";
   const meanings = mode === "meanings";
+  const which = mode === "more";
   tabsEl.querySelectorAll(".tab").forEach((tab) => {
     const on = tab.id === "tab-" + mode;
     tab.setAttribute("aria-selected", on);
     tab.tabIndex = on ? 0 : -1;
     if (on && tabsEl.scrollWidth > tabsEl.clientWidth) tab.scrollIntoView({ block: "nearest", inline: "nearest" });
   });
-  linkerGame.hidden = opposites || meanings;
+  linkerGame.hidden = opposites || meanings || which;
+  moreGame.hidden = !which;
   oppositesGame.hidden = !opposites;
   meaningsGame.hidden = !meanings;
   if (!opposites && ticking) { stopTimer(); paint(); }   // leaving Opposites pauses its timer
   if (opposites || meanings) statusEl.textContent = "";
   if (opposites) showOppositesGame();
   else if (meanings) showMeaningsGame();
+  else if (which) showMoreGame();
   else showLinkerGame();
 }
 
@@ -1540,7 +1879,8 @@ tabsEl.addEventListener("keydown", (event) => {
 
 /* ---------- keyboard ----------
    Space or Enter moves the game on: a new set of words, or in Opposites and Two meanings
-   the reveal and then a new word. L gives a new linker. N gives a new word. */
+   the reveal and then a new word. L gives a new linker. N gives a new word.
+   In Which is more: Space or Enter gives a new pair, A a new adjective, H hides or shows the language box. */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const target = event.target.closest ? event.target : document.body;
@@ -1554,6 +1894,10 @@ document.addEventListener("keydown", (event) => {
   } else if (mode === "meanings") {
     if (press) { event.preventDefault(); if (mShown) newMeaning(); else showMeaning(); }
     else if (event.key === "n" || event.key === "N") newMeaning();
+  } else if (mode === "more") {
+    if (press) { event.preventDefault(); nextMorePair(); }
+    else if (event.key === "a" || event.key === "A") nextMoreAdjective();
+    else if (event.key === "h" || event.key === "H") toggleLanguage();
   } else {
     if (press) { event.preventDefault(); nextWords(); }
     else if (event.key === "l" || event.key === "L") nextLinker();
