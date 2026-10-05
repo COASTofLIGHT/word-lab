@@ -72,13 +72,10 @@
   .tiles li.b1 { --c: #A9CCEB; } /* B1: sky blue */
   .tiles li.b2 { --c: #A8D5CB; } /* B2: sea green */
 
-  /* Activity colours */
-  .tiles li.similar { --c: #C9C3EA; } /* Similar but Different: lavender */
-  .tiles li.odd { --c: #C7DE9F; } /* Odd One Out: leaf green */
-  .tiles li.bbs { --c: #F0C2D3; } /* Because, But, So: rose pink */
-  .tiles li.complete { --c: #C9C3EA; } /* Complete the Sentence: lavender */
-  .tiles li.sandwich { --c: #C7DE9F; } /* Word Sandwich: leaf green */
-  .tiles li.twotofive { --c: #F4B5A0; } /* Two to Five: coral orange */
+  /* Tile colours: give any <li> one of these names. Add a line to add a colour. */
+  .tiles li.lavender { --c: #C9C3EA; } /* lavender */
+  .tiles li.leaf { --c: #C7DE9F; } /* leaf green */
+  .tiles li.rose { --c: #F0C2D3; } /* rose pink */
 
   .tiles a {
     display: flex;
@@ -121,22 +118,24 @@
 
   <!--
     To add a page: copy one <li> block, then change the href, title and description.
-    Set the <li> class to its level (a1, a2, b1 or b2) or its activity colour (similar, odd, bbs, complete, sandwich or twotofive).
-    A new activity needs its own class here and a matching colour line in the style section.
+    To colour a tile: set the <li> class to a level colour (a1, a2, b1 or b2)
+    or a tile colour (lavender, leaf or rose). Swap the class to change the colour.
+    For a new colour, add one line to the "Tile colours" list in the style section.
   -->
   <ul class="tiles">
-     <li class="a1">
+    <li class="a1">
       <a href="wordlist.html">
         <span class="title">Word lists</span>
         <span class="about">Random nouns, verbs and adjectives.</span>
       </a>
-       <li class="similar">
+    </li>
+    <li class="lavender">
       <a href="similar-but-different.html">
         <span class="title">Similar Different</span>
         <span class="about">Alike, unlike.</span>
       </a>
     </li>
-    <li class="sandwich">
+    <li class="leaf">
       <a href="word-sandwich.html">
         <span class="title">Word Sandwich</span>
         <span class="about">Think of a word.</span>
@@ -148,36 +147,30 @@
         <span class="about">Create sentences with random language points.</span>
       </a>
     </li>
-    <li class="complete">
+    <li class="lavender">
       <a href="complete-the-sentence.html">
         <span class="title">Complete the Sentence</span>
         <span class="about">Maybe with a twist.</span>
       </a>
     </li>
-      </a>
-    </li>
-      <li class="bbs">
+    <li class="rose">
       <a href="because-but-so.html">
         <span class="title">Because But So</span>
         <span class="about">Finish the sentence three ways.</span>
       </a>
     </li>
-    <li class="twotofive">
+    <li class="a2">
       <a href="two-to-five.html">
         <span class="title">Two to Five</span>
         <span class="about">Fill the gaps.</span>
       </a>
     </li>
-    <li class="revisioncategories">
-      <a href="trevision-categories.html">
-        <span class="title">Revision Caetgories</span>
-        <span class="about">Think of the right word..</span>
+    <li class="rose">
+      <a href="revision-categories.html">
+        <span class="title">Revision Categories</span>
+        <span class="about">Think of the right word.</span>
       </a>
     </li>
-  
-    
-    
-   
   </ul>
 </main>
 </body>
