@@ -303,6 +303,55 @@
   .topic .txt { text-wrap: balance; }
   .chunk .txt, .ask .txt, .answer .txt { white-space: nowrap; }
 
+  /* ---------- Tic Tac Tell ---------- */
+
+  /* The task on the left, the level on the right */
+  .tell-top {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+  .tell-top .intro { flex: 1 1 16rem; min-width: 0; }
+  .tell-top .levels { margin-right: 0; }
+
+  /* The board: a slab in the level colour with nine word squares */
+  .tell-board {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.35rem, 0.8vw, 0.6rem);
+    padding: clamp(0.6rem, 1.4vw, 1.1rem);
+    border-radius: 0.7rem;
+    background: var(--tell-level, #F4B5A0);
+    transition: background-color 250ms ease;
+  }
+  .tell-sq {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 0.4rem 1rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: clamp(1.3rem, min(3.4vw, 5.6vh), 3.1rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    text-align: center;
+    cursor: pointer;
+  }
+  .tell-sq:hover { filter: brightness(0.97); }
+  .tell-sq:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+  .tell-sq span { display: block; min-width: 0; max-width: 100%; text-wrap: balance; overflow-wrap: break-word; }
+
   @keyframes settle {
     from { opacity: 0; transform: translateY(0.4rem); }
     to   { opacity: 1; transform: none; }
@@ -324,8 +373,10 @@
   @media (max-width: 720px) {
     html, body { height: auto; overflow: auto; }
     .page { height: auto; min-height: 100vh; min-height: 100dvh; }
-    .tabs { order: 3; flex-basis: 100%; }
-    .tab { padding: 0 0.8rem; font-size: 0.95rem; }
+    /* Three tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
+    .tabs { order: 3; flex-basis: 100%; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: 0 0 auto; padding: 0 0.4rem; font-size: 0.8rem; }
     .back { margin-bottom: 0.6rem; }
     .frame { border-top-left-radius: 0; }
     .stage { flex-direction: column; }
@@ -333,10 +384,14 @@
     .tile { flex: 0 0 auto; height: 8.5rem; }
     #language-tile, #noun-tile { height: 11rem; }
     .tip { margin-left: 0; flex-basis: 100%; text-align: left; }
+    .tell-board { grid-template-rows: none; }
+    .tell-board { padding: 0.4rem; }
+    .tell-sq { min-height: 5.5rem; padding: 0.4rem 0.2rem; font-size: clamp(0.8rem, 3.4vw, 1.3rem); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .fresh { animation: none; }
+    .tell-board { transition: none; }
   }
 </style>
 </head>
@@ -348,6 +403,7 @@
     <div class="tabs" role="tablist" aria-label="Games" id="tabs">
       <button type="button" class="tab" role="tab" id="tab-builder" aria-controls="builder-game">Sentence Builder</button>
       <button type="button" class="tab" role="tab" id="tab-words" aria-controls="write-game">Three Little Words</button>
+      <button type="button" class="tab" role="tab" id="tab-tell" aria-controls="tell-game">Tic Tac Tell</button>
     </div>
     <a class="back" href="./">&larr; Word Lab</a>
   </div>
@@ -430,6 +486,23 @@
         <button type="button" class="btn" id="say-chunks-btn">New chunks</button>
         <button type="button" class="btn-primary" id="say-next-btn">Next</button>
         <p class="tip">Chunks: O'Keeffe, McCarthy &amp; Carter, <i>From Corpus to Classroom</i></p>
+      </div>
+    </section>
+
+    <!-- Tic Tac Tell: nine words; choose three in a line and make a sentence with all three. -->
+    <section class="game" id="tell-game" role="tabpanel" aria-labelledby="tab-tell" hidden>
+      <div class="tell-top">
+        <p class="intro">Choose three words in a line. Make a sentence with all three.</p>
+        <div class="levels" role="radiogroup" aria-labelledby="tell-level-label" id="tell-levels">
+          <span class="levels-label" id="tell-level-label">Level</span>
+        </div>
+      </div>
+
+      <div class="tell-board" id="tell-board"></div>
+
+      <div class="controls">
+        <button type="button" class="btn-primary" id="tell-new-btn">New words</button>
+        <p class="tip">Across, down or corner to corner. You can change the form of a word. Click any word to swap just that one.</p>
       </div>
     </section>
 
@@ -1200,18 +1273,221 @@ $("say-answer").addEventListener("click", sayAnswer);
 $("say-chunks-btn").addEventListener("click", () => { sayAsk(); sayAnswer(); });
 
 /* ===============================================================
+   TIC TAC TELL
+   Nine words in a grid. Choose three in a line and make a sentence
+   with all three. Everything for this tab lives inside the brackets
+   below, so its names can't clash with the other games.
+================================================================ */
+
+const ticTacTell = (() => {
+
+  /* The levels, with their Word Lab colours. The board takes the colour of the level. */
+  const TELL_LEVELS = [
+    { id: "a1", label: "A1", colour: "#F2D9A6" },
+    { id: "a2", label: "A2", colour: "#F4B5A0" },
+    { id: "b1", label: "B1", colour: "#A9CCEB" },
+    { id: "b2", label: "B2", colour: "#A8D5CB" }
+  ];
+
+  /* ---------------------------------------------------------------
+     The words, one block per level.
+
+     Every board has three things (a person, a thing and a place),
+     three verbs and three extras (one from "time", one from "little"
+     and one adjective). They are placed so that each row and each
+     column gets one of each. One diagonal is the person, the thing
+     and the place; the other is one of each kind again. So every
+     line of three can make a sentence.
+
+     Verbs are in the infinitive and adjectives in their base form,
+     so the students work out the changes. Add or remove words freely.
+  ---------------------------------------------------------------- */
+  const WORDS = {
+    a1: {
+      people: ["my mum", "my dad", "my brother", "my sister", "my friend", "my teacher", "my grandma", "my grandpa",
+               "the baby", "a boy", "a girl", "my cousin", "the doctor", "a clown"],
+      things: ["a ball", "my bag", "a book", "a cake", "the cat", "the dog", "a bike", "an apple", "my hat",
+               "a kite", "a robot", "ice cream", "a pencil", "my shoes", "a banana", "a toy"],
+      places: ["the park", "school", "the beach", "my house", "the zoo", "the shop", "the garden", "my bedroom",
+               "the kitchen", "the farm", "the playground", "the classroom"],
+      verbs:  ["play", "eat", "go", "see", "like", "have", "run", "jump", "read", "draw", "sing", "swim", "sleep",
+               "drink", "open", "ride", "make", "want", "give", "find", "walk", "wear", "watch", "kick", "catch",
+               "clean", "cook", "dance", "help", "buy"],
+      time:   ["today", "every day", "on Monday", "in the morning", "at night", "now", "on Saturday", "after school",
+               "in summer", "always", "never", "sometimes"],
+      little: ["and", "but", "because", "with", "where", "who", "what", "how many", "can", "can't"],
+      adjectives: ["big", "small", "happy", "sad", "new", "old", "funny", "red", "blue", "hot", "cold", "hungry",
+                   "tired", "fast", "dirty", "beautiful", "long", "nice"]
+    },
+    a2: {
+      people: ["my sister", "my uncle", "my teacher", "my best friend", "the doctor", "my neighbour", "my cousin",
+               "a police officer", "my grandmother", "the waiter", "my dad", "a tourist", "the bus driver", "my classmates"],
+      things: ["my phone", "a pizza", "basketball", "homework", "a present", "the bus", "my keys", "a guitar",
+               "a sandwich", "my bike", "a film", "the dog", "money", "an umbrella", "a photo", "my bag"],
+      places: ["the park", "the beach", "school", "the supermarket", "the cinema", "London", "the kitchen",
+               "the hospital", "a restaurant", "the airport", "the library", "the swimming pool", "the station", "my bedroom"],
+      verbs:  ["play", "buy", "lose", "find", "eat", "forget", "break", "give", "see", "go", "meet", "make", "take",
+               "want", "visit", "cook", "watch", "drive", "wear", "send", "hurt", "win", "drink", "open", "carry",
+               "need", "borrow", "catch", "clean", "paint", "run", "sleep", "sing", "wait", "laugh", "fall"],
+      /* The extras: one from each list goes on every board. */
+      time:   ["yesterday", "tomorrow", "last week", "every day", "never", "always", "sometimes", "at the weekend",
+               "next year", "two days ago", "on Friday", "tonight", "last summer", "usually"],
+      little: ["which", "where", "why", "when", "who", "because", "but", "so", "if", "how many"],
+      adjectives: ["big", "new", "old", "expensive", "tired", "happy", "dangerous", "favourite", "funny", "late",
+                   "hungry", "cheap", "noisy", "boring", "angry", "beautiful"]
+    },
+    b1: {
+      people: ["my best friend", "my neighbour", "my coach", "a stranger", "my grandparents", "the head teacher",
+               "a tourist", "my classmates", "a famous singer", "my aunt", "the shop assistant", "a firefighter",
+               "my cousin", "the bus driver", "a journalist", "my team"],
+      things: ["my phone", "a suitcase", "the weather", "a secret", "a mistake", "the exam", "my passport",
+               "a message", "the traffic", "a ticket", "my headphones", "a present", "an idea", "the news",
+               "a recipe", "my password"],
+      places: ["the airport", "a festival", "the city centre", "abroad", "the gym", "the countryside", "a campsite",
+               "the hospital", "a concert", "the coast", "the stadium", "a shopping centre", "the mountains",
+               "the underground"],
+      verbs:  ["forget", "borrow", "lend", "promise", "decide", "explain", "arrive", "miss", "book", "cancel",
+               "complain", "improve", "invite", "agree", "argue", "choose", "earn", "spend", "share", "save",
+               "remember", "recommend", "worry", "organise", "repair", "climb", "hide", "shout", "receive",
+               "download", "hope", "refuse", "apologise", "expect", "prefer"],
+      time:   ["already", "yet", "just", "since Monday", "for two years", "ever", "recently", "last night",
+               "next month", "at the moment", "in the future", "two years ago", "these days", "as soon as"],
+      little: ["although", "unless", "if", "so that", "which", "who", "whose", "however", "instead of",
+               "used to", "should", "might", "have to", "while"],
+      adjectives: ["nervous", "proud", "embarrassed", "exhausted", "crowded", "terrible", "amazing", "lucky",
+                   "jealous", "confident", "disappointed", "unusual", "annoyed", "generous", "rude",
+                   "fashionable", "reliable", "peaceful"]
+    },
+    b2: {
+      people: ["the head teacher", "a politician", "my generation", "an influencer", "a volunteer", "the witness",
+               "my role model", "a complete stranger", "the audience", "a scientist", "the neighbours",
+               "my opponent", "a celebrity", "the referee", "an expert", "my relatives"],
+      things: ["the deadline", "a rumour", "social media", "the environment", "a compliment", "an excuse",
+               "a decision", "the budget", "an opportunity", "my reputation", "a scholarship", "the evidence",
+               "a challenge", "a habit", "the atmosphere", "an argument"],
+      places: ["the outskirts", "a remote island", "the suburbs", "the stage", "a laboratory", "the rainforest",
+               "an abandoned building", "the border", "backstage", "the countryside", "a crowded beach",
+               "a rooftop", "the waiting room", "a theme park", "the motorway"],
+      verbs:  ["admit", "deny", "regret", "persuade", "refuse", "manage", "afford", "achieve", "blame", "suspect",
+               "warn", "threaten", "encourage", "postpone", "overcome", "exaggerate", "criticise", "convince",
+               "deserve", "struggle", "accuse", "pretend", "recover", "cope", "hesitate", "betray", "gossip",
+               "interrupt", "cheat", "announce", "influence", "appreciate", "tolerate", "bother", "boast"],
+      time:   ["by the time", "eventually", "in the meantime", "ever since", "the moment", "so far", "at last",
+               "from now on", "sooner or later", "until recently", "once", "lately", "for ages", "in the end",
+               "by next year", "hardly ever"],
+      little: ["despite", "whereas", "unless", "provided that", "even though", "in case", "no sooner", "I wish",
+               "if only", "would rather", "must have", "can't have", "should have", "might have", "whoever",
+               "nevertheless"],
+      adjectives: ["reluctant", "ridiculous", "furious", "suspicious", "ambitious", "stubborn", "guilty",
+                   "thrilled", "awkward", "desperate", "grateful", "exhausting", "controversial", "hilarious",
+                   "selfish", "overwhelmed", "misleading", "sensible"]
+    }
+  };
+
+  /* Where each kind of word goes: N = a thing, V = a verb, X = an extra. Turned and flipped at random for each board. */
+  const LAYOUT = "VXNXNVNVX";
+
+  /* The level comes from the last visit, otherwise A2. */
+  let tellLevel = "a2";
+  try {
+    const saved = localStorage.getItem("tictactell.level");
+    if (TELL_LEVELS.some((l) => l.id === saved)) tellLevel = saved;
+  } catch (e) { /* storage unavailable */ }
+
+  const board = $("tell-board");
+  const cells = [];        // the nine squares: { list, word, el }. "list" is the word list the square draws from.
+
+  /* A shuffled pile for each list at each level, so words don't come round again until the list is used up. */
+  const piles = {};
+  function draw(list) {
+    const key = tellLevel + "." + list, onBoard = cells.map((c) => c.word);
+    for (let tries = 0; tries < 50; tries++) {
+      if (!piles[key] || !piles[key].length) piles[key] = shuffle(WORDS[tellLevel][list].slice());
+      const word = piles[key].pop();
+      if (!onBoard.includes(word)) return word;
+    }
+    return WORDS[tellLevel][list][0];
+  }
+
+  function show(cell, word) {
+    cell.word = word;
+    const w = cell.el.firstChild;
+    w.textContent = word;
+    w.classList.remove("fresh"); void w.offsetWidth; w.classList.add("fresh");
+    cell.el.setAttribute("aria-label", word + ". Click for a different word.");
+  }
+
+  /* A whole new board. */
+  function deal() {
+    // Turn and flip the layout, and sometimes swap the verbs with the extras.
+    const turns = rand(4), flip = rand(2) === 1, swap = rand(2) === 1;
+    const kinds = new Array(9);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      let rr = r, cc = c;
+      for (let k = 0; k < turns; k++) [rr, cc] = [cc, 2 - rr];
+      if (flip) cc = 2 - cc;
+      let kind = LAYOUT[r * 3 + c];
+      if (swap && kind !== "N") kind = kind === "V" ? "X" : "V";
+      kinds[rr * 3 + cc] = kind;
+    }
+    const lists = {
+      N: shuffle(["people", "things", "places"]),
+      V: ["verbs", "verbs", "verbs"],
+      X: shuffle(["time", "little", "adjectives"])
+    };
+    cells.forEach((c) => { c.word = null; });
+    cells.forEach((c, i) => { c.list = lists[kinds[i]].pop(); show(c, draw(c.list)); });
+  }
+
+  /* One square: a different word of the same kind, so the board keeps its balance. */
+  function change(cell) { show(cell, draw(cell.list)); }
+
+  for (let i = 0; i < 9; i++) {
+    const el = document.createElement("button");
+    el.type = "button"; el.className = "tell-sq";
+    el.appendChild(document.createElement("span"));
+    const cell = { list: "", word: null, el };
+    el.addEventListener("click", () => change(cell));
+    board.appendChild(el); cells.push(cell);
+  }
+  $("tell-new-btn").addEventListener("click", deal);
+
+  /* Level buttons: changing level deals a fresh board in that level's colour. */
+  function paint() { board.style.setProperty("--tell-level", TELL_LEVELS.find((l) => l.id === tellLevel).colour); }
+  TELL_LEVELS.forEach((l) => {
+    const label = document.createElement("label");
+    label.style.setProperty("--lv", l.colour);
+    label.innerHTML = '<input type="radio" name="tell-level" value="' + l.id + '"><span>' + l.label + "</span>";
+    const input = label.querySelector("input");
+    input.checked = l.id === tellLevel;
+    input.addEventListener("change", () => {
+      tellLevel = l.id;
+      try { localStorage.setItem("tictactell.level", tellLevel); } catch (e) { /* ignore */ }
+      paint(); deal();
+    });
+    $("tell-levels").appendChild(label);
+  });
+
+  paint(); deal();
+  return { deal };   // for the Space and Enter keys, further down
+})();
+
+/* ===============================================================
    THE TABS
-   Two tabs at the top: Sentence Builder and Three Little Words.
-   Three Little Words has two games of its own, Write it and Say it,
-   chosen with the switch beside its buttons.
+   Three tabs at the top: Sentence Builder, Three Little Words and
+   Tic Tac Tell. Three Little Words has two games of its own, Write it
+   and Say it, chosen with the switch beside its buttons.
 
    A link can open any of them directly:
      sentence-builder.html?mode=builder   (add &level=b1 for a level)
      sentence-builder.html?mode=write
      sentence-builder.html?mode=say
+     sentence-builder.html?mode=tell
 ================================================================ */
 
-const GAMES = ["builder", "write", "say"];
+const GAMES = ["builder", "write", "say", "tell"];
+const TABS = ["builder", "words", "tell"];
+const tabOf = (game) => (game === "write" || game === "say" ? "words" : game);
 let mode = "builder";
 let wordsGame = "write";   // the Three Little Words game last on screen
 
@@ -1222,14 +1498,14 @@ function refit() {
 
 function chooseMode(id) {
   mode = id;
-  if (mode !== "builder") wordsGame = mode;
+  if (tabOf(mode) === "words") wordsGame = mode;
   GAMES.forEach((g) => { $(g + "-game").hidden = g !== mode; });
 
-  const onBuilder = mode === "builder";
-  $("tab-builder").setAttribute("aria-selected", onBuilder);
-  $("tab-builder").tabIndex = onBuilder ? 0 : -1;
-  $("tab-words").setAttribute("aria-selected", !onBuilder);
-  $("tab-words").tabIndex = onBuilder ? -1 : 0;
+  TABS.forEach((t) => {
+    const on = t === tabOf(mode);
+    $("tab-" + t).setAttribute("aria-selected", on);
+    $("tab-" + t).tabIndex = on ? 0 : -1;
+  });
   $("tab-words").setAttribute("aria-controls", wordsGame + "-game");
 
   document.querySelectorAll(".switch button").forEach((b) => {
@@ -1242,20 +1518,23 @@ function chooseMode(id) {
 
 $("tab-builder").addEventListener("click", () => chooseMode("builder"));
 $("tab-words").addEventListener("click", () => chooseMode(wordsGame));
+$("tab-tell").addEventListener("click", () => chooseMode("tell"));
 document.querySelectorAll(".switch button").forEach((b) => b.addEventListener("click", () => chooseMode(b.dataset.go)));
 
-/* Left and right arrows move between the two tabs when one of them has the focus. */
+/* Left and right arrows move between the tabs when one of them has the focus. */
 $("tabs").addEventListener("keydown", (event) => {
   if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-  const toBuilder = mode !== "builder";
-  chooseMode(toBuilder ? "builder" : wordsGame);
-  $(toBuilder ? "tab-builder" : "tab-words").focus();
+  const step = event.key === "ArrowRight" ? 1 : -1;
+  const tab = TABS[(TABS.indexOf(tabOf(mode)) + step + TABS.length) % TABS.length];
+  chooseMode(tab === "words" ? wordsGame : tab);
+  $("tab-" + tab).focus();
 });
 
 /* Keys.
    Sentence Builder: Space or Enter = both, 1 / 2 = one column.
    Three Little Words: Space, Enter or right arrow = Next, T = New topic,
-   C = New chunk or chunks, + = Add a chunk (Write it). */
+   C = New chunk or chunks, + = Add a chunk (Write it).
+   Tic Tac Tell: Space or Enter = New words. */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const go = event.code === "Space" || event.code === "Enter";
@@ -1263,6 +1542,10 @@ document.addEventListener("keydown", (event) => {
   if (event.target.closest && event.target.closest(".tabs")) return;
   const key = event.key.toLowerCase();
 
+  if (mode === "tell") {
+    if (go) { event.preventDefault(); ticTacTell.deal(); }
+    return;
+  }
   if (mode === "builder") {
     if (go) { event.preventDefault(); randomAll(); }
     else if (key === "1") change(language);
