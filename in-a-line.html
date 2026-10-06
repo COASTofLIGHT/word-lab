@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>In a Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --panel: #F9FBFB;
+    --line: rgba(16, 48, 58, 0.14);
+    --level: #F2D9A6;          /* set by the board's level, see LEVELS in the script */
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--mist); color: var(--ink); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+  button, input, select { font-family: var(--font); color: var(--ink); }
+  button, select { cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .page {
+    height: 100%; max-width: 1400px; margin: 0 auto;
+    padding: clamp(0.75rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2.25rem);
+    display: flex; flex-direction: column; gap: clamp(0.5rem, 1.5vh, 1rem);
+  }
+  /* Title, tabs and the way back. The chosen tab joins on to the board underneath. */
+  .main { flex: 1 0 auto; display: flex; flex-direction: column; }
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: clamp(1rem, 2.5vw, 2rem); }
+  .top h1 { margin: 0 0 0.6rem; font-size: clamp(1.5rem, 2.8vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .back { margin: 0 0 0.75rem auto; color: var(--ink-soft); font-size: 0.95rem; text-decoration: none; white-space: nowrap; }
+  .tabs { display: flex; gap: 0.2rem; }
+  .tab {
+    height: 2.75rem; padding: 0 1.15rem; border: 0; border-radius: 0.7rem 0.7rem 0 0;
+    background: transparent; color: var(--ink-soft); font-size: 1rem; font-weight: 700; white-space: nowrap;
+    transition: background-color 250ms ease;
+  }
+  .tab:hover { background: rgba(255, 255, 255, 0.55); color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--level); color: var(--ink); }
+  .tab:focus-visible { outline-offset: -3px; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* The board: a slab in the level colour with the squares cut into it */
+  .board {
+    flex: 1 0 auto; background: var(--level); border-radius: 0.9rem;
+    padding: clamp(0.7rem, 1.6vw, 1.4rem); display: flex; flex-direction: column; gap: clamp(0.5rem, 1.2vh, 0.9rem);
+    transition: background-color 250ms ease;
+  }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.4rem 1.5rem; flex-wrap: wrap; }
+  .status { margin: 0; font-size: clamp(1.1rem, 2vw, 1.7rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+  .how { margin: 0; font-size: clamp(0.9rem, 1.3vw, 1.1rem); font-weight: 500; line-height: 1.3; opacity: 0.8; }
+
+  .play { flex: 1 0 auto; display: flex; gap: clamp(0.5rem, 1.2vw, 1rem); }
+  .grid {
+    --n: 4;
+    flex: 1 1 0; min-width: 0; position: relative; display: grid;
+    grid-template-columns: minmax(5.5rem, 1.15fr) repeat(var(--n), minmax(0, 1fr));
+    grid-template-rows: auto repeat(var(--n), minmax(min-content, 1fr));
+    gap: clamp(0.3rem, 0.7vw, 0.55rem);
+  }
+
+  /* The words round the edge. Click one to change it. */
+  .hd {
+    display: grid; place-items: center; text-align: center; border-radius: 0.6rem;
+    padding: 0.35rem 0.4rem; min-height: 2.6rem;
+    font-size: clamp(0.95rem, min(2.1vw, 3.6vh), 1.9rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.1;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  .hd.lit { background: var(--ink); color: var(--mist); }
+  .ed {
+    display: inline-block; min-width: 3ch; max-width: 100%; outline: none; text-wrap: balance; overflow-wrap: break-word;
+    border-bottom: 2px dashed transparent; cursor: text;
+  }
+  .ed:hover, .ed:focus { border-bottom-color: currentColor; }
+  .ed:empty::before { content: "type here"; font-weight: 500; opacity: 0.5; }
+
+  .sq {
+    position: relative; min-height: 3.2rem; padding: 0; border: 0; border-radius: 0.6rem;
+    background: var(--panel); transition: background-color 150ms ease;
+  }
+  .sq:not(.taken):not(.pending):not(:disabled):hover { background: #fff; box-shadow: inset 0 0 0 2px var(--line); }
+  .sq.pending { background: #fff; box-shadow: inset 0 0 0 4px var(--ink); }
+  .sq.taken { background: var(--tc); cursor: default; }
+  .sq:disabled { cursor: default; }
+  .sq svg { position: absolute; inset: 17%; width: 66%; height: 66%; }
+  .sq.pending svg { opacity: 0.25; }
+  .sq.just svg { animation: pop 0.3s ease-out; }
+  @keyframes pop { from { transform: scale(0.6); opacity: 0; } }
+  .mark { fill: none; stroke: var(--ink); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Words inside: the language sits in the squares and the topic stands beside them */
+  .grid.inside {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(min-content, 1fr));
+  }
+  .grid.inside .sq {
+    display: grid; place-items: center; text-align: center; padding: 0.5rem 0.6rem; min-height: 3.6rem;
+    font-size: clamp(1rem, min(2vw, 3.6vh), 1.9rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.1;
+  }
+  .grid.inside .sq .w { text-wrap: balance; overflow-wrap: break-word; max-width: 100%; }
+  .grid.inside .sq svg {
+    inset: 0.4rem auto auto 0.4rem;
+    width: clamp(1rem, 1.8vw, 1.6rem); height: clamp(1rem, 1.8vw, 1.6rem);
+  }
+  .grid.inside .lines line { opacity: 0.2; stroke-width: 22; }   /* a soft band, so the words stay readable */
+
+  .topic {
+    flex: 0 0 clamp(11rem, 23%, 19rem); border-radius: 0.6rem; background: var(--ink); color: var(--mist);
+    padding: clamp(0.8rem, 1.6vw, 1.4rem); display: flex; flex-direction: column; justify-content: center; gap: 0.7rem;
+  }
+  .topic h2 { margin: 0; font-size: clamp(0.95rem, 1.4vw, 1.25rem); font-weight: 600; line-height: 1.2; opacity: 0.75; }
+  .topic .items {
+    font-size: clamp(1.1rem, min(2vw, 3.5vh), 1.9rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.3;
+    white-space: pre-wrap; overflow-wrap: break-word;
+  }
+  .topic [contenteditable] { outline: none; border-bottom: 2px dashed transparent; cursor: text; }
+  .topic [contenteditable]:hover, .topic [contenteditable]:focus { border-bottom-color: currentColor; }
+
+  /* The lines drawn through threes and fours */
+  .lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .lines line { stroke: var(--ink); stroke-width: 7; stroke-linecap: round; opacity: 0.9; }
+  .lines line.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 0.45s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* Teams */
+  .scores { display: flex; gap: 0.6rem; align-items: stretch; flex-wrap: wrap; }
+  .teams { flex: 1; min-width: min(100%, 18rem); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 0.6rem; }
+  .team {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 0.9rem; padding: 0.4rem 0.7rem 0.4rem 0.45rem;
+  }
+  .team.on { box-shadow: inset 0 0 0 3px var(--ink); }
+  .team.gone { opacity: 0.45; }
+  .team .chip { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 0.55rem; background: var(--tc); position: relative; }
+  .team .chip svg { position: absolute; inset: 20%; width: 60%; height: 60%; }
+  .team .name {
+    flex: 1; min-width: 4rem; width: 100%; font-size: 1.05rem; font-weight: 700;
+    border: 0; border-bottom: 2px dashed transparent; background: transparent; padding: 0.1em 0;
+  }
+  .team .name:hover, .team .name:focus { border-bottom-color: var(--ink-soft); outline: none; }
+  .team .tag { font-size: 0.9rem; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .team .total { font-size: 1.8rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 1.5ch; text-align: right; line-height: 1; }
+  .tools { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
+  .tool { border: 0; background: transparent; color: var(--ink-soft); font-size: 0.9rem; font-weight: 600; text-align: left; padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
+  .tool:hover { color: var(--ink); text-decoration: underline; }
+  .tool:disabled { opacity: 0.35; cursor: default; text-decoration: none; }
+
+  /* Bottom bar */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  button.btn {
+    font-weight: 600; font-size: 1rem; padding: 0.55em 1.1em; border-radius: 0.6rem;
+    border: 2px solid var(--ink); background: var(--ink); color: var(--mist);
+  }
+  button.btn.ghost { background: transparent; color: var(--ink); }
+  button.btn:hover { filter: brightness(1.15); }
+  button.btn:disabled { opacity: 0.35; cursor: default; filter: none; }
+  .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 0.6rem; overflow: hidden; }
+  .seg button { font-weight: 700; font-size: 1rem; padding: 0.45em 0.9em; border: 0; background: transparent; }
+  .seg button.on { background: var(--ink); color: var(--mist); }
+  .seg button:focus-visible { outline-offset: -3px; }
+  select.pick {
+    appearance: none; -webkit-appearance: none; font-weight: 700; font-size: 1rem;
+    padding: 0.5em 2.3em 0.5em 0.9em; border: 2px solid var(--ink); border-radius: 0.6rem; max-width: 100%;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2310303A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.8em center / 0.75em;
+  }
+
+  @media (max-width: 700px) {
+    html, body, .page { height: auto; }
+    .tabs { order: 3; flex-basis: 100%; }
+    .tab { padding: 0 0.8rem; font-size: 0.95rem; }
+    .back { margin-bottom: 0.6rem; }
+    .board { overflow-x: auto; border-top-left-radius: 0; }
+    .grid { flex: 1 0 auto; min-width: 40rem; }
+    .grid.inside { min-width: 0; }
+    .play { flex-direction: column; }
+    .topic { order: -1; flex: none; }
+    .sq { min-height: 4rem; }
+    .tools { flex-direction: row; flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .board, .hd, .sq, .tab { transition: none; }
+    .sq.just svg { animation: none; }
+    .lines line.draw { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="main">
+    <div class="top">
+      <h1>In a Line</h1>
+      <div class="tabs" role="tablist" aria-label="Boards">
+        <button class="tab" role="tab" id="tab-out" data-view="out" aria-selected="true" aria-controls="board">Words outside</button>
+        <button class="tab" role="tab" id="tab-in" data-view="in" aria-selected="false" aria-controls="board">Words inside</button>
+      </div>
+      <a class="back" href="./">&larr; Word Lab</a>
+    </div>
+
+    <section class="board" id="board" role="tabpanel">
+      <div class="head">
+        <p class="status" id="status" aria-live="polite"></p>
+        <p class="how" id="how"></p>
+      </div>
+      <div class="play">
+        <div class="grid" id="grid"></div>
+        <aside class="topic" id="topic" hidden>
+          <h2 id="topicTitle" aria-label="Topic"></h2>
+          <div class="items" id="topicItems" aria-label="Things to talk about"></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div class="scores">
+    <div class="teams" id="teams"></div>
+    <div class="tools">
+      <button class="tool" id="addTeam">Add a team</button>
+      <button class="tool" id="removeTeam">Remove a team</button>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="controls">
+      <button class="btn" id="ok">Correct</button>
+      <button class="btn ghost" id="no">Not quite</button>
+      <button class="btn ghost" id="undo">Undo</button>
+      <button class="btn ghost" id="fresh">New game</button>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Game">
+        <button data-mode="most" class="on">Most threes</button>
+        <button data-mode="four">First to four</button>
+        <button data-mode="out">Avoid three</button>
+      </div>
+      <div class="seg" role="group" aria-label="Board size" data-for="out">
+        <button data-n="4" class="on">4 &times; 4</button>
+        <button data-n="5">5 &times; 5</button>
+      </div>
+      <select class="pick" id="pick" aria-label="Board" data-for="out"></select>
+      <div class="seg" role="group" aria-label="Level" data-for="in" hidden>
+        <button data-lv="a1" class="on">A1</button>
+        <button data-lv="a2">A2</button>
+        <button data-lv="b1">B1</button>
+        <button data-lv="b2">B2</button>
+      </div>
+      <select class="pick" id="pickIn" aria-label="Language" data-for="in" hidden></select>
+      <button class="btn ghost" id="mix">New words</button>
+      <button class="btn ghost" id="newTopic" data-for="in" hidden>New topic</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   THE BOARDS
+
+   To add a board: copy one block, then change the name, level, words
+   and example. "cols" go along the top, "rows" go down the side.
+   Each list needs at least 5 entries. The first 4 (or 5) are used when
+   the board opens; "New words" picks at random from the whole list.
+   Every top word has to work with every side word.
+   Verbs go in the infinitive and adjectives in their base form,
+   so the students work out the changes.
+   Levels: a1, a2, b1, b2.
+------------------------------------------------------------------ */
+const SETS = [
+  { name: "Animals", level: "a1", task: "Make a sentence. Change the verb if you need to.", eg: "A frog has got four legs.",
+    cols: ["A bird", "A shark", "A monkey", "A frog", "A spider", "A cat", "An elephant", "A snake", "A penguin", "A horse"],
+    rows: ["can", "can't", "have got", "have not got", "like", "eat", "live", "be", "sleep", "drink"] },
+
+  { name: "Where things are", level: "a1", task: "Make a sentence with there is or there are.", eg: "In my bedroom there aren't any plants.",
+    cols: ["In my bedroom", "In my school bag", "In the kitchen", "In the classroom", "In my town", "In the park", "At the beach"],
+    rows: ["a / an", "some", "any", "two", "a lot of", "no"] },
+
+  { name: "Letters", level: "a1", task: "Say a word that fits both.", eg: "B + an animal = bear.",
+    cols: ["B", "C", "S", "T", "P", "M", "F", "H"],
+    rows: ["an animal", "food or drink", "a place", "a job", "something at school", "a verb", "a sport or hobby"] },
+
+  { name: "Past simple", level: "a2", task: "Make a sentence in the past.", eg: "Last summer I went to the beach.",
+    cols: ["Yesterday", "Last weekend", "Last summer", "This morning", "When I was little", "Last night", "On my birthday", "Two days ago"],
+    rows: ["go", "eat", "see", "buy", "make", "have", "play", "find"] },
+
+  { name: "How often?", level: "a2", eg: "My teacher never arrives late.",
+    cols: ["I", "My best friend", "My teacher", "My family", "My mum or dad", "My neighbours", "Teenagers"],
+    rows: ["always", "usually", "sometimes", "never", "often", "every day", "at the weekend"] },
+
+  { name: "Comparing", level: "a2", task: "Compare it with something else.", eg: "A cat is cheaper than a horse.",
+    cols: ["A cat", "A bike", "A pizza", "A phone", "A city", "A book", "A car", "A football"],
+    rows: ["big", "cheap", "good", "dangerous", "fun", "small", "bad", "expensive"] },
+
+  { name: "Plans", level: "a2", task: "Make a sentence about the future.", eg: "Next summer I'm going to visit my cousins.",
+    cols: ["Tonight", "Tomorrow", "Next weekend", "Next summer", "When I'm older", "After class", "On Friday"],
+    rows: ["be going to", "want to", "would like to", "hope to", "need to", "plan to"] },
+
+  { name: "Present perfect", level: "b1", task: "Make a present perfect sentence.", eg: "I've never eaten sushi.",
+    cols: ["never", "already", "just", "yet", "ever", "always"],
+    rows: ["be", "eat", "see", "do", "make", "have", "buy", "play"] },
+
+  { name: "Rules", level: "b1", task: "Make a rule. It can be positive or negative.", eg: "At home you don't have to wear a uniform.",
+    cols: ["At school", "At home", "In a restaurant", "On a plane", "At the beach", "In a library", "On the bus", "At a football match"],
+    rows: ["have to", "must", "can", "should", "need to", "be allowed to"] },
+
+  { name: "If \u2026", level: "b1", task: "Make a sentence with If I \u2026, I would \u2026", eg: "If I were rich, I'd buy a boat.",
+    cols: ["be rich", "can fly", "be the teacher", "live in London", "have no phone", "be invisible", "speak ten languages"],
+    rows: ["buy", "go", "tell", "eat", "feel", "need", "give", "see"] },
+
+  { name: "Linking words", level: "b1", eg: "I like football, but I never watch it.",
+    cols: ["School", "Football", "Mobile phones", "Summer", "Homework", "Music", "Pets", "Weekends"],
+    rows: ["because", "but", "so", "although", "when", "if", "while"] },
+
+  { name: "Back then", level: "b1", task: "Make a sentence about the past.", eg: "Before mobile phones, people had to use maps.",
+    cols: ["When I was five", "At primary school", "Ten years ago", "Before mobile phones", "When my grandparents were young", "A hundred years ago"],
+    rows: ["used to", "have to", "can", "there + be", "have", "play", "go"] },
+
+  { name: "Verb patterns", level: "b2", task: "Make a sentence. Think about the verb that comes next.", eg: "I'm looking forward to going on holiday.",
+    cols: ["enjoy", "decide", "can't stand", "look forward to", "would rather", "regret", "manage", "avoid"],
+    rows: ["School", "Weekends", "Holidays", "Sport", "Food", "Money", "Friends", "Music"] },
+
+  { name: "Linking words", level: "b2", eg: "Although I use social media every day, I rarely post anything.",
+    cols: ["Social media", "Exams", "Travelling", "Fast food", "Video games", "Climate change", "Fashion", "Part-time jobs"],
+    rows: ["although", "despite", "whereas", "unless", "as long as", "even though", "however"] },
+
+  { name: "Making guesses", level: "b2", task: "Make a guess about now or about the past.", eg: "My neighbours must have gone on holiday.",
+    cols: ["My teacher", "My best friend", "My neighbours", "My parents", "The person next to me", "My favourite singer"],
+    rows: ["must", "can't", "might", "must (past)", "can't (past)", "might (past)"] },
+
+  /* The empty board: type your own words round the edge. */
+  { name: "Your own words", level: "own", own: true, cols: [], rows: [] }
+];
+
+/* ------------------------------------------------------------------
+   WORDS INSIDE
+
+   Here the language goes in the 16 squares and the topic stands beside
+   the board. Each language set has a word list for every level. A list
+   needs at least 16 entries; if it has more, "New words" picks 16 at
+   random. Verbs go in the infinitive and adjectives in their base form.
+
+   "topics" says which topics each level cycles through with "New
+   topic". Use a name from TOPICS, or write one out in full:
+   { title: "...", items: ["...", "..."] }
+------------------------------------------------------------------ */
+const TOPICS = {
+  days:     { title: "The days of the week", items: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+  seasons:  { title: "The seasons", items: ["spring", "summer", "autumn", "winter"] },
+  subjects: { title: "School subjects", items: ["Maths", "English", "Science", "History", "PE", "Art", "Music"] },
+  sports:   { title: "Sports", items: ["football", "basketball", "tennis", "swimming", "cycling", "running"] },
+  travel:   { title: "Getting around", items: ["car", "bus", "train", "plane", "bike", "on foot"] },
+  cities:   { title: "Cities", items: ["Madrid", "London", "Paris", "New York", "Tokyo", "Rome"] },
+  jobs:     { title: "Jobs", items: ["teacher", "doctor", "footballer", "chef", "police officer", "influencer"] },
+  myday:    { title: "My day", items: ["in the morning", "at school", "at lunchtime", "after school", "in the evening", "at bedtime"] },
+  food:     { title: "Food and drink", items: ["breakfast", "lunch", "dinner", "fruit", "pizza", "water"] },
+  animals:  { title: "Animals", items: ["dogs", "cats", "horses", "sharks", "spiders", "birds"] },
+  freetime: { title: "Free time", items: ["sport", "music", "video games", "films", "books", "friends"] },
+  school:   { title: "School", items: ["lessons", "homework", "teachers", "exams", "breaks", "school trips"] },
+  tech:     { title: "Technology", items: ["phones", "social media", "video games", "the internet", "AI", "TV"] },
+  world:    { title: "The world around us", items: ["climate change", "big cities", "tourism", "fast fashion", "plastic", "public transport"] },
+  places:   { title: "Places", items: ["at school", "at home", "on a plane", "in a library", "at the beach", "in a restaurant"] },
+  outabout: { title: "Out and about", items: ["on the bus", "at the cinema", "in a museum", "at a swimming pool", "in a park", "at a football match"] },
+  advice:   { title: "Advice about", items: ["staying healthy", "learning English", "making friends", "saving money", "visiting your town", "using social media"] }
+};
+
+const INSIDE = [
+  { name: "Linking words", task: "Make a sentence about the topic. Use the linking word.",
+    words: {
+      a1: ["and", "but", "or", "because", "so", "then", "when", "before", "after", "if", "too", "also", "first", "next", "and then", "later"],
+      a2: ["and", "but", "or", "because", "so", "also", "too", "as well", "when", "while", "before", "after", "if", "then", "first", "next", "finally", "until", "after that", "for example"],
+      b1: ["although", "however", "because", "because of", "so", "so that", "while", "unless", "as soon as", "until", "since", "even if", "in case", "as well as", "instead of", "for example", "such as", "on the other hand", "in fact", "after that"],
+      b2: ["although", "even though", "despite", "in spite of", "whereas", "while", "however", "nevertheless", "therefore", "as a result", "due to", "since", "unless", "as long as", "provided that", "in case", "in order to", "so as to", "moreover", "what's more", "on the other hand", "otherwise", "even if", "no matter"]
+    },
+    topics: { a1: ["myday", "food", "animals"], a2: ["freetime", "school", "food"], b1: ["school", "freetime", "tech", "travel"], b2: ["tech", "world", "school", "travel"] } },
+
+  { name: "Comparing", task: "Compare two or more. Change the word if you need to.",
+    words: {
+      a1: ["than", "more", "the most", "good", "bad", "fun", "boring", "easy", "difficult", "nice", "favourite", "like", "don't like", "both", "the same", "different"],
+      a2: ["than", "more", "the most", "less", "as \u2026 as", "not as \u2026 as", "good", "bad", "fun", "boring", "easy", "difficult", "interesting", "exciting", "tiring", "popular", "both", "the same as", "different from", "prefer"],
+      b1: ["than", "more", "the most", "less", "the least", "as \u2026 as", "not as \u2026 as", "much", "a bit", "a lot", "good", "bad", "both", "neither", "however", "similar to", "different from", "the same as", "prefer", "would rather"],
+      b2: ["than", "more", "less", "the most", "the least", "as \u2026 as", "not as \u2026 as", "not nearly as", "just as", "by far", "easily", "slightly", "a bit", "far", "much", "considerably", "whereas", "while", "however", "on the other hand", "both", "neither", "good", "bad"]
+    },
+    topics: { a1: ["days", "subjects", "seasons"], a2: ["days", "seasons", "subjects", "sports"], b1: ["days", "subjects", "travel", "cities", "sports"], b2: ["days", "jobs", "cities", "travel", "tech"] } },
+
+  { name: "Irregular verbs", task: "Choose a time and make a sentence with the verb.",
+    words: {
+      a1: ["be", "have", "go", "do", "eat", "drink", "see", "make", "come", "get", "give", "take", "buy", "read", "write", "run", "swim", "sing", "sleep", "sit", "say", "find", "draw", "ride"],
+      a2: ["go", "see", "buy", "eat", "drink", "make", "take", "give", "find", "lose", "win", "meet", "tell", "think", "know", "wear", "bring", "catch", "leave", "send", "spend", "speak", "break", "forget", "feel", "fall", "begin", "choose", "drive", "hear", "teach", "pay", "sell", "wake up"],
+      b1: ["become", "begin", "break", "bring", "build", "choose", "cost", "cut", "fall", "feel", "fly", "forget", "grow", "hide", "hit", "hold", "hurt", "keep", "lend", "let", "lie", "mean", "put", "ring", "shake", "shut", "steal", "throw", "understand", "wear"],
+      b2: ["beat", "bend", "bite", "bleed", "blow", "burst", "deal", "dig", "forbid", "forgive", "freeze", "hang", "lay", "lead", "light", "seek", "shine", "shoot", "shrink", "sink", "slide", "spill", "spread", "stick", "sting", "strike", "swear", "tear"]
+    },
+    topics: {
+      a1: [{ title: "When?", items: ["yesterday", "today", "last night", "this morning", "on Saturday", "last week"] },
+           { title: "When?", items: ["last night", "last Monday", "last week", "last month", "last summer", "last year"] }],
+      a2: [{ title: "When?", items: ["yesterday", "today", "last weekend", "two days ago", "last summer", "when I was little"] },
+           { title: "When?", items: ["yesterday", "every day", "right now", "tomorrow", "last year", "next week"] }],
+      b1: [{ title: "When?", items: ["yesterday", "today", "last year", "already", "never", "just", "yet", "since Monday"] },
+           { title: "When?", items: ["two days ago", "this week", "ever", "for a long time", "when I was ten", "recently"] }],
+      b2: [{ title: "When?", items: ["yesterday", "today", "never", "since", "while", "by the time", "if only", "by next year"] },
+           { title: "When?", items: ["last night", "recently", "just", "so far", "before that", "ever since"] }]
+    } },
+
+  { name: "Rules and advice", task: "Choose one. Make a rule or give some advice.",
+    words: {
+      a1: ["can", "can't", "must", "mustn't", "have to", "don't have to", "should", "shouldn't", "need to", "don't need to", "Don't \u2026", "Please \u2026", "Let's \u2026", "Can I \u2026 ?", "Always \u2026", "Never \u2026"],
+      a2: ["can", "must", "have to", "should", "need to", "could", "Can I \u2026 ?", "Could you \u2026 ?", "Don't \u2026", "Let's \u2026", "Why don't you \u2026 ?", "it's a good idea to", "it's important to", "try to", "remember to", "be careful", "always", "never"],
+      b1: ["have to", "must", "can", "should", "need to", "be allowed to", "ought to", "had better", "could", "may", "make sure", "it's a good idea to", "it's better to", "If I were you", "Why don't you \u2026 ?", "How about \u2026 ?", "try to", "remember to", "it's important to", "be careful"],
+      b2: ["have to", "must", "need to", "be allowed to", "be supposed to", "ought to", "had better", "be required to", "be forbidden to", "be banned from", "let", "make", "be expected to", "be meant to", "it's essential to", "it's advisable to", "there's no point in", "it's worth", "you might want to", "I'd recommend", "If I were you", "should have", "needn't have", "it's up to you"]
+    },
+    topics: { a1: ["places", "outabout"], a2: ["places", "outabout", "advice"], b1: ["places", "advice", "outabout"], b2: ["places", "advice", "outabout"] } }
+];
+
+/* Board colour for each level, as in Word Lab. */
+const LEVELS = { a1: "#F2D9A6", a2: "#F4B5A0", b1: "#A9CCEB", b2: "#A8D5CB", own: "#D5E0DE" };
+const LEVEL_NAMES = { a1: "A1", a2: "A2", b1: "B1", b2: "B2", own: "Yours" };
+
+/* Team colours, in order. A team never gets the colour of the board it is playing on. */
+const TEAM_COLOURS = ["#C9C3EA", "#F0C2D3", "#C7DE9F", "#F2D9A6", "#A9CCEB", "#F4B5A0", "#A8D5CB"];
+
+/* Team marks: ring, cross, triangle, square. */
+const MARKS = [
+  '<circle class="mark" cx="50" cy="50" r="36"/>',
+  '<path class="mark" d="M18 18 82 82M82 18 18 82"/>',
+  '<path class="mark" d="M50 15 88 82H12Z"/>',
+  '<rect class="mark" x="16" y="16" width="68" height="68" rx="6"/>'
+];
+const markSvg = t => '<svg viewBox="0 0 100 100" aria-hidden="true">' + MARKS[t] + '</svg>';
+
+const RULES = {
+  most: "Three in a line = 1 point.",
+  four: "First to four in a line wins.",
+  out:  "Make three in a line and you're out."
+};
+
+/* ---------- State ---------- */
+const S = {
+  view: "out",                        // "out" = words round the edge, "in" = words in the squares
+  level: "a1", inside: INSIDE[0], topic: 0, words: [],
+  set: SETS[0], n: 4, mode: "most",
+  cols: [], rows: [],                 // the five words in play on each edge (the first n are shown)
+  teams: [{ name: "Team 1" }, { name: "Team 2" }],
+  board: [], turn: 0, starter: 0,
+  pending: null, last: null, history: []
+};
+const stash = { out: null, in: null }; // the game left behind on the other tab
+let J = null;                         // the latest verdict from judge()
+let colEls = [], rowEls = [], sqEls = [], teamEls = [], drawn = new Set();
+
+const $ = id => document.getElementById(id);
+const grid = $("grid"), statusEl = $("status"), howEl = $("how");
+const inside = () => S.view === "in";
+const level = () => (inside() ? S.level : S.set.level);
+const svgNS = "http://www.w3.org/2000/svg";
+const linesSvg = document.createElementNS(svgNS, "svg");
+linesSvg.setAttribute("class", "lines");
+linesSvg.setAttribute("aria-hidden", "true");
+
+/* ---------- Words ---------- */
+function shuffle(list) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function deal(mixed) {
+  const take = list => { const a = (mixed ? shuffle(list) : list).slice(0, 5); while (a.length < 5) a.push(""); return a; };
+  S.cols = take(S.set.cols);
+  S.rows = take(S.set.rows);
+}
+
+function dealInside() { S.words = shuffle(S.inside.words[S.level]).slice(0, 16); }
+function topics() { return S.inside.topics[S.level].map(t => (typeof t === "string" ? TOPICS[t] : t)); }
+
+/* ---------- The rules ---------- */
+function windows(k) {
+  const n = S.n, found = [];
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
+      const er = r + dr * (k - 1), ec = c + dc * (k - 1);
+      if (er < 0 || er >= n || ec < 0 || ec >= n) continue;
+      const cells = [];
+      for (let i = 0; i < k; i++) cells.push((r + dr * i) * n + (c + dc * i));
+      const team = S.board[cells[0]];
+      if (team >= 0 && cells.every(i => S.board[i] === team)) found.push({ team, cells });
+    }
+  }
+  return found;
+}
+const names = list => {
+  const a = list.map(t => S.teams[t].name || "Team " + (t + 1));
+  return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+};
+function judge() {
+  const T = S.teams.length, all = S.teams.map((_, t) => t);
+  const threes = windows(3), fours = windows(4);
+  const score = all.map(t => threes.filter(l => l.team === t).length);
+  const full = S.board.every(v => v >= 0);
+  const best = Math.max(...score), top = all.filter(t => score[t] === best);
+  const v = { lines: [], score, out: new Set(), over: false, msg: "", showScore: S.mode === "most" };
+
+  if (S.mode === "most") {
+    v.lines = threes;
+    if (full) {
+      v.over = true;
+      v.msg = best === 0 ? "Board full. No lines this time."
+        : top.length === 1 ? names(top) + " wins with " + best + (best === 1 ? " line." : " lines.")
+        : "A draw. " + names(top) + " have " + best + " each.";
+    }
+  } else if (S.mode === "four") {
+    if (fours.length) {
+      v.over = true; v.lines = fours;
+      v.msg = "Four in a line. " + names([fours[0].team]) + " wins.";
+    } else if (full) {
+      v.over = true; v.lines = threes; v.showScore = true;
+      v.msg = best === 0 ? "No four in a line, and no threes. A draw."
+        : top.length === 1 ? "No four in a line, so threes decide. " + names(top) + " wins with " + best + "."
+        : "No four in a line. " + names(top) + " draw with " + best + (best === 1 ? " three each." : " threes each.");
+    }
+  } else {
+    v.lines = threes;
+    threes.forEach(l => v.out.add(l.team));
+    const left = all.filter(t => !v.out.has(t));
+    if (left.length === 0) { v.over = true; v.msg = "Everyone made three in a line."; }
+    else if (left.length === 1) {
+      v.over = true;
+      v.msg = T === 2 ? names([...v.out]) + " made three in a line. " + names(left) + " wins."
+                      : names(left) + " wins. Everyone else made three in a line.";
+    } else if (full) {
+      v.over = true;
+      v.msg = left.length === T ? "Board full and nobody made three. A draw." : "Board full. " + names(left) + " survive.";
+    }
+  }
+  return v;
+}
+
+/* ---------- Moves ---------- */
+const snapshot = () => S.history.push({ board: S.board.slice(), turn: S.turn, starter: S.starter });
+function advance() {
+  J = judge();
+  if (J.over) return;
+  const T = S.teams.length;
+  for (let i = 0; i < T; i++) { S.turn = (S.turn + 1) % T; if (!J.out.has(S.turn)) break; }
+}
+function tap(i) {
+  if (J.over || S.board[i] >= 0) return;
+  if (S.pending === i) return correct();
+  S.pending = i; render();
+}
+function correct() {
+  if (S.pending === null) return;
+  snapshot();
+  S.board[S.pending] = S.turn; S.last = S.pending; S.pending = null;
+  advance(); render();
+}
+function notQuite() {
+  if (S.pending === null) return;
+  snapshot();
+  S.pending = null; S.last = null;
+  advance(); render();
+}
+function undo() {
+  if (S.pending !== null) { S.pending = null; return render(); }
+  const h = S.history.pop();
+  if (!h) return;
+  S.board = h.board; S.turn = h.turn; S.starter = h.starter; S.last = null;
+  render();
+}
+function clearBoard() { S.board = new Array(S.n * S.n).fill(-1); S.pending = null; S.last = null; drawn = new Set(); }
+function newGame() {
+  snapshot();                                   // so a slip on "New game" can be undone
+  clearBoard();
+  S.starter = (S.starter + 1) % S.teams.length; // a different team starts each game
+  S.turn = S.starter;
+  render();
+}
+function restart() {                            // new board, new words, new size: start clean
+  S.history = []; S.turn = 0; S.starter = 0;
+  clearBoard(); buildGrid(); render();
+}
+
+/* ---------- Building the page ---------- */
+function teamColours() {
+  const colour = LEVELS[level()];
+  const list = TEAM_COLOURS.filter(c => c !== colour);
+  S.teams.forEach((_, t) => document.documentElement.style.setProperty("--t" + t, list[t]));
+  document.documentElement.style.setProperty("--level", colour);
+}
+function header(kind, i) {
+  const cell = document.createElement("div"); cell.className = "hd";
+  const ed = document.createElement("span"); ed.className = "ed";
+  try { ed.contentEditable = "plaintext-only"; } catch (e) { ed.contentEditable = "true"; }
+  if (ed.contentEditable !== "plaintext-only") ed.contentEditable = "true";
+  ed.spellcheck = false;
+  ed.setAttribute("role", "textbox");
+  ed.setAttribute("aria-label", (kind === "cols" ? "Top word " : "Side word ") + (i + 1));
+  ed.textContent = S[kind][i];
+  ed.addEventListener("input", () => {
+    if (!ed.textContent.trim()) ed.innerHTML = "";
+    S[kind][i] = ed.textContent.replace(/\s+/g, " ").trim();
+    if (S.pending !== null) status();
+  });
+  ed.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); ed.blur(); } });
+  ed.addEventListener("paste", e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\s+/g, " ");
+    document.execCommand("insertText", false, text);
+  });
+  ed.addEventListener("blur", () => { ed.textContent = S[kind][i]; label(); });
+  cell.appendChild(ed); grid.appendChild(cell);
+  return cell;
+}
+function buildGrid() {
+  const n = S.n;
+  grid.style.setProperty("--n", n);
+  grid.className = inside() ? "grid inside" : "grid";
+  grid.innerHTML = ""; colEls = []; rowEls = []; sqEls = [];
+  if (inside()) {
+    for (let i = 0; i < n * n; i++) {
+      const b = document.createElement("button");
+      b.className = "sq"; b.type = "button";
+      b.addEventListener("click", () => tap(i));
+      grid.appendChild(b); sqEls.push(b);
+    }
+    grid.appendChild(linesSvg);
+    return;
+  }
+  grid.appendChild(document.createElement("div"));
+  for (let c = 0; c < n; c++) colEls.push(header("cols", c));
+  for (let r = 0; r < n; r++) {
+    rowEls.push(header("rows", r));
+    for (let c = 0; c < n; c++) {
+      const b = document.createElement("button");
+      b.className = "sq"; b.type = "button";
+      b.addEventListener("click", () => tap(r * n + c));
+      grid.appendChild(b); sqEls.push(b);
+    }
+  }
+  grid.appendChild(linesSvg);
+}
+function buildTeams() {
+  const box = $("teams"); box.innerHTML = ""; teamEls = [];
+  S.teams.forEach((team, t) => {
+    const el = document.createElement("div"); el.className = "team"; el.style.setProperty("--tc", "var(--t" + t + ")");
+    el.innerHTML = '<span class="chip">' + markSvg(t) + '</span>' +
+      '<input class="name" maxlength="18" aria-label="Team name">' +
+      '<span class="tag"></span><span class="total"></span>';
+    const input = el.querySelector(".name");
+    input.value = team.name;
+    input.addEventListener("input", () => { team.name = input.value.trim(); status(); label(); });
+    box.appendChild(el); teamEls.push(el);
+  });
+  teamColours();
+}
+function editable(el) {
+  try { el.contentEditable = "plaintext-only"; } catch (e) { el.contentEditable = "true"; }
+  if (el.contentEditable !== "plaintext-only") el.contentEditable = "true";
+  el.spellcheck = false;
+}
+function buildTopic() {
+  $("topic").hidden = !inside();
+  if (!inside()) return;
+  const list = topics(), t = list[S.topic % list.length];
+  $("topicTitle").textContent = t.title;
+  $("topicItems").textContent = t.items.join("\n");
+  $("newTopic").disabled = list.length < 2;
+}
+function buildPicker() {
+  INSIDE.forEach((set, i) => { const o = document.createElement("option"); o.value = i; o.textContent = set.name; $("pickIn").appendChild(o); });
+  const pick = $("pick"); let group = null, level = null;
+  SETS.forEach((set, i) => {
+    if (set.level !== level) { level = set.level; group = document.createElement("optgroup"); group.label = LEVEL_NAMES[level]; pick.appendChild(group); }
+    const o = document.createElement("option"); o.value = i; o.textContent = set.own ? set.name : LEVEL_NAMES[level] + "  " + set.name;
+    group.appendChild(o);
+  });
+}
+
+/* ---------- Showing the game ---------- */
+function label() {
+  const n = S.n;
+  sqEls.forEach((b, i) => {
+    const who = S.board[i] >= 0 ? names([S.board[i]]) : "empty";
+    const what = inside() ? S.words[i] : (S.cols[i % n] || "?") + ", " + (S.rows[Math.floor(i / n)] || "?");
+    b.setAttribute("aria-label", what + ": " + who);
+  });
+}
+function status() {
+  const who = names([S.turn]);
+  if (J.over) statusEl.textContent = J.msg;
+  else if (S.pending !== null && inside()) statusEl.textContent = who + ": " + S.words[S.pending];
+  else if (S.pending !== null) {
+    const n = S.n, c = S.cols[S.pending % n] || "?", r = S.rows[Math.floor(S.pending / n)] || "?";
+    statusEl.textContent = who + ": " + c + " + " + r;
+  } else statusEl.textContent = who + " to play. " + RULES[S.mode];
+}
+function drawLines() {
+  const g = grid.getBoundingClientRect();
+  if (!g.width) return;
+  linesSvg.setAttribute("viewBox", "0 0 " + g.width + " " + g.height);
+  linesSvg.innerHTML = "";
+  const centre = i => { const r = sqEls[i].getBoundingClientRect(); return [r.left - g.left + r.width / 2, r.top - g.top + r.height / 2]; };
+  const now = new Set();
+  J.lines.forEach(l => {
+    const key = l.cells.join("-"), [x1, y1] = centre(l.cells[0]), [x2, y2] = centre(l.cells[l.cells.length - 1]);
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", x1); line.setAttribute("y1", y1); line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+    if (!drawn.has(key)) { line.classList.add("draw"); line.style.setProperty("--len", Math.ceil(Math.hypot(x2 - x1, y2 - y1))); }
+    linesSvg.appendChild(line); now.add(key);
+  });
+  drawn = now;
+}
+function render() {
+  J = judge();
+  const n = S.n, p = S.pending;
+  sqEls.forEach((b, i) => {
+    const t = S.board[i], show = t >= 0 ? t : (i === p ? S.turn : -1);
+    b.className = "sq" + (t >= 0 ? " taken" : "") + (i === p ? " pending" : "") + (i === S.last ? " just" : "");
+    b.style.setProperty("--tc", t >= 0 ? "var(--t" + t + ")" : "transparent");
+    b.innerHTML = show >= 0 ? markSvg(show) : "";
+    if (inside()) { const w = document.createElement("span"); w.className = "w"; w.textContent = S.words[i]; b.prepend(w); }
+    b.disabled = J.over;
+  });
+  S.last = null;
+  colEls.forEach((el, c) => el.classList.toggle("lit", p !== null && p % n === c));
+  rowEls.forEach((el, r) => el.classList.toggle("lit", p !== null && Math.floor(p / n) === r));
+
+  teamEls.forEach((el, t) => {
+    const gone = J.out.has(t);
+    el.classList.toggle("on", !J.over && S.turn === t);
+    el.classList.toggle("gone", gone);
+    el.querySelector(".tag").textContent = gone ? "out" : "";
+    el.querySelector(".total").textContent = J.showScore ? J.score[t] : "";
+  });
+
+  howEl.textContent = inside() ? S.inside.task
+    : S.set.own ? "Click a word round the edge and type your own."
+    : (S.set.task || "Make a sentence with both.") + " For example: " + S.set.eg;
+  status(); label(); drawLines();
+
+  const played = S.board.some(v => v >= 0);
+  $("ok").disabled = $("no").disabled = p === null;
+  $("undo").disabled = p === null && !S.history.length;
+  $("fresh").disabled = !played && p === null;
+  $("mix").disabled = !inside() && !!S.set.own;
+  $("addTeam").disabled = S.teams.length >= 4;
+  $("removeTeam").disabled = S.teams.length <= 2;
+}
+
+/* ---------- Controls ---------- */
+$("ok").addEventListener("click", correct);
+$("no").addEventListener("click", notQuite);
+$("undo").addEventListener("click", undo);
+$("fresh").addEventListener("click", newGame);
+$("mix").addEventListener("click", () => { if (inside()) dealInside(); else deal(true); restart(); });
+$("newTopic").addEventListener("click", () => { S.topic++; buildTopic(); });
+$("pickIn").addEventListener("change", e => { S.inside = INSIDE[+e.target.value]; S.topic = 0; dealInside(); buildTopic(); restart(); });
+document.querySelectorAll("[data-lv]").forEach(b => b.addEventListener("click", () => {
+  if (S.level === b.dataset.lv) return;
+  S.level = b.dataset.lv; S.topic = 0;
+  document.querySelectorAll("[data-lv]").forEach(x => x.classList.toggle("on", x === b));
+  dealInside(); teamColours(); buildTopic(); restart();
+}));
+
+/* The two tabs. Each keeps its own game, so a slip on a tab loses nothing. */
+function showView(view) {
+  if (view === S.view) return;
+  stash[S.view] = { board: S.board, turn: S.turn, starter: S.starter, history: S.history, n: S.n };
+  S.view = view; S.pending = null; S.last = null; drawn = new Set();
+  const g = stash[view];
+  if (g) { S.board = g.board; S.turn = g.turn; S.starter = g.starter; S.history = g.history; S.n = g.n; }
+  else { S.n = 4; S.turn = 0; S.starter = 0; S.history = []; S.board = new Array(16).fill(-1); dealInside(); }
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.view === view));
+  document.querySelectorAll("[data-for]").forEach(el => { el.hidden = el.dataset.for !== view; });
+  $("board").setAttribute("aria-labelledby", "tab-" + view);
+  teamColours(); buildGrid(); buildTopic(); render();
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.dataset.view)));
+$("pick").addEventListener("change", e => { S.set = SETS[+e.target.value]; deal(false); teamColours(); restart(); });
+
+document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+  S.mode = b.dataset.mode; S.pending = null; drawn = new Set();
+  document.querySelectorAll("[data-mode]").forEach(x => x.classList.toggle("on", x === b));
+  J = judge();
+  if (!J.over && J.out.has(S.turn)) advance();
+  render();
+}));
+document.querySelectorAll("[data-n]").forEach(b => b.addEventListener("click", () => {
+  if (S.n === +b.dataset.n) return;
+  S.n = +b.dataset.n;
+  document.querySelectorAll("[data-n]").forEach(x => x.classList.toggle("on", x === b));
+  restart();
+}));
+$("addTeam").addEventListener("click", () => {
+  if (S.teams.length >= 4) return;
+  S.teams.push({ name: "Team " + (S.teams.length + 1) });
+  buildTeams(); render();
+});
+$("removeTeam").addEventListener("click", () => {
+  if (S.teams.length <= 2) return;
+  const t = S.teams.length - 1;
+  S.teams.pop();
+  S.board = S.board.map(v => (v === t ? -1 : v));
+  S.history = []; S.pending = null; drawn = new Set();
+  Object.values(stash).forEach(g => {             // and the game waiting on the other tab
+    if (!g) return;
+    g.board = g.board.map(v => (v === t ? -1 : v)); g.history = [];
+    if (g.turn >= S.teams.length) g.turn = 0;
+    if (g.starter >= S.teams.length) g.starter = 0;
+  });
+  if (S.turn >= S.teams.length) S.turn = 0;
+  if (S.starter >= S.teams.length) S.starter = 0;
+  buildTeams(); render();
+});
+
+if ("ResizeObserver" in window) new ResizeObserver(() => { if (J) drawLines(); }).observe(grid);
+else window.addEventListener("resize", () => { if (J) drawLines(); });
+
+/* ---------- Start ---------- */
+buildPicker();
+deal(false);
+editable($("topicTitle")); editable($("topicItems"));
+$("board").setAttribute("aria-labelledby", "tab-out");
+buildTeams();
+restart();
+if (new URLSearchParams(location.search).get("tab") === "inside") showView("in");   /* in-a-line.html?tab=inside opens the second tab */
+</script>
+</body>
+</html>
