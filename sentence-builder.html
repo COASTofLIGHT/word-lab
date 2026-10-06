@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sentence Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Build the Sentence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
 <style>
   :root {
     --mist: #EDF3F2;
+    --paper: #FFFFFF;
     --ink: #10303A;
     --ink-soft: #456670;
     --line: #5F808A;
@@ -17,11 +18,21 @@
     --sea-deep: #124F5E;
     --focus: #0B62A4;
     --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+    /* Sentence Builder tiles */
     --language-c: #C9C3EA;
     --noun-c: #A8D5CB;
+
+    /* Three Little Words tiles */
+    --topic-c: #C7DE9F;   /* the topic: leaf green */
+    --chunk-c: #C9C3EA;   /* Write it, the chunks: lavender */
+    --ask-c: #A9CCEB;     /* Say it, the question chunk: sky blue */
+    --answer-c: #F0C2D3;  /* Say it, the answer chunk: rose pink */
   }
 
   *, *::before, *::after { box-sizing: border-box; }
+
+  [hidden] { display: none !important; }
 
   html, body {
     height: 100%;
@@ -46,42 +57,89 @@
     flex-direction: column;
   }
 
-  .back {
-    display: inline-block;
+  /* ---------- Title, tabs and the way back ---------- */
+
+  .top {
     flex: 0 0 auto;
-    align-self: flex-start;
-    margin-bottom: 0.5rem;
-    color: var(--ink-soft);
-    font-size: 0.9rem;
-    text-decoration: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    column-gap: clamp(1rem, 2.5vw, 2rem);
   }
-  .back:hover { text-decoration: underline; }
-  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-  header { flex: 0 0 auto; }
-
-  header h1 {
-    margin: 0;
-    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  .top h1 {
+    margin: 0 0 0.6rem;
+    font-size: clamp(1.4rem, 2.8vw, 2.1rem);
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.05;
   }
 
-  header p {
-    margin: 0.4rem 0 0;
+  .back {
+    margin: 0 0 0.75rem auto;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* Tabs: the chosen one joins on to the frame underneath. */
+  .tabs { display: flex; gap: 0.2rem; }
+
+  .tab {
+    height: 2.75rem;
+    padding: 0 1.15rem;
+    border: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab:hover { background: rgba(255, 255, 255, 0.55); color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--paper); color: var(--ink); }
+  .tab:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  /* ---------- The frame: one game at a time ---------- */
+
+  .frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(0.7rem, 1.6vw, 1.1rem);
+    border-radius: 0.9rem;
+    background: var(--paper);
+  }
+
+  .game {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.55rem, 1.5vh, 0.9rem);
+  }
+
+  .intro {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0 0.15rem;
     color: var(--ink-soft);
     font-size: clamp(1rem, 1.9vw, 1.3rem);
     line-height: 1.3;
-    max-width: 62rem;
   }
 
   .controls {
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.6rem;
-    margin-top: 0.75rem;
   }
 
   .btn, .btn-primary {
@@ -100,6 +158,8 @@
     border: 2px solid var(--line);
   }
   .btn:hover { border-color: var(--ink); }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .btn:disabled:hover { border-color: var(--line); }
 
   .btn-primary {
     background: var(--sea);
@@ -111,7 +171,14 @@
   .btn:active, .btn-primary:active { transform: translateY(1px); }
   .btn:focus-visible, .btn-primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
-  /* Level picker: the chosen level takes its Word Lab colour */
+  .tip {
+    margin: 0 0 0 auto;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    text-align: right;
+  }
+
+  /* Sentence Builder's level picker: the chosen level takes its Word Lab colour */
   .levels { display: flex; align-items: center; gap: 0.4rem; margin-right: 0.6rem; }
   .levels-label { margin-right: 0.3rem; font-weight: 600; }
   .levels label { position: relative; display: block; }
@@ -126,13 +193,46 @@
   .levels input:checked + span { background: var(--lv); border-color: var(--ink); }
   .levels input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
 
+  /* Three Little Words: the switch between Write it and Say it */
+  .switch {
+    display: inline-flex;
+    height: 2.6rem;
+    margin-right: 0.6rem;
+    border: 2px solid var(--ink);
+    border-radius: 0.6rem;
+    overflow: hidden;
+  }
+  .switch button {
+    padding: 0 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .switch button.on { background: var(--ink); color: #fff; }
+  .switch button:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  /* ---------- The tiles ---------- */
+
   .stage {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     align-items: stretch;
     gap: clamp(0.6rem, 1.6vw, 1.1rem);
-    margin-top: 0.75rem;
+  }
+
+  /* Three Little Words: the topic sits on the left, the chunks stack up on the right. */
+  .stack {
+    flex: 1.15 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.6rem, 1.6vw, 1.1rem);
   }
 
   .tile {
@@ -142,10 +242,10 @@
     align-items: center;
     justify-content: center;
     min-width: 0;
-    height: 100%;
-    padding: clamp(1rem, 2.6vw, 2rem);
+    min-height: 0;
+    padding: clamp(1.9rem, 4.6vh, 2.6rem) clamp(1rem, 2.6vw, 2rem) clamp(1rem, 2.6vh, 1.6rem);
     border: 0;
-    border-radius: 0.9rem;
+    border-radius: 0.7rem;
     overflow: hidden;
     color: var(--ink);
     font: inherit;
@@ -157,6 +257,10 @@
 
   #language-tile { background: var(--language-c); }
   #noun-tile { background: var(--noun-c); }
+  .tile.topic { background: var(--topic-c); }
+  .tile.chunk { background: var(--chunk-c); }
+  .tile.ask { background: var(--ask-c); }
+  .tile.answer { background: var(--answer-c); }
 
   .tag {
     position: absolute;
@@ -169,6 +273,7 @@
     opacity: 0.5;
   }
 
+  /* Sentence Builder: the words on a tile */
   .item {
     display: block;
     max-width: 100%;
@@ -178,19 +283,31 @@
     overflow-wrap: normal;
   }
 
+  /* Three Little Words: the words on a tile. fit() in the script picks the biggest size that fits. */
+  .big {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  .big .txt {
+    display: block;
+    max-width: 100%;
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+  }
+  .topic .txt { text-wrap: balance; }
+  .chunk .txt, .ask .txt, .answer .txt { white-space: nowrap; }
+
   @keyframes settle {
     from { opacity: 0; transform: translateY(0.4rem); }
     to   { opacity: 1; transform: none; }
   }
   .fresh { animation: settle 0.22s ease-out; }
-
-  footer {
-    flex: 0 0 auto;
-    margin-top: 0.6rem;
-    color: var(--ink-soft);
-    font-size: 0.85rem;
-    text-align: center;
-  }
 
   .sr {
     position: absolute;
@@ -201,8 +318,21 @@
     white-space: nowrap;
   }
 
+  /* ---------- Smaller screens ---------- */
+
+  /* Phones: everything stacks and the page scrolls if it needs to. */
   @media (max-width: 720px) {
+    html, body { height: auto; overflow: auto; }
+    .page { height: auto; min-height: 100vh; min-height: 100dvh; }
+    .tabs { order: 3; flex-basis: 100%; }
+    .tab { padding: 0 0.8rem; font-size: 0.95rem; }
+    .back { margin-bottom: 0.6rem; }
+    .frame { border-top-left-radius: 0; }
     .stage { flex-direction: column; }
+    .stack { flex: 0 0 auto; }
+    .tile { flex: 0 0 auto; height: 8.5rem; }
+    #language-tile, #noun-tile { height: 11rem; }
+    .tip { margin-left: 0; flex-basis: 100%; text-align: left; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -212,38 +342,115 @@
 </head>
 <body>
 <main class="page">
-  <a class="back" href="./">&larr; Word Lab</a>
 
-  <header>
+  <div class="top">
     <h1>Build the Sentence</h1>
-    <p>Write a sentence using the language and the noun.</p>
-  </header>
-
-  <div class="controls">
-    <div class="levels" role="radiogroup" aria-labelledby="level-label" id="level-options">
-      <span class="levels-label" id="level-label">Level</span>
+    <div class="tabs" role="tablist" aria-label="Games" id="tabs">
+      <button type="button" class="tab" role="tab" id="tab-builder" aria-controls="builder-game">Sentence Builder</button>
+      <button type="button" class="tab" role="tab" id="tab-words" aria-controls="write-game">Three Little Words</button>
     </div>
-    <button type="button" class="btn" id="new-language-btn">New language</button>
-    <button type="button" class="btn" id="new-noun-btn">New noun</button>
-    <button type="button" class="btn-primary" id="random-btn">Random</button>
+    <a class="back" href="./">&larr; Word Lab</a>
   </div>
 
-  <div class="stage">
-    <button type="button" class="tile" id="language-tile" aria-label="Click for new language">
-      <span class="tag" aria-hidden="true">Language</span>
-      <span class="item" id="language"></span>
-    </button>
-    <button type="button" class="tile" id="noun-tile" aria-label="Click for a new noun">
-      <span class="tag" aria-hidden="true">Noun</span>
-      <span class="item" id="noun"></span>
-    </button>
-  </div>
+  <div class="frame">
 
-  <footer>Click any column to change just that one, or press Random to change both.</footer>
-  <p class="sr" role="status" id="status"></p>
+    <!-- Sentence Builder: a language item and a noun, by level. -->
+    <section class="game" id="builder-game" role="tabpanel" aria-labelledby="tab-builder">
+      <p class="intro">Write a sentence using the language and the noun.</p>
+
+      <div class="stage">
+        <button type="button" class="tile" id="language-tile" aria-label="Click for new language">
+          <span class="tag" aria-hidden="true">Language</span>
+          <span class="item" id="language"></span>
+        </button>
+        <button type="button" class="tile" id="noun-tile" aria-label="Click for a new noun">
+          <span class="tag" aria-hidden="true">Noun</span>
+          <span class="item" id="noun"></span>
+        </button>
+      </div>
+
+      <div class="controls">
+        <div class="levels" role="radiogroup" aria-labelledby="level-label" id="level-options">
+          <span class="levels-label" id="level-label">Level</span>
+        </div>
+        <button type="button" class="btn" id="new-language-btn">New language</button>
+        <button type="button" class="btn" id="new-noun-btn">New noun</button>
+        <button type="button" class="btn-primary" id="random-btn">Random</button>
+        <p class="tip">Click any tile to change just that one, or press Random to change both.</p>
+      </div>
+      <p class="sr" role="status" id="status"></p>
+    </section>
+
+    <!-- Three Little Words, Write it: a topic and one, two or three chunks from written English. -->
+    <section class="game" id="write-game" role="tabpanel" aria-labelledby="tab-words" hidden>
+      <p class="intro" id="write-intro"></p>
+
+      <div class="stage">
+        <button type="button" class="tile topic" id="write-topic" aria-label="Click for a new topic">
+          <span class="tag" aria-hidden="true">Topic</span>
+          <span class="big"><span class="txt"></span></span>
+        </button>
+        <div class="stack" id="write-chunks"></div>
+      </div>
+
+      <div class="controls">
+        <div class="switch" role="group" aria-label="Write it or Say it"><button type="button" data-go="write" class="on" aria-pressed="true">Write it</button><button type="button" data-go="say" aria-pressed="false">Say it</button></div>
+        <button type="button" class="btn" id="write-topic-btn">New topic</button>
+        <button type="button" class="btn" id="write-chunk-btn">New chunk</button>
+        <button type="button" class="btn" id="write-add-btn">Add a chunk</button>
+        <button type="button" class="btn-primary" id="write-next-btn">Next</button>
+        <p class="tip">Chunks: O'Keeffe, McCarthy &amp; Carter, <i>From Corpus to Classroom</i></p>
+      </div>
+    </section>
+
+    <!-- Three Little Words, Say it: a topic, a chunk to ask with and a chunk to answer with, from spoken English. -->
+    <section class="game" id="say-game" role="tabpanel" aria-labelledby="tab-words" hidden>
+      <p class="intro">Ask your partner a question about the topic. Your partner answers. Use the chunks.</p>
+
+      <div class="stage">
+        <button type="button" class="tile topic" id="say-topic" aria-label="Click for a new topic">
+          <span class="tag" aria-hidden="true">Topic</span>
+          <span class="big"><span class="txt"></span></span>
+        </button>
+        <div class="stack">
+          <button type="button" class="tile ask" id="say-ask" aria-label="Click for a new chunk to ask with">
+            <span class="tag" aria-hidden="true">Ask</span>
+            <span class="big"><span class="txt"></span></span>
+          </button>
+          <button type="button" class="tile answer" id="say-answer" aria-label="Click for a new chunk to answer with">
+            <span class="tag" aria-hidden="true">Answer</span>
+            <span class="big"><span class="txt"></span></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="switch" role="group" aria-label="Write it or Say it"><button type="button" data-go="write" aria-pressed="false">Write it</button><button type="button" data-go="say" class="on" aria-pressed="true">Say it</button></div>
+        <button type="button" class="btn" id="say-topic-btn">New topic</button>
+        <button type="button" class="btn" id="say-chunks-btn">New chunks</button>
+        <button type="button" class="btn-primary" id="say-next-btn">Next</button>
+        <p class="tip">Chunks: O'Keeffe, McCarthy &amp; Carter, <i>From Corpus to Classroom</i></p>
+      </div>
+    </section>
+
+  </div>
 </main>
 
 <script>
+const $ = (id) => document.getElementById(id);
+const rand = (n) => Math.floor(Math.random() * n);
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+/* ===============================================================
+   SENTENCE BUILDER
+================================================================ */
+
 /* ---------------------------------------------------------------
    The levels. To add one (B2, say): add a line here, then add its
    language and nouns to SETS below under the same id.
@@ -734,21 +941,13 @@ const SETS = {
   }
 };
 
-const statusEl = document.getElementById("status");
-
-function shuffle(list) {
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
-  return list;
-}
+const statusEl = $("status");
 
 /* ---------- one column: draws from a shuffled deck so nothing repeats until the list is used up ---------- */
 
 function makeColumn(id, getList, avoid) {
-  const tile = document.getElementById(id + "-tile");
-  const el = document.getElementById(id);
+  const tile = $(id + "-tile");
+  const el = $(id);
   let deck = [];
   let current = null;
 
@@ -815,7 +1014,7 @@ function randomAll() { columns.forEach((c) => c.next()); announce(); }
 columns.forEach((c) => c.tile.addEventListener("click", () => change(c)));
 
 /* Level buttons: changing level deals a fresh language item and noun. */
-const levelOptions = document.getElementById("level-options");
+const levelOptions = $("level-options");
 LEVELS.forEach((l) => {
   const label = document.createElement("label");
   label.style.setProperty("--lv", l.colour);
@@ -831,23 +1030,255 @@ LEVELS.forEach((l) => {
   levelOptions.appendChild(label);
 });
 
-document.getElementById("new-language-btn").addEventListener("click", () => change(language));
-document.getElementById("new-noun-btn").addEventListener("click", () => change(noun));
-document.getElementById("random-btn").addEventListener("click", randomAll);
+$("new-language-btn").addEventListener("click", () => change(language));
+$("new-noun-btn").addEventListener("click", () => change(noun));
+$("random-btn").addEventListener("click", randomAll);
 
-/* Keys: Space or Enter = both, 1 / 2 = one column. */
+/* ===============================================================
+   THREE LITTLE WORDS
+================================================================ */
+
+/* ===============================================================
+   THE CHUNKS
+   The most common three-word chunks in English, from two lists:
+   written English and spoken English. Add or take away chunks
+   here, between quotes, with commas between them.
+================================================================ */
+
+/* Write it. From the top 20 in written English.
+   Left out: "to be a", "on to the" and "end of the" (awkward to build on, or a repeat). */
+const WRITTEN = [
+  "one of the", "out of the", "it was a", "there was a", "the end of", "a lot of",
+  "there was no", "as well as", "it would be", "in front of", "it was the", "some of the",
+  "I don't know", "part of the", "be able to", "the rest of", "the first time"
+];
+
+/* Say it. From the top 20 in spoken English: the ones that start a question... */
+const ASK = [
+  "do you think", "do you want", "do you know", "what do you"
+];
+
+/* ...and the ones that help with an answer.
+   Left out: "I mean I", "you know I", "but I mean", "you know what", "you know the",
+   "and it was" and "you want to". They are what people say while they think, so they
+   don't work well with a topic. */
+const ANSWER = [
+  "I don't know", "I don't think", "I think it's", "you have to", "a lot of",
+  "a bit of", "a couple of", "one of the", "it was a"
+];
+
+/* ===============================================================
+   THE TOPICS
+   Both tabs take their topics from here, in a random order,
+   and no topic comes back until all of them have been used.
+================================================================ */
+const TOPICS = [
+  "Basketball", "Football", "Tennis", "Swimming", "Cycling", "The Olympics", "The gym", "Dancing",
+  "Music", "Concerts", "Films", "TV series", "Video games", "Social media", "Phones", "The internet",
+  "Books", "Art", "Photography", "Superheroes",
+  "School", "Homework", "Exams", "Teachers", "English", "Languages",
+  "Friends", "Family", "Birthdays", "Parties", "Weekends", "Mornings", "Sleep",
+  "Food", "Pizza", "Breakfast", "Fast food", "Chocolate", "Ice cream", "Cooking",
+  "Animals", "Pets", "Dogs", "Cats",
+  "Holidays", "Travel", "The beach", "Camping", "Planes", "Trains", "Cars",
+  "Summer", "Winter", "Christmas", "The weather", "Rain",
+  "Nature", "The sea", "Mountains", "Cities", "My town", "My bedroom",
+  "Shopping", "Clothes", "Fashion", "Money", "Jobs",
+  "Space", "Robots", "The future", "Health", "Museums", "Festivals"
+];
+
+const MAX_CHUNKS = 3;   // most chunks on Write it
+
+/* A shuffled pile: nothing repeats until the whole list has been used. */
+function pile(list) {
+  let cards = [];
+  return function draw(avoid = []) {
+    if (!cards.length) cards = shuffle(list.slice());
+    // skip anything already on screen
+    let at = cards.length - 1;
+    while (at > 0 && avoid.includes(cards[at])) at--;
+    return cards.splice(at, 1)[0];
+  };
+}
+
+const drawTopic = pile(TOPICS);
+const drawWritten = pile(WRITTEN);
+const drawAsk = pile(ASK);
+const drawAnswer = pile(ANSWER);
+
+/* ---------- Putting words on a tile ---------- */
+
+/* Pick the biggest size that keeps the words inside the tile. */
+function fit(tile) {
+  const box = tile.querySelector(".big"), txt = tile.querySelector(".txt");
+  if (!box || !box.clientWidth) return;   // not one of these tiles, or the tab is hidden
+  let size = Math.min(window.innerWidth * 0.075, window.innerHeight * 0.17, 120);
+  txt.style.fontSize = size + "px";
+  while (size > 14 && (txt.scrollWidth > box.clientWidth || txt.offsetHeight > box.clientHeight)) {
+    size -= 2;
+    txt.style.fontSize = size + "px";
+  }
+}
+
+function show(tile, words, isFresh = true) {
+  const txt = tile.querySelector(".txt");
+  txt.textContent = words;
+  fit(tile);
+  if (isFresh) { txt.classList.remove("fresh"); void txt.offsetWidth; txt.classList.add("fresh"); }
+}
+
+/* ---------- Write it ---------- */
+
+const write = { topic: "", chunks: [] };
+const writeStack = $("write-chunks");
+
+function drawWrite(fresh) {
+  // fresh: "all", "topic", "chunks", or the number of the chunk that changed
+  show($("write-topic"), write.topic, fresh === "all" || fresh === "topic");
+
+  writeStack.innerHTML = "";
+  write.chunks.forEach((chunk, n) => {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "tile chunk";
+    tile.setAttribute("aria-label", "Click for a new chunk");
+    tile.innerHTML = '<span class="tag" aria-hidden="true"></span><span class="big"><span class="txt"></span></span>';
+    tile.querySelector(".tag").textContent = write.chunks.length > 1 ? "Chunk " + (n + 1) : "Chunk";
+    tile.addEventListener("click", () => {
+      write.chunks[n] = drawWritten(write.chunks);
+      drawWrite(n);
+    });
+    writeStack.append(tile);
+  });
+  // sizes are worked out once every tile is in place
+  writeStack.querySelectorAll(".tile").forEach((tile, n) => {
+    show(tile, write.chunks[n], fresh === "all" || fresh === "chunks" || fresh === n);
+  });
+
+  const many = write.chunks.length > 1;
+  $("write-intro").textContent = "Write a sentence about the topic. " +
+    (many ? "Use all the chunks in one sentence." : "Use the chunk.");
+  $("write-chunk-btn").textContent = many ? "New chunks" : "New chunk";
+  $("write-add-btn").disabled = write.chunks.length >= MAX_CHUNKS;
+}
+
+function writeNext() {
+  write.topic = drawTopic([write.topic]);
+  write.chunks = [drawWritten(write.chunks)];
+  drawWrite("all");
+}
+
+$("write-next-btn").addEventListener("click", writeNext);
+$("write-topic").addEventListener("click", () => { write.topic = drawTopic([write.topic]); drawWrite("topic"); });
+$("write-topic-btn").addEventListener("click", () => { write.topic = drawTopic([write.topic]); drawWrite("topic"); });
+$("write-chunk-btn").addEventListener("click", () => {
+  const old = write.chunks.slice(), fresh = [];
+  old.forEach(() => fresh.push(drawWritten(old.concat(fresh))));
+  write.chunks = fresh;
+  drawWrite("chunks");
+});
+$("write-add-btn").addEventListener("click", () => {
+  if (write.chunks.length >= MAX_CHUNKS) return;
+  write.chunks.push(drawWritten(write.chunks));
+  drawWrite(write.chunks.length - 1);
+});
+
+/* ---------- Say it ---------- */
+
+const say = { topic: "", ask: "", answer: "" };
+
+function sayTopic() { say.topic = drawTopic([say.topic]); show($("say-topic"), say.topic); }
+function sayAsk() { say.ask = drawAsk([say.ask]); show($("say-ask"), say.ask); }
+function sayAnswer() { say.answer = drawAnswer([say.answer]); show($("say-answer"), say.answer); }
+function sayNext() { sayTopic(); sayAsk(); sayAnswer(); }
+
+$("say-next-btn").addEventListener("click", sayNext);
+$("say-topic").addEventListener("click", sayTopic);
+$("say-topic-btn").addEventListener("click", sayTopic);
+$("say-ask").addEventListener("click", sayAsk);
+$("say-answer").addEventListener("click", sayAnswer);
+$("say-chunks-btn").addEventListener("click", () => { sayAsk(); sayAnswer(); });
+
+/* ===============================================================
+   THE TABS
+   Two tabs at the top: Sentence Builder and Three Little Words.
+   Three Little Words has two games of its own, Write it and Say it,
+   chosen with the switch beside its buttons.
+
+   A link can open any of them directly:
+     sentence-builder.html?mode=builder   (add &level=b1 for a level)
+     sentence-builder.html?mode=write
+     sentence-builder.html?mode=say
+================================================================ */
+
+const GAMES = ["builder", "write", "say"];
+let mode = "builder";
+let wordsGame = "write";   // the Three Little Words game last on screen
+
+function refit() {
+  columns.forEach((c) => c.fit());
+  document.querySelectorAll(".tile").forEach(fit);
+}
+
+function chooseMode(id) {
+  mode = id;
+  if (mode !== "builder") wordsGame = mode;
+  GAMES.forEach((g) => { $(g + "-game").hidden = g !== mode; });
+
+  const onBuilder = mode === "builder";
+  $("tab-builder").setAttribute("aria-selected", onBuilder);
+  $("tab-builder").tabIndex = onBuilder ? 0 : -1;
+  $("tab-words").setAttribute("aria-selected", !onBuilder);
+  $("tab-words").tabIndex = onBuilder ? -1 : 0;
+  $("tab-words").setAttribute("aria-controls", wordsGame + "-game");
+
+  document.querySelectorAll(".switch button").forEach((b) => {
+    const on = b.dataset.go === wordsGame;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", on);
+  });
+  refit();   // a game can't be measured while it is hidden
+}
+
+$("tab-builder").addEventListener("click", () => chooseMode("builder"));
+$("tab-words").addEventListener("click", () => chooseMode(wordsGame));
+document.querySelectorAll(".switch button").forEach((b) => b.addEventListener("click", () => chooseMode(b.dataset.go)));
+
+/* Left and right arrows move between the two tabs when one of them has the focus. */
+$("tabs").addEventListener("keydown", (event) => {
+  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  const toBuilder = mode !== "builder";
+  chooseMode(toBuilder ? "builder" : wordsGame);
+  $(toBuilder ? "tab-builder" : "tab-words").focus();
+});
+
+/* Keys.
+   Sentence Builder: Space or Enter = both, 1 / 2 = one column.
+   Three Little Words: Space, Enter or right arrow = Next, T = New topic,
+   C = New chunk or chunks, + = Add a chunk (Write it). */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.target.closest && event.target.closest("button, input") && (event.code === "Space" || event.code === "Enter")) return;
-  if (event.code === "Space" || event.code === "Enter") { event.preventDefault(); randomAll(); }
-  else if (event.key === "1") change(language);
-  else if (event.key === "2") change(noun);
+  const go = event.code === "Space" || event.code === "Enter";
+  if (go && event.target.closest && event.target.closest("button, input")) return;
+  if (event.target.closest && event.target.closest(".tabs")) return;
+  const key = event.key.toLowerCase();
+
+  if (mode === "builder") {
+    if (go) { event.preventDefault(); randomAll(); }
+    else if (key === "1") change(language);
+    else if (key === "2") change(noun);
+    return;
+  }
+  if (go || key === "arrowright") { event.preventDefault(); (mode === "write" ? writeNext : sayNext)(); }
+  else if (key === "t") $(mode + "-topic-btn").click();
+  else if (key === "c") $(mode === "write" ? "write-chunk-btn" : "say-chunks-btn").click();
+  else if ((key === "+" || key === "=") && mode === "write") $("write-add-btn").click();
 });
 
 let resizeFrame;
 function scheduleRefit() {
   cancelAnimationFrame(resizeFrame);
-  resizeFrame = requestAnimationFrame(() => columns.forEach((c) => c.fit()));
+  resizeFrame = requestAnimationFrame(refit);
 }
 window.addEventListener("resize", scheduleRefit);
 window.addEventListener("orientationchange", scheduleRefit);
@@ -857,7 +1288,11 @@ if (window.ResizeObserver) {
   columns.forEach((c) => observer.observe(c.tile));
 }
 
+const asked = (new URLSearchParams(location.search).get("mode") || "").toLowerCase();
 randomAll();
+writeNext();
+sayNext();
+chooseMode(GAMES.includes(asked) ? asked : "builder");
 </script>
 </body>
 </html>
