@@ -314,6 +314,96 @@
   .but { --c: var(--but); }
   .so { --c: var(--so); }
 
+  /* ---------- Two to Five ---------- */
+
+  #two-game {
+    --panel: #F9FBFB;
+    --hair: rgba(16, 48, 58, 0.14);
+    --two-level: var(--a2);   /* the board takes the colour of the level */
+    overflow-y: auto;         /* with lots of teams on a small screen, the game scrolls rather than hiding anything */
+  }
+  #two-game button, #two-game input { font-family: var(--font); }
+  #two-game button { cursor: pointer; }
+  #two-game button:focus-visible, #two-game input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  #two-game .btn:disabled { opacity: 0.35; cursor: default; }
+  #two-game .btn:disabled:hover { border-color: var(--line); }
+
+  /* The board */
+  .two-board {
+    flex: 1 0 auto; background: var(--two-level); border-radius: 0.7rem;
+    padding: clamp(1rem, 3vw, 2.5rem); display: flex; flex-direction: column;
+    transition: background-color 250ms ease;
+  }
+  .two-board.a2 { --two-level: var(--a2); }
+  .two-board.b1 { --two-level: var(--b1); }
+  .two-board.b2 { --two-level: var(--b2); }
+
+  #two-game .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  #two-game .prompt { margin: 0; font-size: clamp(1rem, 1.6vw, 1.3rem); font-weight: 600; line-height: 1.3; }
+
+  /* The four numbers: all lit when any length is allowed, one lit in Exactly mode */
+  #two-game .nums { display: flex; gap: 0.4rem; flex: none; }
+  #two-game .num {
+    width: clamp(2.2rem, 4.2vw, 3.4rem); aspect-ratio: 1; border-radius: 0.6rem;
+    display: grid; place-items: center; background: var(--panel);
+    font-size: clamp(1.2rem, 2.4vw, 2rem); font-weight: 800; font-variant-numeric: tabular-nums;
+    transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  #two-game .num.off { opacity: 0.3; transform: scale(0.9); }
+  #two-game .num.ring { box-shadow: inset 0 0 0 3px var(--ink); }
+
+  .two-stage { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 0.6rem; padding: 0.6rem 0; }
+  #two-game .sentence {
+    margin: 0; font-size: clamp(1.7rem, min(4.6vw, 7.5vh), 4rem); font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance;
+  }
+  /* The gap: one slot per word. Solid slots must be filled, dashed slots are optional. */
+  #two-game .gap { display: inline-flex; gap: 0.22em; vertical-align: baseline; white-space: nowrap; margin: 0 0.1em; }
+  #two-game .slot { display: inline-block; width: 1.5em; height: 0.75em; border-bottom: 0.09em solid var(--ink); }
+  #two-game .slot.maybe { border-bottom-style: dashed; opacity: 0.45; }
+  #two-game .ex {
+    display: inline-block; background: var(--panel); border-radius: 0.3em;
+    padding: 0 0.22em; margin: 0.06em 0.05em; animation: two-pop 0.3s ease-out;
+  }
+  @keyframes two-pop { from { transform: scale(0.85); opacity: 0; } }
+  #two-game .worth { margin: 0; min-height: 1.4em; font-size: clamp(1rem, 1.6vw, 1.3rem); font-weight: 600; }
+
+  /* Round result */
+  #two-game .result h2 { margin: 0 0 0.8rem; font-size: clamp(1.6rem, min(4vw, 6vh), 3.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+  #two-game .result ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; max-width: 44rem; }
+  #two-game .result li {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 1.2rem; align-items: baseline;
+    background: var(--panel); border-radius: 0.6rem; padding: 0.45rem 0.9rem;
+    font-size: clamp(1.1rem, 2vw, 1.6rem); font-weight: 700;
+  }
+  #two-game .result li span { font-variant-numeric: tabular-nums; }
+  #two-game .result li .sub { font-weight: 600; color: var(--ink-soft); font-size: 0.8em; }
+
+  /* Teams */
+  #two-game .scores { flex: 0 0 auto; display: flex; gap: 0.6rem; align-items: stretch; flex-wrap: wrap; }
+  #two-game .teams { flex: 1; min-width: min(100%, 18rem); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 0.6rem; }
+  #two-game .team {
+    display: flex; align-items: center; gap: 0.7rem;
+    background: var(--panel); border: 1px solid var(--hair); border-radius: 0.9rem; padding: 0.45rem 0.7rem;
+  }
+  #two-game .team .name {
+    flex: 1; min-width: 6rem; width: 100%; color: var(--ink); font-size: 1.05rem; font-weight: 700;
+    border: 0; border-bottom: 2px dashed transparent; background: transparent; padding: 0.1em 0;
+  }
+  #two-game .team .name:hover, #two-game .team .name:focus { border-bottom-color: var(--ink-soft); outline: none; }
+  #two-game .team .total { font-size: 1.8rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; line-height: 1; }
+  #two-game .pts { display: flex; gap: 0.3rem; }
+  #two-game .pt {
+    width: 2.3rem; height: 2.3rem; border-radius: 0.55rem; border: 2px solid var(--ink);
+    background: transparent; color: var(--ink); font-size: 1.05rem; font-weight: 700; padding: 0;
+  }
+  #two-game .pt.on { background: var(--ink); color: var(--mist); }
+  #two-game .pt:disabled { opacity: 0.2; cursor: default; }
+  #two-game .tools { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
+  #two-game .tool { border: 0; background: transparent; color: var(--ink-soft); font-size: 0.9rem; font-weight: 600; text-align: left; padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
+  #two-game .tool:hover { color: var(--ink); text-decoration: underline; }
+  #two-game .tool:disabled { opacity: 0.35; cursor: default; text-decoration: none; }
+
   /* ---------- Smaller screens ---------- */
 
   /* The tabs drop to their own row, flush with the frame's left edge. */
@@ -332,11 +422,23 @@
     .push { margin-left: 0; }
     .switch button { padding: 0 0.55rem; font-size: 0.9rem; }
     .pick { max-width: 100%; }
+    /* Three tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
+    .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: 0 0 auto; padding: 0 0.6rem; font-size: 0.88rem; }
+    #two-game { overflow: visible; }
+    .two-stage { min-height: 38vh; padding: 1.2rem 0; }
+    #two-game .team { flex-wrap: wrap; }
+    #two-game .team .name { flex-basis: 100%; }
+    #two-game .team .total { margin-left: auto; }
+    #two-game .tools { flex-direction: row; flex-wrap: wrap; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .content, .box, .link { transition: none; }
     .stem .join { animation: none; }
+    .two-board, #two-game .num { transition: none; }
+    #two-game .ex { animation: none; }
   }
 </style>
 </head>
@@ -416,19 +518,63 @@
       </div>
     </section>
 
+    <!-- Two to Five: fill the gap with two to five words, one point for each word. -->
+    <section class="game" id="two-game" role="tabpanel" aria-labelledby="tab-two" hidden>
+      <div class="two-board a2" id="two-board">
+        <div class="head">
+          <p class="prompt" id="two-prompt"></p>
+          <div class="nums" aria-hidden="true">
+            <div class="num">2</div><div class="num">3</div><div class="num">4</div><div class="num">5</div>
+          </div>
+        </div>
+        <div class="two-stage" id="two-stage"></div>
+      </div>
+
+      <div class="scores">
+        <div class="teams" id="two-teams"></div>
+        <div class="tools">
+          <button type="button" class="tool" id="two-add-team">Add a team</button>
+          <button type="button" class="tool" id="two-remove-team">Remove a team</button>
+          <button type="button" class="tool" id="two-reset">Reset scores</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn" id="two-prev">Back</button>
+        <button type="button" class="btn-primary" id="two-next">Next sentence</button>
+        <button type="button" class="btn" id="two-example">Show an example</button>
+        <span class="count" id="two-count"></span>
+        <div class="pick push">
+          <div class="switch" id="two-mode" role="group" aria-label="Game">
+            <button type="button" data-v="free" class="on">2 to 5</button>
+            <button type="button" data-v="exact">Exactly</button>
+          </div>
+        </div>
+        <div class="pick">
+          <span class="pick-label" id="two-level-label">Level</span>
+          <div class="switch" id="two-level" role="group" aria-labelledby="two-level-label">
+            <button type="button" data-v="a2" class="on">A2</button>
+            <button type="button" data-v="b1">B1</button>
+            <button type="button" data-v="b2">B2</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 </main>
 
 <script>
 /* ---------------------------------------------------------------
-   Two games on one page, chosen with the tabs at the top.
-   A link can open a tab directly: ?mode=starters or ?mode=bbs.
+   Three games on one page, chosen with the tabs at the top.
+   A link can open a tab directly: ?mode=starters, ?mode=bbs or ?mode=two.
    Otherwise the page opens on the last one used.
    To rename a tab, change its label here.
 ---------------------------------------------------------------- */
 const GAMES = [
   { id: "starters", label: "Starters" },
-  { id: "bbs", label: "Because But So" }
+  { id: "bbs", label: "Because But So" },
+  { id: "two", label: "Two to Five" }
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -736,6 +882,305 @@ $("bbs-prev").addEventListener("click", () => moveStem(-1));
 wireSwitch($("bbs-level"), (lv) => { bLevel = lv; revealed = false; showStem(); });
 
 /* ===============================================================
+   Two to Five
+   Fill the gap with two to five words. One point for each word.
+   Everything for this tab lives inside the brackets below, so its
+   names can't clash with the other two games.
+================================================================ */
+
+const twoToFive = (() => {
+  /*
+    Sentences. Each line is: the sentence (with ___ for the gap), then four
+    example answers of 2, 3, 4 and 5 words, in that order.
+    To add a sentence, copy a line and change it. Contractions (don't, they'd)
+    and hyphenated words (ten-euro) count as one word.
+  */
+  const SENTENCES = {
+    a2: [
+      ["I ___ to school every day.", "usually walk", "ride my bike", "take the early bus", "walk with my best friend"],
+      ["My cat likes to ___ on the sofa.", "sleep quietly", "sit and sleep", "play with my socks", "sleep all day and night"],
+      ["Can you ___ me your phone, please?", "just lend", "come and show", "stop and quickly lend", "be very kind and lend"],
+      ["She ___ a book from the shop yesterday.", "quickly bought", "went and bought", "and her sister bought", "and her two friends bought"],
+      ["We ___ dinner at 9 o'clock every evening.", "always have", "sit and have", "all sit and have", "cook and eat a big"],
+      ["On Saturdays, my friends and I ___ in the park.", "play football", "meet and talk", "ride our new bikes", "eat pizza and play games"],
+      ["My brother ___ every morning before school.", "eats breakfast", "has a shower", "listens to loud music", "makes toast for the family"],
+      ["There is ___ in my bedroom.", "a desk", "a big bed", "a very old computer", "a small desk and chair"],
+      ["I can't ___ because I'm too tired.", "go out", "do my homework", "play football this afternoon", "go to the party tonight"],
+      ["My best friend ___ at the weekend.", "plays tennis", "visits her grandparents", "goes to the beach", "watches films with her family"],
+      ["Yesterday I ___ and it was great.", "went swimming", "saw a film", "played basketball with friends", "went shopping with my cousins"],
+      ["My mum ___ when she gets home.", "makes tea", "takes a shower", "cooks dinner for us", "sits down and watches TV"],
+      ["In summer, we ___ every day.", "go swimming", "eat ice cream", "go to the beach", "stay outside until it's dark"],
+      ["The teacher asked us to ___ before Friday.", "study hard", "finish the project", "write a short story", "learn all the new words"],
+      ["I'd like ___ for my birthday.", "new trainers", "a new phone", "a really big cake", "a party with my friends"],
+      ["My dog ___ when I come home.", "always jumps", "runs to me", "barks and runs around", "runs around the living room"],
+      ["Tomorrow I'm going to ___ with my family.", "have lunch", "visit my grandparents", "watch a funny film", "go to a new restaurant"],
+      ["He ___ on the bus this morning.", "fell asleep", "lost his phone", "listened to some music", "sat next to his teacher"],
+      ["Please don't ___ in the classroom.", "eat food", "use your phone", "shout at your friends", "throw paper at other students"],
+      ["I usually ___ after I finish my homework.", "watch TV", "play video games", "go out with friends", "talk to my friends online"],
+      ["My grandparents ___ in a small village.", "live happily", "have a farm", "have a lovely house", "grow vegetables and keep chickens"],
+      ["Last weekend we ___ at the beach.", "had fun", "played volleyball together", "ate lunch and swam", "spent the whole day relaxing"],
+      ["My sister never ___ in the morning.", "eats breakfast", "makes her bed", "wakes up on time", "has time to eat breakfast"],
+      ["I want to ___ when I'm older.", "be famous", "have a dog", "live in another country", "work with animals every day"],
+      ["It was raining, so we ___ at home.", "played games", "watched a film", "made pizza for lunch", "played cards and ate popcorn"]
+    ],
+    b1: [
+      ["If it's sunny tomorrow, we ___ after class.", "will meet", "can play football", "will have a picnic", "are going to the beach"],
+      ["I've never ___ in my life.", "been abroad", "eaten raw fish", "been on a plane", "slept in a tent outside"],
+      ["My parents don't let me ___ during the week.", "go out", "play video games", "stay up very late", "use my phone after dinner"],
+      ["While I was walking home, I ___.", "fell over", "saw my cousin", "found a ten-euro note", "bumped into my old teacher"],
+      ["The best thing about my town is ___.", "the beach", "its friendly people", "the food in summer", "the park near my house"],
+      ["I used to ___ when I was little.", "hate vegetables", "bite my nails", "sleep with a teddy", "be afraid of the dark"],
+      ["You should ___ if you want to pass the exam.", "study more", "revise every day", "get plenty of sleep", "ask your teacher for help"],
+      ["I was really surprised when ___.", "it snowed", "my team won", "I passed the test", "my friends organised a party"],
+      ["My friend has just ___, so she's really happy.", "finished school", "got a puppy", "passed her driving test", "won a prize for singing"],
+      ["I'm looking forward to ___ this summer.", "sleeping late", "seeing my cousins", "going to a festival", "spending time at the beach"],
+      ["Before I go to bed, I always ___.", "read something", "brush my teeth", "check my phone again", "listen to some relaxing music"],
+      ["It's important to ___ when you meet someone new.", "be friendly", "smile and listen", "ask them some questions", "remember their name straight away"],
+      ["I haven't ___ since last year.", "been swimming", "seen my cousins", "been to the cinema", "had a really good holiday"],
+      ["If I had more free time, I ___.", "would paint", "would learn guitar", "would read more books", "would start my own band"],
+      ["Our teacher told us ___ before the trip.", "to rest", "to pack early", "to bring some water", "to charge our phones fully"],
+      ["The film was so boring that ___.", "I left", "we fell asleep", "everyone started to talk", "I looked at my phone"],
+      ["I get annoyed when people ___.", "interrupt me", "arrive really late", "talk during a film", "don't answer my messages quickly"],
+      ["She was tired because she ___ the night before.", "had studied", "had gone out", "had stayed up late", "had watched films until midnight"],
+      ["I'd rather ___ than go shopping.", "stay home", "play video games", "tidy my whole bedroom", "go for a long walk"],
+      ["When I finish school, I want to ___.", "travel abroad", "study computer science", "get a good job", "take a year to travel"],
+      ["My phone ___, so I couldn't call you.", "was broken", "had no battery", "was in my locker", "fell in the swimming pool"],
+      ["We were late because ___.", "it rained", "Dad overslept again", "we missed the train", "my sister lost her keys"],
+      ["I think everyone should ___ at least once.", "go camping", "try new food", "travel to another country", "sing in front of people"],
+      ["He apologised for ___.", "being late", "forgetting my birthday", "breaking my new headphones", "not replying to my message"],
+      ["I've been ___ for two hours.", "studying maths", "waiting for you", "trying to call you", "playing this game with friends"]
+    ],
+    b2: [
+      ["If I'd known about the party, I ___.", "would've come", "would have come", "would have brought something", "would have invited my cousin"],
+      ["Despite ___, she managed to finish the race.", "the rain", "feeling very ill", "hurting her left ankle", "having slept for three hours"],
+      ["I wish I ___ when I was younger.", "had travelled", "had learnt piano", "had taken more risks", "had listened to my grandparents"],
+      ["It's high time the government ___.", "took action", "listened to teenagers", "invested in public transport", "did something about climate change"],
+      ["Spending too much time online can ___.", "be harmful", "affect your sleep", "make you feel lonely", "stop you seeing your friends"],
+      ["By the time we arrived, ___.", "they'd gone", "everyone had left", "the film had started", "all the food had gone"],
+      ["She's the kind of person who ___.", "never complains", "always tells jokes", "makes everyone feel welcome", "would help anyone in trouble"],
+      ["I can't stand people who ___.", "show off", "never say thanks", "talk over other people", "are always on their phones"],
+      ["Unless we ___, the problem will only get worse.", "act now", "change our habits", "start using less plastic", "all work together on it"],
+      ["It's worth ___ before you make a decision.", "thinking carefully", "asking for advice", "talking to your family", "looking at all the options"],
+      ["I would have passed if I ___.", "had studied", "had worked harder", "had revised the vocabulary", "had read the questions properly"],
+      ["Nowadays, teenagers tend to ___.", "sleep less", "shop online more", "spend less time outdoors", "follow celebrities on social media"],
+      ["Having ___, he decided to go home.", "finished work", "missed the bus", "lost all his money", "waited for over an hour"],
+      ["What I love most about weekends is ___.", "sleeping in", "having no homework", "seeing all my friends", "not setting an alarm clock"],
+      ["She suggested ___ instead of staying in.", "going out", "trying something new", "going for a walk", "meeting up at the beach"],
+      ["He was accused of ___.", "telling lies", "copying my homework", "breaking the school rules", "taking money from the shop"],
+      ["Social media has made it easier to ___.", "stay connected", "share your opinions", "find people like you", "keep in touch with friends"],
+      ["I'd sooner ___ than give a speech in public.", "eat insects", "fail an exam", "clean the whole school", "walk home in the rain"],
+      ["No sooner had we sat down than ___.", "it rained", "the lights failed", "the fire alarm rang", "my phone started to ring"],
+      ["It's no use ___; you just have to practise.", "getting upset", "blaming your teacher", "waiting for a miracle", "hoping it will get easier"],
+      ["The government ought to ___.", "do more", "protect the environment", "build more sports centres", "make public transport much cheaper"],
+      ["She regrets ___.", "leaving early", "not studying languages", "selling her old guitar", "arguing with her best friend"],
+      ["This time next year, I'll be ___.", "studying abroad", "living in London", "preparing for my exams", "working in my uncle's shop"],
+      ["I'm not used to ___.", "waking early", "speaking in public", "eating dinner so early", "being away from my family"],
+      ["The reason I was late is that ___.", "I overslept", "my alarm failed", "the roads were flooded", "I couldn't find my keys"]
+    ]
+  };
+
+  const ROUND = 5;          // sentences in a round
+  const MAX_TEAMS = 6;
+
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const sum = a => a.reduce((t, v) => t + (v || 0), 0);
+
+  // Each level has its own shuffled pile, so sentences don't repeat until the pile runs out.
+  const piles = { a2: [], b1: [], b2: [] };
+  function draw(lv) {
+    if (!piles[lv].length) piles[lv] = shuffle(SENTENCES[lv].slice());
+    return piles[lv].pop();
+  }
+
+  let twoLevel = "a2";
+  let twoMode = "free";     // "free" = any length from 2 to 5, "exact" = the lit number
+  let teams = [{ name: "Team 1", bank: 0 }, { name: "Team 2", bank: 0 }];
+  let round = null;         // { items: [{ s, n, exact }], scores: [team][sentence] }
+  let at = 0;               // 0 to 4 = sentence, 5 = round result
+  let shown = 0;            // word count of the example on screen, 0 = none
+
+  const board = $("two-board"), stage = $("two-stage"), promptEl = $("two-prompt"), teamsEl = $("two-teams");
+  const nextBtn = $("two-next"), prevBtn = $("two-prev"), exBtn = $("two-example"), countEl = $("two-count");
+  const nums = [...$("two-game").querySelectorAll(".num")];
+
+  function newRound(bank) {
+    if (bank && round) teams.forEach((t, i) => { t.bank += sum(round.scores[i]); });
+    // The numbers for Exactly: each of 2, 3, 4, 5 once, plus one more.
+    const bag = shuffle([2, 3, 4, 5, 2 + Math.floor(Math.random() * 4)]);
+    round = {
+      items: bag.map(n => ({ s: draw(twoLevel), n, exact: twoMode === "exact" })),
+      scores: teams.map(() => Array(ROUND).fill(null))
+    };
+    at = 0; shown = 0;
+    render();
+  }
+
+  const roundMax = () => sum(round.items.map(it => it.exact ? it.n : 5));
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderSentence() {
+    const it = round.items[at];
+    promptEl.textContent = it.exact
+      ? `Fill the gap with exactly ${it.n} words.`
+      : "Fill the gap with 2 to 5 words. One point for each word.";
+
+    nums.forEach((d, i) => {
+      const k = i + 2;
+      d.classList.toggle("off", it.exact && k !== it.n);
+      d.classList.toggle("ring", (it.exact && k === it.n) || shown === k);
+    });
+
+    const [before, after] = it.s[0].split("___");
+    const p = el("p", "sentence");
+    p.append(before);
+    if (shown) {
+      it.s[shown - 1].split(" ").forEach(w => { p.append(el("span", "ex", w), " "); });
+      p.lastChild.remove();
+    } else {
+      const gap = el("span", "gap");
+      const slots = it.exact ? it.n : 5, solid = it.exact ? it.n : 2;
+      for (let i = 0; i < slots; i++) gap.append(el("span", i < solid ? "slot" : "slot maybe"));
+      p.append(gap);
+    }
+    p.append(after);
+
+    const worth = el("p", "worth", shown ? `${shown} words, so ${shown} points.` : "");
+    stage.className = "two-stage";
+    stage.replaceChildren(p, worth);
+
+    exBtn.disabled = false;
+    exBtn.textContent = !shown ? "Show an example" : (it.exact || shown === 5) ? "Hide the example" : "Show a longer one";
+    nextBtn.textContent = at === ROUND - 1 ? "See the round result" : "Next sentence";
+    prevBtn.disabled = at === 0;
+    countEl.textContent = `Sentence ${at + 1} of ${ROUND}`;
+  }
+
+  function renderResult() {
+    promptEl.textContent = "Round result";
+    nums.forEach(d => { d.classList.add("off"); d.classList.remove("ring"); });
+
+    const rows = teams.map((t, i) => ({ name: t.name || `Team ${i + 1}`, pts: sum(round.scores[i]), total: t.bank + sum(round.scores[i]) }))
+      .sort((a, b) => b.pts - a.pts);
+    const best = rows[0].pts, winners = rows.filter(r => r.pts === best).map(r => r.name);
+    const headline = best === 0 ? "No points this round."
+      : winners.length === 1 ? (teams.length === 1 ? `${best} points this round.` : `${winners[0]} wins the round.`)
+      : `A draw between ${winners.slice(0, -1).join(", ")} and ${winners[winners.length - 1]}.`;
+
+    const box = el("div", "result");
+    const list = el("ol");
+    rows.forEach(r => {
+      const li = el("li");
+      li.append(el("span", null, r.name), el("span", null, `${r.pts} out of ${roundMax()}`), el("span", "sub", `Total ${r.total}`));
+      list.append(li);
+    });
+    box.append(el("h2", null, headline), list);
+    stage.className = "two-stage";
+    stage.replaceChildren(box);
+
+    exBtn.disabled = true;
+    exBtn.textContent = "Show an example";
+    nextBtn.textContent = "Start a new round";
+    prevBtn.disabled = false;
+    countEl.textContent = "";
+  }
+
+  function renderTeams() {
+    const it = round.items[at];
+    teamsEl.replaceChildren(...teams.map((t, i) => {
+      const card = el("div", "team");
+      const name = el("input", "name");
+      name.value = t.name; name.maxLength = 16; name.setAttribute("aria-label", `Name of team ${i + 1}`);
+      name.addEventListener("input", () => { t.name = name.value; });
+      const pts = el("div", "pts");
+      if (it) {
+        [0, 2, 3, 4, 5].forEach(v => {
+          const b = el("button", "pt", v);
+          b.setAttribute("aria-label", `${v} points`);
+          b.classList.toggle("on", round.scores[i][at] === v);
+          b.disabled = it.exact && v !== 0 && v !== it.n;
+          b.addEventListener("click", () => {
+            round.scores[i][at] = round.scores[i][at] === v ? null : v;
+            renderTeams();
+          });
+          pts.append(b);
+        });
+      }
+      card.append(name, pts, el("span", "total", t.bank + sum(round.scores[i])));
+      return card;
+    }));
+    $("two-add-team").disabled = teams.length >= MAX_TEAMS;
+    $("two-remove-team").disabled = teams.length <= 1;
+  }
+
+  function render() {
+    board.className = "two-board " + twoLevel;
+    if (at < ROUND) renderSentence(); else renderResult();
+    renderTeams();
+  }
+
+  function forward() {
+    if (at < ROUND) { at++; shown = 0; render(); } else { newRound(true); }
+  }
+  function back() {
+    if (at > 0) { at--; shown = 0; render(); }
+  }
+
+  nextBtn.addEventListener("click", forward);
+  prevBtn.addEventListener("click", back);
+  exBtn.addEventListener("click", () => {
+    const it = round.items[at];
+    if (!it) return;
+    shown = it.exact ? (shown ? 0 : it.n) : (shown === 0 ? 2 : shown === 5 ? 0 : shown + 1);
+    render();
+  });
+
+  $("two-add-team").addEventListener("click", () => {
+    if (teams.length >= MAX_TEAMS) return;
+    teams.push({ name: `Team ${teams.length + 1}`, bank: 0 });
+    round.scores.push(Array(ROUND).fill(null));
+    render();
+  });
+  $("two-remove-team").addEventListener("click", () => {
+    if (teams.length <= 1) return;
+    teams.pop(); round.scores.pop();
+    render();
+  });
+  $("two-reset").addEventListener("click", () => {
+    teams.forEach(t => { t.bank = 0; });
+    round.scores = teams.map(() => Array(ROUND).fill(null));
+    render();
+  });
+
+  // Changing the game applies from the sentence on screen onwards.
+  wireSwitch($("two-mode"), (picked) => {
+    if (twoMode === picked) return;
+    twoMode = picked;
+    for (let i = at; i < ROUND; i++) {
+      round.items[i].exact = twoMode === "exact";
+      round.scores.forEach(s => { s[i] = null; });
+    }
+    shown = 0;
+    render();
+  });
+
+  // Changing the level keeps the points so far and starts a new round.
+  wireSwitch($("two-level"), (picked) => {
+    if (twoLevel === picked) return;
+    twoLevel = picked;
+    newRound(true);
+  });
+
+  newRound(false);
+  return { forward, back };   // for the arrow keys, further down
+})();
+
+/* ===============================================================
    The tabs
 ================================================================ */
 
@@ -756,7 +1201,7 @@ function applyMode() {
   });
   GAMES.forEach((g) => { $(g.id + "-game").hidden = g.id !== mode; });
   if (mode === "starters") { if (!current) nextStarter(false); }
-  else showStem();
+  else if (mode === "bbs") showStem();
 }
 
 function chooseMode(id) {
@@ -788,7 +1233,8 @@ tabsEl.addEventListener("keydown", (event) => {
 
 /* ---------- keyboard ----------
    Starters: Space or Enter gives a new sentence.
-   Because But So: Space, Enter or the right arrow moves on; the left arrow goes back. */
+   Because But So: Space, Enter or the right arrow moves on; the left arrow goes back.
+   Two to Five: the right arrow moves on; the left arrow goes back. */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const target = event.target.closest ? event.target : document.body;
@@ -796,7 +1242,11 @@ document.addEventListener("keydown", (event) => {
   const press = event.code === "Space" || event.key === "Enter";
   if (press && target.closest("button, a")) return;
 
-  if (mode === "starters") {
+  if (mode === "two") {
+    if (event.target.tagName === "INPUT") return;   // typing a team name
+    if (event.key === "ArrowRight") twoToFive.forward();
+    else if (event.key === "ArrowLeft") twoToFive.back();
+  } else if (mode === "starters") {
     if (press) { event.preventDefault(); nextStarter(); }
   } else {
     if (press || event.key === "ArrowRight") { event.preventDefault(); forward(); }
