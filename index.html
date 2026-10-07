@@ -66,16 +66,15 @@
     list-style: none;
   }
 
-  /* Level colours: warm for A, cool for B. Give each <li> its level class. */
-  .tiles li.a1 { --c: #F2D9A6; } /* A1: sand yellow */
-  .tiles li.a2 { --c: #F4B5A0; } /* A2: coral orange */
-  .tiles li.b1 { --c: #A9CCEB; } /* B1: sky blue */
-  .tiles li.b2 { --c: #A8D5CB; } /* B2: sea green */
-
-  /* Tile colours: give any <li> one of these names. Add a line to add a colour. */
-  .tiles li.lavender { --c: #C9C3EA; } /* lavender */
-  .tiles li.leaf { --c: #C7DE9F; } /* leaf green */
-  .tiles li.rose { --c: #F0C2D3; } /* rose pink */
+  /* Tile colours follow the order of the tiles, the same seven as the main index.
+     Move a tile and it takes the colour of its new place. */
+  .tiles li:nth-child(7n+1) { --c: #A8D5CB; }
+  .tiles li:nth-child(7n+2) { --c: #F2D9A6; }
+  .tiles li:nth-child(7n+3) { --c: #F4B5A0; }
+  .tiles li:nth-child(7n+4) { --c: #C9C3EA; }
+  .tiles li:nth-child(7n+5) { --c: #A9CCEB; }
+  .tiles li:nth-child(7n+6) { --c: #F0C2D3; }
+  .tiles li:nth-child(7n+7) { --c: #C7DE9F; }
 
   .tiles a {
     display: flex;
@@ -118,57 +117,61 @@
 
   <!--
     To add a page: copy one <li> block, then change the href, title and description.
-    To colour a tile: set the <li> class to a level colour (a1, a2, b1 or b2)
-    or a tile colour (lavender, leaf or rose). Swap the class to change the colour.
-    For a new colour, add one line to the "Tile colours" list in the style section.
+    The colour comes from the tile's place in the list.
   -->
   <ul class="tiles">
-    <li class="a1">
+    <li>
       <a href="word-wheel.html">
         <span class="title">Word Wheel</span>
         <span class="about">Can you find 10 words?.</span>
       </a>
     </li>
-    <li class="a1">
+    <li>
       <a href="wordlist.html">
         <span class="title">Word lists</span>
         <span class="about">Random nouns, verbs and adjectives.</span>
       </a>
     </li>
-    <li class="lavender">
+    <li>
       <a href="similar-but-different.html">
         <span class="title">Similar Different</span>
         <span class="about">Alike, unlike.</span>
       </a>
     </li>
-    <li class="leaf">
+    <li>
       <a href="word-sandwich.html">
         <span class="title">Word Sandwich</span>
         <span class="about">Think of a word.</span>
       </a>
     </li>
-    <li class="a2">
+    <li>
       <a href="sentence-builder.html">
         <span class="title">Build the Sentence</span>
         <span class="about">Using random language points.</span>
       </a>
     </li>
-    <li class="lavender">
+    <li>
       <a href="complete-the-sentence.html">
         <span class="title">Complete the Sentence</span>
         <span class="about">Maybe with a twist.</span>
       </a>
     </li>
-    <li class="a2">
+    <li>
       <a href="in-a-line.html">
         <span class="title">In a Line</span>
         <span class="about">3 or 4 or none!</span>
       </a>
     </li>
-    <li class="b2">
+    <li>
       <a href="revision-categories.html">
         <span class="title">Revision Categories</span>
         <span class="about">Think of the right word.</span>
+      </a>
+    </li>
+    <li>
+      <a href="football.html">
+        <span class="title">Football</span>
+        <span class="about">Right answers score goals. Irregular verbs included.</span>
       </a>
     </li>
   </ul>
