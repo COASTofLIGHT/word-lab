@@ -404,10 +404,76 @@
   #two-game .tool:hover { color: var(--ink); text-decoration: underline; }
   #two-game .tool:disabled { opacity: 0.35; cursor: default; text-decoration: none; }
 
+  /* ---------- What is it not? ---------- */
+
+  /* The board takes the colour of the level: the word on the left, the sentences to finish on the right. */
+  .not-board {
+    --not-level: var(--a1);
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(0.6rem, 1.8vw, 1.3rem);
+    padding: clamp(0.8rem, 2.4vw, 2rem);
+    border-radius: 0.7rem;
+    background: var(--not-level);
+    transition: background-color 250ms ease;
+  }
+  .not-board.a1 { --not-level: var(--a1); }
+  .not-board.a2 { --not-level: var(--a2); }
+  .not-board.b1 { --not-level: var(--b1); }
+  .not-board.b2 { --not-level: var(--b2); }
+
+  .not-word {
+    margin: 0;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(0.7rem, 2vw, 1.5rem);
+    border-radius: 0.7rem;
+    background: var(--paper);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-align: center;
+    overflow: hidden;
+  }
+  .not-word span { display: inline-block; white-space: nowrap; font-size: var(--fs, 4rem); }
+  .not-word.fresh span { animation: pop 0.3s ease-out; }
+
+  .not-stems {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.35rem, 1.2vh, 0.65rem);
+    font-size: clamp(1.25rem, min(3vw, 4.8vh), 2.5rem);   /* made smaller by the script if a long sentence needs it */
+  }
+  .not-stems li {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0 0.7em;
+    border-radius: 0.6rem;
+    background: var(--paper);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .not-stems li b { font-weight: 700; white-space: nowrap; }
+  .not-stems li b.tight { margin-left: -0.25em; }   /* a comma sits close to the gap before it */
+  /* The lines to write on. A sentence can have one gap or two; the last one is the longest. */
+  .not-stems li i { flex: 1 1 2.4em; min-width: 2.4em; height: 0.75em; border-bottom: 0.09em dashed var(--ink); opacity: 0.45; }
+  .not-stems li i:last-child { flex-grow: 2; }
+
   /* ---------- Smaller screens ---------- */
 
   /* The tabs drop to their own row, flush with the frame's left edge. */
-  @media (max-width: 820px) {
+  @media (max-width: 1080px) {
     .tabs { order: 3; flex-basis: 100%; }
     .back { margin-bottom: 0.6rem; }
     .frame { border-top-left-radius: 0; }
@@ -422,7 +488,7 @@
     .push { margin-left: 0; }
     .switch button { padding: 0 0.55rem; font-size: 0.9rem; }
     .pick { max-width: 100%; }
-    /* Three tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
+    /* Four tabs on a narrow screen: smaller, and they slide sideways if they still don't fit. */
     .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { flex: 0 0 auto; padding: 0 0.6rem; font-size: 0.88rem; }
@@ -432,6 +498,10 @@
     #two-game .team .name { flex-basis: 100%; }
     #two-game .team .total { margin-left: auto; }
     #two-game .tools { flex-direction: row; flex-wrap: wrap; }
+    .not-board { grid-template-columns: 1fr; }
+    .not-word { min-height: 8rem; }
+    .not-stems li { flex: 0 0 auto; flex-wrap: wrap; row-gap: 0.5rem; min-height: 3.2rem; padding-block: 0.6rem; }
+    .not-stems li i { min-width: 3rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -439,6 +509,8 @@
     .stem .join { animation: none; }
     .two-board, #two-game .num { transition: none; }
     #two-game .ex { animation: none; }
+    .not-board { transition: none; }
+    .not-word.fresh span { animation: none; }
   }
 </style>
 </head>
@@ -561,20 +633,45 @@
       </div>
     </section>
 
+    <!-- What is it not?: one object or animal, and sentences to say what it is not. -->
+    <section class="game" id="not-game" role="tabpanel" aria-labelledby="tab-not" hidden>
+      <p class="intro">Look at the word. Finish the sentences to say what it is not.</p>
+
+      <div class="not-board a1" id="not-board">
+        <p class="not-word" id="not-word" aria-live="polite"><span id="not-word-text"></span></p>
+        <ul class="not-stems" id="not-stems" aria-label="Sentences to finish"></ul>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn-primary" id="not-next">Next word</button>
+        <span class="count" id="not-count"></span>
+        <div class="pick push">
+          <span class="pick-label" id="not-level-label">Level</span>
+          <div class="switch" id="not-level" role="group" aria-labelledby="not-level-label">
+            <button type="button" data-v="a1" class="on">A1</button>
+            <button type="button" data-v="a2">A2</button>
+            <button type="button" data-v="b1">B1</button>
+            <button type="button" data-v="b2">B2</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 </main>
 
 <script>
 /* ---------------------------------------------------------------
-   Three games on one page, chosen with the tabs at the top.
-   A link can open a tab directly: ?mode=starters, ?mode=bbs or ?mode=two.
+   Four games on one page, chosen with the tabs at the top.
+   A link can open a tab directly: ?mode=starters, ?mode=bbs, ?mode=two or ?mode=not.
    Otherwise the page opens on the last one used.
    To rename a tab, change its label here.
 ---------------------------------------------------------------- */
 const GAMES = [
   { id: "starters", label: "Starters" },
   { id: "bbs", label: "Because But So" },
-  { id: "two", label: "Two to Five" }
+  { id: "two", label: "Two to Five" },
+  { id: "not", label: "What is it not?" }
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -885,7 +982,7 @@ wireSwitch($("bbs-level"), (lv) => { bLevel = lv; revealed = false; showStem(); 
    Two to Five
    Fill the gap with two to five words. One point for each word.
    Everything for this tab lives inside the brackets below, so its
-   names can't clash with the other two games.
+   names can't clash with the other games.
 ================================================================ */
 
 const twoToFive = (() => {
@@ -1181,6 +1278,132 @@ const twoToFive = (() => {
 })();
 
 /* ===============================================================
+   What is it not?
+   One object or animal at a time, with sentences to finish that say
+   what it is not. Everything for this tab lives inside the brackets
+   below, so its names can't clash with the other games.
+================================================================ */
+
+const whatIsItNot = (() => {
+  /*
+    Words: objects and animals, one thing each (no plurals, nothing you
+    cannot count), so "A" or "An" always works in front.
+    Each level uses the words of the levels below as well as its own;
+    B2 has the same words as B1, with harder sentences.
+    To add a word, type it into a list with a space before it.
+  */
+  const NOT_WORDS = {
+    a1: ("cat dog fish bird horse cow sheep duck chicken frog mouse spider snake monkey elephant giraffe lion tiger " +
+         "bear hippo crocodile zebra rabbit goat whale dolphin shark kangaroo parrot penguin bat bee fly snail lizard panda " +
+         "ball book pen pencil ruler rubber bag chair table desk bed door window clock lamp phone computer " +
+         "car bus bike train plane boat lorry kite doll robot guitar piano hat shoe sock T-shirt jacket " +
+         "apple banana orange egg cake sandwich burger tree flower house box cup bottle key camera radio").split(" "),
+    a2: ("camel butterfly eagle octopus turtle wolf fox deer donkey swan ant dinosaur jellyfish squirrel owl gorilla kitten puppy " +
+         "umbrella suitcase backpack laptop tablet fridge cooker sofa mirror pillow blanket towel toothbrush comb wallet " +
+         "ticket passport map newspaper magazine diary dictionary envelope stamp candle ladder bridge castle tent " +
+         "helicopter motorbike taxi tram ship rocket skateboard drum violin ring necklace belt glove scarf boot coat sweater " +
+         "knife fork spoon plate bowl glass lemon potato tomato carrot onion mushroom biscuit").split(" "),
+    b1: ("hedgehog seagull lobster peacock ostrich flamingo chameleon caterpillar woodpecker crab seal goose hamster " +
+         "lighthouse microwave telescope calculator hammer saucepan kettle wheelchair trolley fountain statue compass " +
+         "parachute submarine tractor caravan hammock satellite microscope thermometer keyboard charger drone screwdriver " +
+         "wardrobe chimney doorbell dishwasher freezer bookshelf skyscraper windmill scooter canoe trumpet flute trophy medal").split(" ")
+  };
+  NOT_WORDS.a2 = NOT_WORDS.a1.concat(NOT_WORDS.a2);
+  NOT_WORDS.b1 = NOT_WORDS.a2.concat(NOT_WORDS.b1);
+  NOT_WORDS.b2 = NOT_WORDS.b1;
+
+  /*
+    The sentences to finish. ___ is a gap: a sentence can have one or two.
+    {A word} becomes "A whale", "An apple" and so on; the first sentence at
+    each level uses it, so the word is named before the "It" sentences.
+  */
+  const NOT_STEMS = {
+    a1: ["{A word} is not ___", "It does not ___", "It can't ___", "It hasn't got ___"],
+    a2: ["{A word} is not ___", "It does not ___", "It can't ___", "It hasn't got ___", "It will never ___"],
+    b1: ["{A word} isn't as ___ as ___", "It has never ___", "It isn't ___ enough to ___",
+         "It doesn't have to ___", "It isn't used for ___", "If it could ___, it wouldn't ___"],
+    b2: ["{A word} is neither ___ nor ___", "Unlike a ___, it doesn't ___", "Despite ___, it can't ___",
+         "It wishes it didn't have to ___", "There's no point in ___"]
+  };
+
+  const board = $("not-board"), wordBox = $("not-word"), wordText = $("not-word-text");
+  const article = (w) => /^[aeiou]/i.test(w) ? "an" : "a";
+
+  let notLevel = "a1";
+  let pile = [];        // shuffled words still to come at this level
+  let seen = 0;
+  let word = null;      // the word on screen (null until the tab is first opened)
+
+  function next() {
+    if (!pile.length) {
+      pile = shuffle(NOT_WORDS[notLevel].slice());
+      if (pile.length > 1 && pile[pile.length - 1] === word) pile.unshift(pile.pop());
+      seen = 0;
+    }
+    word = pile.pop();
+    seen++;
+
+    const withArticle = article(word) + " " + word;
+    wordText.textContent = withArticle;
+    wordBox.classList.remove("fresh"); void wordBox.offsetWidth; wordBox.classList.add("fresh");
+
+    $("not-stems").replaceChildren(...NOT_STEMS[notLevel].map((stem) => {
+      const li = document.createElement("li");
+      const parts = stem.replace("{A word}", withArticle.charAt(0).toUpperCase() + withArticle.slice(1)).split("___");
+      parts.forEach((text, i) => {
+        text = text.trim();
+        if (text) {
+          const b = document.createElement("b");
+          b.textContent = text;
+          if (text.charAt(0) === ",") b.className = "tight";
+          li.append(b);
+        }
+        if (i < parts.length - 1) li.append(document.createElement("i"));   /* a line to write on */
+      });
+      return li;
+    }));
+
+    $("not-count").textContent = `${seen} / ${NOT_WORDS[notLevel].length}`;
+    fit();
+  }
+
+  /* The word is as big as its box allows, and the sentences shrink a little if a long one needs it */
+  function fit() {
+    if ($("not-game").hidden || !word) return;
+    const cs = getComputedStyle(wordBox);
+    const room = wordBox.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const fs = Math.min(120, window.innerWidth * 0.09);
+    wordBox.style.setProperty("--fs", fs + "px");
+    const wide = wordText.offsetWidth;
+    if (wide > room) wordBox.style.setProperty("--fs", Math.max(20, fs * room / wide * 0.95) + "px");
+
+    const list = $("not-stems");
+    list.style.fontSize = "";
+    if (window.matchMedia("(max-width: 720px)").matches) return;   /* on a phone the sentences wrap instead */
+    let size = parseFloat(getComputedStyle(list).fontSize);
+    const tooBig = () => [...list.children].some((li) => li.scrollWidth > li.clientWidth + 1 || li.scrollHeight > li.clientHeight + 1);
+    while (size > 14 && tooBig()) {
+      size *= 0.95;
+      list.style.fontSize = size + "px";
+    }
+  }
+
+  $("not-next").addEventListener("click", next);
+  wireSwitch($("not-level"), (picked) => {
+    if (notLevel === picked) return;
+    notLevel = picked;
+    board.className = "not-board " + picked;
+    pile = [];
+    next();
+  });
+  window.addEventListener("resize", fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+  /* open: called when the tab is shown. The first time, it deals a word. */
+  return { next, open: () => { if (!word) next(); else fit(); } };
+})();
+
+/* ===============================================================
    The tabs
 ================================================================ */
 
@@ -1202,6 +1425,7 @@ function applyMode() {
   GAMES.forEach((g) => { $(g.id + "-game").hidden = g.id !== mode; });
   if (mode === "starters") { if (!current) nextStarter(false); }
   else if (mode === "bbs") showStem();
+  else if (mode === "not") whatIsItNot.open();
 }
 
 function chooseMode(id) {
@@ -1234,7 +1458,8 @@ tabsEl.addEventListener("keydown", (event) => {
 /* ---------- keyboard ----------
    Starters: Space or Enter gives a new sentence.
    Because But So: Space, Enter or the right arrow moves on; the left arrow goes back.
-   Two to Five: the right arrow moves on; the left arrow goes back. */
+   Two to Five: the right arrow moves on; the left arrow goes back.
+   What is it not?: Space, Enter or the right arrow gives a new word. */
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const target = event.target.closest ? event.target : document.body;
@@ -1248,6 +1473,8 @@ document.addEventListener("keydown", (event) => {
     else if (event.key === "ArrowLeft") twoToFive.back();
   } else if (mode === "starters") {
     if (press) { event.preventDefault(); nextStarter(); }
+  } else if (mode === "not") {
+    if (press || event.key === "ArrowRight") { event.preventDefault(); whatIsItNot.next(); }
   } else {
     if (press || event.key === "ArrowRight") { event.preventDefault(); forward(); }
     else if (event.key === "ArrowLeft") moveStem(-1);
