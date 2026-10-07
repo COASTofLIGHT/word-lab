@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --panel: #F9FBFB;
+    --line: rgba(16, 48, 58, 0.14);
+    --dash: rgba(16, 48, 58, 0.32);
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --big: "Atkinson Hyperlegible", var(--font);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0; min-height: 100%;
+    background: var(--mist); color: var(--ink);
+    font-family: var(--font);
+    -webkit-text-size-adjust: 100%;
+  }
+  main {
+    max-width: 1040px; margin: 0 auto;
+    padding: clamp(0.6rem, 2vh, 1.5rem) clamp(1rem, 3vw, 2rem);
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
+  button { font-family: var(--font); color: var(--ink); }
+  button:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  .back { align-self: flex-start; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.2; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* Title and rules share one row so the whole game fits on screen without scrolling */
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1.6rem; }
+  h1 { margin: 0; flex: 0 0 auto; font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .hint { margin: 0; flex: 1 1 24rem; color: var(--ink-soft); font-size: 0.98rem; line-height: 1.3; }
+
+  .play {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(1rem, 3.5vw, 2.6rem); align-items: start;
+  }
+  .side { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+
+  /* The wheel */
+  /* The wheel shrinks on short screens: 270px is the room everything else in its column needs */
+  .wheel { display: block; width: clamp(220px, calc(100dvh - 270px), 440px); max-width: 100%; height: auto; margin: 0 auto; }
+  .cell { cursor: pointer; }
+  .cell:focus { outline: none; }
+  .cell .shape { stroke: var(--mist); stroke-width: 5; transition: opacity 120ms; }
+  .cell text {
+    font-family: var(--big); font-weight: 700; font-size: 46px; fill: var(--ink);
+    text-anchor: middle; pointer-events: none; user-select: none; transition: opacity 120ms;
+  }
+  .cell.middle .shape { fill: var(--ink); }
+  .cell.middle text { fill: var(--mist); font-size: 60px; }
+  .cell:hover:not(.used) .shape { filter: brightness(0.96); }
+  .cell:focus-visible .shape { stroke: var(--focus); stroke-width: 6; }
+  .cell.used { cursor: default; }
+  .cell.used .shape { opacity: 0.3; }
+  .cell.used text { opacity: 0.35; }
+  .cell.middle.used .shape { opacity: 0.45; }
+  .cell.middle.used text { opacity: 1; }
+
+  /* Typing a word */
+  .entry { display: flex; gap: 0.6rem; align-items: stretch; }
+  .entry input {
+    flex: 1 1 auto; min-width: 0; width: 100%;
+    font-family: var(--big); font-weight: 700; color: var(--ink);
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem); letter-spacing: 0.08em; text-transform: uppercase;
+    background: #fff; border: 2px solid var(--ink); border-radius: 0.9rem;
+    padding: 0.25em 0.6em; min-height: 50px;
+  }
+  .entry input::placeholder { color: var(--ink-soft); opacity: 0.7; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 0.7em; }
+  .entry input:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+  .entry.bad input { animation: shake 0.25s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+  .next {
+    border: 0; cursor: pointer; border-radius: 0.9rem; background: var(--ink); color: var(--mist);
+    font-size: 1.1rem; font-weight: 800; padding: 8px 20px; min-height: 46px; white-space: nowrap;
+  }
+  .next:hover:not(:disabled) { background: #1B4652; }
+  .show {
+    border: 2px solid var(--ink); cursor: pointer; border-radius: 0.9rem; background: var(--panel);
+    font-size: 1rem; font-weight: 700; padding: 6px 16px; min-height: 42px;
+  }
+  .show:hover:not(:disabled) { background: #fff; }
+  .buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .buttons .end { margin-left: auto; }
+
+  .result { margin: 0; min-height: 1.3em; font-size: 1.1rem; font-weight: 700; line-height: 1.3; }
+  .result .gaps { font-family: var(--big); letter-spacing: 0.2em; white-space: nowrap; }
+
+  /* Words found: ten empty slots that fill up */
+  .count { margin: 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .count b { color: var(--ink); }
+  .slots {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 0.4rem;
+  }
+  .slots li {
+    min-height: 2.5rem; display: flex; align-items: center; justify-content: center;
+    border-radius: 0.6rem; padding: 0.1rem 0.3rem; white-space: nowrap;
+    font-family: var(--big); font-weight: 700; font-size: clamp(1.1rem, 1.9vw, 1.35rem);
+    background: var(--panel); border: 2px dashed var(--dash);
+  }
+  /* After ten words the list adds columns instead of rows, so the page does not grow */
+  .slots[data-cols="3"] li { font-size: 1.1rem; }
+  .slots[data-cols="4"] li { font-size: 0.95rem; }
+  .slots li.got { background: var(--c); border: 0; }
+  .slots li.fresh { animation: pop 0.18s ease-out; }
+  .slots li.nine { box-shadow: inset 0 0 0 4px var(--ink); }
+  .slots li:nth-child(7n+1) { --c: #A8D5CB; }
+  .slots li:nth-child(7n+2) { --c: #F2D9A6; }
+  .slots li:nth-child(7n+3) { --c: #F4B5A0; }
+  .slots li:nth-child(7n+4) { --c: #C9C3EA; }
+  .slots li:nth-child(7n+5) { --c: #A9CCEB; }
+  .slots li:nth-child(7n+6) { --c: #F0C2D3; }
+  .slots li:nth-child(7n+7) { --c: #C7DE9F; }
+  @keyframes pop { from { transform: scale(0.88); } to { transform: none; } }
+
+  /* The 9-letter word */
+  .nine-label { margin: 0.15rem 0 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.2; }
+  .nine { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(9, 1fr); gap: 0.3rem; max-width: 23rem; }
+  .nine li {
+    aspect-ratio: 1; display: grid; place-items: center; border-radius: 0.45rem;
+    font-family: var(--big); font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.35rem); line-height: 1;
+    background: var(--panel); border: 2px dashed var(--dash);
+  }
+  .nine.found li { background: var(--ink); color: var(--mist); border: 0; }
+  .nine.shown li { background: #fff; border: 2px solid var(--ink); }
+
+  .answers { margin: 0; font-size: 1rem; line-height: 1.35; }
+  .answers[hidden] { display: none; }
+  .answers b { display: block; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* The Well done! sign, shown when the tenth word goes in */
+  .done {
+    width: min(92vw, 34rem); padding: 0; border: 4px solid var(--ink); border-radius: 1.4rem;
+    background: var(--panel); color: var(--ink); text-align: center; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(16, 48, 58, 0.35);
+  }
+  .done::backdrop { background: rgba(16, 48, 58, 0.5); }
+  .done[open] { animation: sign 0.22s ease-out; }
+  .done .stripe {
+    height: 1.1rem;
+    background: linear-gradient(90deg,
+      #A8D5CB 0 14.3%, #F2D9A6 0 28.6%, #F4B5A0 0 42.9%, #C9C3EA 0 57.1%,
+      #A9CCEB 0 71.4%, #F0C2D3 0 85.7%, #C7DE9F 0);
+  }
+  .done form { padding: clamp(1.2rem, 4vw, 2rem) clamp(1rem, 4vw, 2.2rem) clamp(1.3rem, 4vw, 2.2rem); }
+  .done h2 { margin: 0; font-size: clamp(2.6rem, 8vw, 4.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .done p { text-wrap: balance; margin: 0.6rem 0 1.4rem; font-size: clamp(1.1rem, 2.6vw, 1.35rem); line-height: 1.35; }
+  .done .buttons { justify-content: center; gap: 0.8rem; }
+  .done .buttons button { min-height: 54px; padding: 8px 24px; font-size: 1.2rem; font-weight: 800; }
+  @keyframes sign { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  @media (max-width: 760px) {
+    .play { grid-template-columns: 1fr; }
+    .wheel { width: min(100%, 320px); }
+    .slots { grid-template-columns: 1fr 1fr; }
+    .slots[data-cols] li { font-size: 1.1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slots li.fresh, .entry.bad input, .done[open] { animation: none; }
+    .cell .shape, .cell text { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <!-- Change this link and label to match the section the page lives in. -->
+  <a class="back" href="./">&larr; Back</a>
+
+  <header>
+    <h1>Word Wheel</h1>
+    <p class="hint">Make words with 3 letters or more. Every word must use the middle letter. One word uses all 9 letters. Use each letter only as many times as you can see it. Names do not count.</p>
+  </header>
+
+  <div class="play">
+    <div class="side">
+      <svg class="wheel" id="wheel" viewBox="0 0 300 300" role="group" aria-label="The wheel: choose a letter to add it to your word"></svg>
+
+      <div class="entry" id="entry">
+        <input id="word" type="text" maxlength="9" placeholder="Type or tap letters" aria-label="Your word"
+               autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <button class="next" type="button" id="add">Add word</button>
+      </div>
+
+      <p class="result" id="result" aria-live="polite"></p>
+
+      <div class="buttons">
+        <button class="show" type="button" id="del">Delete</button>
+        <button class="show" type="button" id="shuffle">Shuffle</button>
+        <button class="show" type="button" id="hintBtn">Hint</button>
+      </div>
+    </div>
+
+    <div class="side">
+      <p class="count">Words found <b id="count">0</b> / <span id="target"></span></p>
+      <ol class="slots" id="slots" aria-label="Words found"></ol>
+
+      <p class="nine-label">The 9-letter word</p>
+      <ol class="nine" id="nine" aria-label="The 9-letter word"></ol>
+
+      <p class="answers" id="answers" hidden></p>
+
+      <div class="buttons">
+        <button class="show" type="button" id="reveal">Show answers</button>
+        <button class="next end" type="button" id="newWheel">New wheel</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- The sign that comes up at ten words. Escape works like "Find more words". -->
+<dialog class="done" id="done" aria-labelledby="doneTitle">
+  <div class="stripe"></div>
+  <form method="dialog">
+    <h2 id="doneTitle">Well done!</h2>
+    <p id="doneText"></p>
+    <div class="buttons">
+      <button class="next" type="submit" value="more">Find more words</button>
+      <button class="show" type="submit" value="end">End challenge</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const TARGET = 10;  /* words to find */
+  const MIN = 3;      /* shortest word allowed */
+
+  /* ---------------------------------------------------------------
+     Wheels: [9-letter word, middle letter, everyday words, other accepted words].
+     "Everyday words" are common words learners are likely to know, most
+     common first: hints and Show answers use only these. "Other" words are
+     real but rarer; they are accepted if someone types them.
+     To add a wheel, copy a line and change it.
+  ---------------------------------------------------------------- */
+  const PUZZLES = [
+    ["chocolate", "a", "each late act eat hate coach catch heat cat tea teach chat hat chocolate coal coat ate tale heal ace cheat oath locate halt", "ache achoo ale alec aloe alt altho alto cache cachet cahoot calo cate catechol ceca cecal chalet chalot chao chela cholate clach cleat coact coca cochlea cocoa cola colocate eath eclat eta hae haet hale halo hao haole lac lace lat latch lath lathe lea leach loach loath loathe loca lota lotah oat oca octal olea ootheca oothecal tace tach tache taco tae tael talc tao teal tela thae theca thecal toea tola"],
+    ["breakfast", "b", "best break base beat bar bet bear breakfast breaks bars bears bat beast baker beats bare basket tab brake bake brakes", "aba abaft abas abase abaser abate abater abaters abates abet abets abreast abs arabesk arb arbs baa baas bakers bakes bares barest barf barfs bark barks bas baser bask bast baste baster bate bates bats beak beaks beta betas bets bra brae braes bras brat brats breast kab kabar kabars kabs kbar kbars kebar kebars kerb kerbs rabat rabats reb rebs sab sabe saber sabra sabre stab taber tabers tabes tabs"],
+    ["yesterday", "y", "year years day say days yet try yes stay easy ready eyes eye yesterday dry ray yard stayed yards steady rays eyed", "aery artsy arty aye ayes ays deary deray derays dey deys dray drays dryest drys dye dyer dyers dyes eatery eery estray estrayed eyas eyer eyers eyra eyras eyre eyres eyry rayed redye redyes reedy resay rya ryas rye ryes satyr sayer seedy stayer stey stray strayed sty stye styed tardy teary tray trays trey treys tye tyee tyees tyer tyers tyes tyre tyred tyres yar yare yarest yay yays yea yeas yeast yeasted yeasty yester"],
+    ["dangerous", "u", "our use used around under sure run due ground sound round sun runs dangerous guard user sugar argue grounds nurse argued guards rounds rude usage ours surgeon urge euro duo argues urged sung sued", "aerugo aerugos aground ague agues arenous argus arouse aroused asunder augend augends auger augers aures danseur desugar dour doura douras douse douser drogue drogues drug drugs druse dues dug dugs dun dune dunes dung dungs duns duos dura duras dure dures durn durns duro duros eau enduro enduros erugo erugos euros gaud gauds gaun gaur gaurs genu genua genus gerund gerunds gnu gnus gourd gourde gourdes gourds gradus grouse groused grue grues guan guano guanos guans guar guars gude gudes guerdon guerdons gun guns negus nodus noseguard nous nude nuder nudes nudge nudger nudgers nudges nurd nurds nursed nus onus oud ouds ourang ourangs resound rogue rogued rogues rondeau roue rouen rouens roues rouge rouged rouges rouse roused rue rued rues rug ruga rugae rugosa rugose rugs rune runes rung rungs ruse sau sauger snug sou soudan sounder sour soured sudor sue suer sugared sundae sunder sundog sura surd surge surged udo udos unaged unde undergo undo undoer undoers undoes unread uns urase urd urds urea ureas uredo uredos urges urn urns ursa ursae usnea"],
+    ["different", "i", "find different friend fire fine tried entire fit ride tired fired diet tie rid tied define edit dirt tier fifteen fried tide differ tin tire", "defi defier definer denier die diene dieter din dine diner dint dire dit dite drift effendi eide eider endite feint feinted ferine fetid fid fie fief fiend fife fifed fifer fin finder fined finer fir firn frit iff inert infer inter ire ired neif nereid nide niffer niffered nit nite niter nitre redfin reedit refind refine refined refit rei reif rein reined retie retied retine rident rif rife riff riffed rift rifted rin rind rite teind tiered tiff tiffed tinder tine tined triene trine trined"],
+    ["beautiful", "a", "able late beautiful eat table beat fat tea flat fault fail lab fate ate tail bat tale leaf bail feat tab albeit", "abet abut aft ail ait alb albite ale alef alif alit alt bait bal bale bate beau beaut beta blae blat blate bleat eau eta fable fauteuil feal feta fetal fetial fiat fibula fibulae fila flab flea ilea lat lati lea luau lutea tabu tabuli tae tael tali tau teal tela telia tuba tubae tubal tufa uta"],
+    ["important", "a", "man part important air art main pain train ran map arm pair rain paint aim pan ratio trap piano tap ram rat rap tan", "ain airn airt ait ami amin amino amir amort amp ani ant anti antipot aport apron apt armpit aroint atom atop atrip atropin att attorn impart inapt inarm iota maintop mair manito mano manor mar mart martin mat matin matron matt mattin mina moa moan moat moira mora nam naoi nap nipa noma noria nota oar oat optima ora ottar pam pant panto par parton pat patin patio patriot patron pia pian pima pina pinta pita pitman potman pram prao prat prima proa protamin ptomain rami ramp rampion rani rant rapt ration rato ratton ria riant roam roan roman rota tain taint tam tamp tampion tampon tanto tao tapir tar tarn taro tarot tarp tarpon tart tat timpano titan titman toman tora trait tram tramp trapt tritoma trona"],
+    ["favourite", "a", "are after far air art rate eat via fair fear fat tea era favourite auto ear ratio fate tear ate favour rat feat fare", "aero afire afore afrit aft airt ait aiver arf arvo aurei ave aver avert avo eau eta faitour faro fauve fave favor favorite feria feta feuar fiar fiat fora fovea frae frat iota irate oaf oar oat oater ora orate outrave ova ovate overfat raft rato rave retia ria rota tae tao tar tare taro tau tav terai toea tora trave tufa uraei urate urea uta uvea vair var vat vatu vau vera viator vita vitae"],
+    ["vegetable", "e", "get let able late leave age gave eat table beat bet tea leg gate belt ate eve tale eagle bee beg vegetable vet", "abele abet agee aglee aglet ale alee ave bagel bale bate beagle beet beetle begat beget bel belga beta betel bevel blae blate bleat blet eaglet eave eel egal elate elevate eta gable gae gale gavel gee gel gelate gelee gelt geta getable gleba glebae glebe glee gleet lave lea lee leet legate legatee lev leva levee tae tael teal tee teel teg tel tela telae tele telega vale valet veal vee veg vegetal vegete vela velate"],
+    ["telephone", "e", "the one then help let open hope phone ten note hotel net hole tone pet telephone pen teen pole poet toe lone", "eel elope enol eon epee eth ethene heel helo helot hen hent hep het hoe holpen hone lee leet leno lent lento leone lept lepton lethe lope nee neep netop noel nope ole ope peel peen peh pele pelon pelt pent peon phenetol phenol pone poteen potheen tee teel tel tele tepee thee thole tole tope topee tophe"],
+    ["classroom", "a", "also car class across cars mass arms arm calm solar coal moral oral arc ram classroom slam scam", "alms als arco arcs ars calms calo cam cams carl carls carol carols carom caroms clam clamor clamors clams claro claros coals cola colas coma comal comas coral corals cram crams crass lac lacs lam lams lar lars las lass lasso loam loams loca mac macro macros macs mar marc marcs marl marls mars mas moa moas mola molar molars molas moola moolas mora morals moras morass oar oars oca ocas ora orals orca orcas osar osmolar ossa rams ras roam roams sac sacs sal sals saros scams scar scars scram scrams slams soar soars sola soma somas sora soras"],
+    ["education", "i", "into united nice idea education action ice unit notice aid noticed diet tie audio tied acid edit cited auction coin icon ion tide audit tin caution unite", "acetin aconite actin adieu adit aeonic aide ain ait ani anodic anti antic atonic auctioned audient auntie cadi caid cain canid catenoid cation cautioned cedi ciao cine cion cite coati codeia codein codeina coedit coined conduit coni ctenoid cutie cutin dacoit danio dautie deontic detain dice dicot dicta die din dine dint dit dita dite doit duci dui duit dunite edict eduction enatic entia etic etui iced incudate induce induct indue iodate iota naoi nicad nide nit nite noctuid nodi noetic nudie odic ontic otic tain teind tenia tic tine tinea tined tondi tonic tui tunic tunica tunicae unai unci uncia unciae untie untied"],
+    ["adventure", "d", "and need under end read due red date trade turned dear tend earned trend adventure dare rated rude deer tender reed den", "advent advert anted anteed ardent averted darn dart dater daunt daunter daut daven dean deave dee deet denature dene dent denture derat derate dere deter dev deva drat drave dree duet dun dune dunt dura dure durn duvet eared eaved endear ender endue endure enured etude evade evader nard natured neared nerd nerved nude nuder nurd rad rand ranted raved ravened reaved redan redate rede rend rented retuned rued tad tared teared ted teed tenured trad tread treed trued tundra tuned unde undee underate undereat unrated unread untread urd vaned vaunted vend vender vendue vented ventured verdant"],
+    ["butterfly", "e", "left let yet true blue felt rule bet fuel belt butter bye tube rely buyer utterly butterfly turtle", "bel belfry beryl bey blet bluer bluet bluey brute brutely buret burley bute butle butler butlery butte buttery byre byte eft elf fer ferly fet feu fey fleury fley flue flute fluter flutey flutter fluttery flyer flyte fret fretty fytte lefty leu ley lube lure lute lye lyre reb rebut rebuy ref refly reft ret rube ruble rue rye tel tet tetryl trebly tref tret trey tuber tufter tule tuyer tye tyer tyre utter yett yule"],
+    ["hamburger", "a", "are game age hear bar bag rare arm bear era grab harm argue gear ear rear ram bare beam ham rage amber hamburger", "ager ague ahem amu arb arguer armer armure arum auger bah bam barer barge barm barre bearhug beau bema bra brae brag bream bregma bura eau embar gab gae gam gamb gambe gamer gar garb gaum gaur gerah gram guar habu hae haem hag hamburg hame hare harem harmer herma mabe mae mag mage mar mare marge mauger maugre mura murra murrha rag rah ream rearm rebar regma rehab rhea rhumba ruga rugae rumba umbra umbrae umbrage urare urea"],
+    ["newspaper", "r", "are were war near answer paper wear ran era papers newspaper wars raw swear earn ear ears spare wrap peer rap wears peers warn newer", "aper apers apres ares arpen arpens ars asper earns enwrap enwraps eras erase ere ern erne ernes erns ers ewer ewers napper nappers nares nears par pare pares pars parse pawer pawers pawner pawners pear pears per perea perse prase prawn prawns pree preen preens prees prep preps presa prese ranee ranees rappee rappees rappen raps ras rase rasp raws reap reaps ree rees renew renews rep repp repps reps res resaw resawn resew resewn rewan saner sapper saree sawer sear seer ser sera serape sere sewar sewer snapper snare sneer spar spawner spear speer spewer spree swapper sware sweer ware wares warns warp warps weaner weaners weer wraps wren wrens"],
+    ["sometimes", "e", "time some see set times sometimes meet seems site met seem items sites sets sees item mess tie meets ties stem sometime toe toes", "eme emes emesis emit emits emmet emmets emote emotes ems eses ess meioses mem memo memos mems mesteso mete metes metis metisse mime mimeo mimeos mimes mioses mise mises mismeet mismeets mismet misset mite mites mitoses mome momes moste mote motes oes ose oses sei seis seise seism seme semes semi semis setose smite smites smote somite somites stems sties stime stimes tee teem teems tees tmeses tmesis tome tomes tommies tsimmes"],
+    ["everybody", "e", "over very every ever red bed eye everybody bye drove eve bored deer ore bee breed reed eyed bore rode", "beer beery bevor bevy bey bode bred brede bree breve byre deb debye dee derby dere dev dey doe doer dore dove dree dye dyer eery ere erode eyer eyre eyry obe obey obeyed obeyer ode orbed overbed overdye overed oyer reb rebody rede redo redye ree reedy rev robe robed roe rove roved rye vee veer veery verb voe yore"],
+    ["afternoon", "a", "are after far art near rate eat fear fan ran fat tea afternoon era earn ear fate tear ate rat tan feat neat fare", "aeon aero afoot afore aft ane anent anon ant ante antre arf atone atoner eta etna fane fanner fano fanon faro feta fora frae frat frena nae nan natron nona nonart nonfat nota oaf oar oat oaten oater ora orate ornate raft rant rato ratoon roan rota tae tanner tao tar tare tarn taro toea tora trona"],
+    ["delicious", "d", "could used old does side due led code cold sold closed solid loud cloud delicious slide lied dose codes clouds disc duo idol sued", "cedi cedis clod clods clued cod cods coed coeds coiled colds coled cosied coude cud cuds cued deco decos deil deils del deli delis dels dice dices die diecious diel dies diol diols dis disci disco doc docile docs doe doilies dol dolce dolci dole doles dols dos douce douse duce duces duci duel duels dues dui dulse duos eidolic eidos eld elds escudo iced ides idle idles idolise idols ids iodic iodise isled leud leuds lid lido lidos lids lode lodes loused lucid lude ludes ludic ode odes odic ods oiled oldie oldies olds oud ouds scold scud scudi scudo sidle sild siloed sled sliced slid sloid slued sluiced sod sodic soiled soldi soled solidi souled udo udos"],
+    ["wonderful", "l", "would world old low role led lower lord rule older wonderful fuel flow loud flower wolf ruled flew fold fled foul flour flu lend lone", "del delf dol dole dowel duel eld elf enfold enol enrol felon floe flounder floured flowed flown flue flued fluor folder fondle fondler fouled fouler fowl fowled fowler furl furled leno leu leud lewd lode loden loner lore lorn louden louder lour loured lowe lowed lown lude lune lure lured nerol nodule noel nurl nurled olden ole orle owl reflow reflown refold rolf rolfed rondel roundel rowel rundle unfold unfolder unled weld weldor woeful woful wold wolfed wolfer"],
+    ["interview", "t", "went event entire ten write winter interview tree enter net rent wet tie twin teen invite tier tin tire wit vet", "evert evite inert inter inti invert invitee inviter newt nit nite niter niterie nitre reinvite rente ret rete retie retine revet rewet rite rivet tee tern terne tew tine tinier treen triene trine twee tween twier twine twiner twinier vent venter verite vert vitrine weet wert wite writ"],
+    ["celebrate", "r", "are real care later car art clear rate race create bar tree bear era celebrate ear tear alert relate arc trace bare rat react rebel alter cart acre", "abler acerb arb arete artel baler beater beer beetler belter berate beret blare blear bleater bra brace bracelet bract brae brat bree caber carb caret carl carle carte cartel cater cerate cere cereal claret crab crate creel earl eater ecarte elater ere erect erectable labret lacer lar laree lear leer rale ratel reb rebate rebec rec recta ree reel reelect relace relet ret retable rete taber taler tar tare terce tercel treacle treble"],
+    ["languages", "e", "use age language sea sale legs leg lane ages eggs egg angel languages angle seal angels usage lens lean gauge lanes angles", "ague agues alae alane ale ales algae ane anes angelus anlage anlages ansae asea eau egal elan elans els eng engs ens gae gaen gaes gage gages gale galea galeas galena galenas gales gane gangue gangues gauges gel gels gen gens genu genua genus glean gleans gleg glen glens glue glues guanase gules gunsel lagune lagunes langue langues lasagne lase lea leans leas leu lues luge luges lune lunes lunge lunges nae nausea negus sae sage sane seg sel sen slanguage slue snuggle sue ulnae unseal usnea"],
+    ["questions", "i", "its into question quite issue site questions unit sit units sites suit quiet noise quit tie ties tissue suits sits suite ion tin unite", "enosis eosin eosins essoin etui etuis inquest inquests ins inset insets ions neist nisus nit nite nites nits noesis noises nosiest ossein outsin outsins quiets quin quins quint quinte quintes quints quits quoin quoins quoit quoits sei seis senti sequin sequins sin sine sines sins sinus sis situs snit snits sonsie squint squints stein steins sties suint suints suites tenuis tine tines tins tis tui tuis unites untie unties"],
+    ["computers", "m", "more some most come must comes term terms met computer storm customer custom sum computers mouse stem spectrum poem costume poems", "coempt coempts comer comers comet comets comp comps compt compts compute computes comte comtes corm corms costumer crump crumpet crumpets crumps ems emu emus estrum meou meous metro metros moc mocs mop mope moper mopers mopes mops mor mores mors morse mort morts mos moste mot mote motes mots moue moues mouser mucor mucors mucose mucro mure mures mus muse muser muster mut mute muter mutes muts oestrum omer omers oms perm perms pom pome pomes poms proem proems prom proms rectum rectums rem rems rom romp romps roms rum rump rumps rums scrum scum septum serum smote smut spume stomp stomper strum stum stump stumper sumo sump sumpter supremo temp tempo tempos temps tom tome tomes toms tromp trompe trompes tromps trump trumps tumor tumors tump tumps ump umps upmost"],
+    ["crocodile", "e", "red role led code ice older ride lie core circle rice lied cried ore cooler rode crocodile", "cedi ceil cel ceorl cerci ceric cero cicero cider circled cire cleric clerid codec coder coed coiled coiler colder cole coled colored cooed cooer cooled coolie cored credo deco decolor decor deil del deli dice dicer die diel dire docile doe doer dolce dole doolie dore eld iced idle idler ire ired lei lice lier lire locoed lode looed looie lore oceloid ode oiled oiler oldie ole oleic oleo oorie oriel oriole orle oroide rec recoil redo rei relic reoil riced riel rile riled rodeo roe roiled"],
+    ["elephants", "h", "the has she than then these help hate heat helps shape path phase hat sheet sheep ash hates heal elephant heels paths hats halt elephants", "aleph alephs ashen eath epha ephas eth ethane ethanes eths hae haen haes haet haets hale hales halest halts hanse hansel hant hantle hantles hants hap haps hapten haptene haptenes haptens haslet hasp hast haste hasten heals heap heaps heats heel heeltap heeltaps hen hens hent hents hep heptane heptanes hes hest het hets lash lath lathe lathes laths leash lethe lethean lethes nah neath nth pah pash peahen peahens peh pehs phat phenate phenates pht plash selah sha shale shalt shapen shat shea sheal sheen shelta shent shlep snath snathe spahee spathe sphene staph thae thane thanes thee thenal thens"],
+    ["spaghetti", "h", "the that this his has she hit hate eight ship heat shape path hits phase tight sight hat hip ash hates paths hats sigh spaghetti", "aphis apish atheist eath eights epha ephas eth eths gash geisha ghast ghat ghats ghi ghis hae haes haet haets hag hags hap haps hasp hast haste heap heaps heats heist hep hes hest het hets hie hies hips hist pah pash peh pehs pettish phage phages phat phi phis pht pish pith piths saith saithe sha shag shat shea sith spahi spathe staithe staph teth teths thae theist theta thetas tights tithe tithes"],
+    ["mountains", "i", "its into main union unit sit nation nations units mountain suit aim mountains saint unions aims ion inn tin mansion minus mint", "ain ains ais ait aits ami amin amino amins amis amnion amnions ani animus anion anions anis anoint anoints anti antis autism inmost inns ins ions iota iotas ism mains maist manito manitos manitou manitous manitu manitus mantis matin matins miaou miaous mina minas mints mis miso mist moist monist muni munis muntin muntins nanism naoi nasion nim nims nit niton nitons nits nomina nonsuit numina omit omits onanism onanist onium ostia ostium outsin sain sati satin sim sima sin smit snit stain stoai suint tain tains tamis tinamou tinamous tinman tins tis tsunami tui tuis unai unais unison"],
+    ["knowledge", "o", "one now know down long old own done god low won gold gone dog knowledge owned golden log woke owe lodge ego glow lone", "doe doge dol dole don donee dong dow dowel endow enol enow eon geode glowed gowd gowk gown gowned kendo keno klong koel leno leone lode loden loge longe longed lowe lowed lown nod node noel nog ode ogee ogle ogled oke olden ole owed owl weeklong wodge woe wog wok woken wold wonk"],
+    ["magazines", "a", "man same game again name mean games means age main amazing sea gas image names gain images magazine manage ages aim gains aims sang magazines manages", "aas aegis aga agas agaze ageism agin agism agma agmas agnize agnizes ain ains ais ama amain amas amaze amazes amen amens ami amia amias amie amies amiga amigas amin amine amines amins amis amnesia amnia ana anas ane anemia anemias anes anga angas ani anima animas anime animes anis anise ansa ansae asea azan azans azine azines easing enigma enigmas gae gaen gaes gam gama gamas gamin gamine gamines gamins gams gan gane gasman gasmen gaze gazes inseam mae maes mag mage mages magi magian magians magnesia mags mains maize maizes mana manas mane manes mange manges mania manias mans manse mas maze mazes mazing mensa mesa mesian mina minae minas nae nag nags nam nema nemas nizam nizams sae sag saga sagamen sage saiga sain sane sanga seam seaman seaming semina siamang sigma sima smaze snag zag zags zamia zamias zanies"],
+    ["direction", "c", "once nice code credit ice direction direct notice cent core noticed rice cited coin corn cried icon indirect cord doctrine", "cedi cento centroid cero cider cinder cine cion cire cite citer citied citrin citrine citron cod codein coden coder coed coedit coined coiner cointer coir con cone coned coni conte cor cordite cored corned cornet cortin cot cote coted credo cretin crinite crinoid crone ctenoid deco decor deontic dice dicer dicier dicot dictier diction dineric doc docent edict ericoid etic iced icier identic incite incited inciter indict indicter indictor iodic ionic irenic ironic neritic nicer nitric noetic nordic noritic noticer odic oneiric ontic orc orcein orcin otic rec recoin recon recti recto reindict riced ricin roc tic tonic torc toric trice triced"],
+    ["birthdays", "h", "this his has had hard hit third hair birth birthday hits shirt hat bath trash habit dish habits ash shy hybrid hats dash hay thirds birthdays", "airth airths ashy bah baht bahts baith bash baths births brash brashy dah dahs dashi dashy dishy dryish hadst hairs hairy hards hardy hart harts hast hasty hays hid hist hybrids hybris hydra hydras hydria radish rah rash rath rhyta sahib saith sha shad shady shaird shard shat shay shirty shri sith tahr tahrs thir thy thyrsi trashy yah yirth yirths"],
+    ["umbrellas", "m", "same small album male arms smaller arm blame smell meal sum mall males albums meals ram beam realm lamb slam amber marble lame umbrellas", "alme almes alms alum alums ambers amble ambler amblers ambles amu amus amuse amuser arum arums balm balms bam bams barm barms beams bema bemas berm berms blam blamer blamers blames blams blume blumes bream breams brumal brume brumes bum bums elm elms embar embars ems emu emus labrum labrums lam lamber lambers lambs lamer lames lams larum larums lemur lemurs lum lumbar lumbars lumber lumbers lums mabe mabes mae maes malleus malls mar marbles mare mares marl marls mars marse mas maser maul mauler maulers mauls mel mell mells mels merl merls mesa mule mules mull mulla mullas muller mullers mulls mura mural murals muras mure mures mus muse muser ramble rambles rams ramus realms ream reams rem rems rum rumba rumbas rumble rumbles rums sambur seam sebum serum serumal slum slumber smear ulema ulemas umbel umbellar umbels umber umbers umbles umbra umbrae umbral umbras umbrella"],
+    ["badminton", "a", "and man bad main band nation aid mad boat admit ban aim obtain domain bat dominant dam tan tab amid badminton", "abo adit ado ain ait ambit ambo ami amido amin amino amnion ani anion anoint anon ant anti atom bait bam bandit bani baton bima biota boa bondman bonita bota dab daimon damn danio dato diatom dita doat dona donna iamb iota maid manito mano mantid mat matin mina moa moan moat monad nab nam nan naoi noma nomad nomina nona nota oat obia tabid tad tain tam tao tinman toad toman"],
+    ["chemistry", "h", "the this his they their her she them him hit hey rich hits shirt chest hire chemistry ethics shy myth hers theirs", "chemist chert cherts cherty chesty chi chime chimer chimers chimes chirm chirms chis chit chits chrism christy chyme chymes chymist cither cithers etch eth ethic eths heir heirs heist hem hemic hems herm hermit hermits herms hes hest het hets hic hie hies hires hist hysteric hyte ich ichs itch itches itchy ither mesh meshy meths miche miches mirth mirths mither mithers mythic mythier myths resh retch rhyme rhymes riches richest scythe shier shim shire shirty shri shyer sith smirch smith smithery smithy stich techy theism therm thermic therms thir thrice thy thyme thymes thymi thymic thymier thyrse thyrsi yech yechs yeh yirth yirths"],
+    ["geography", "a", "are year ago pay yeah age hear page gay ray era gap gear ear pray opera yoga rap rage graph geography hay", "aero aery ager agger aggro agog ahoy ape aper apery aye eggar epha eyra gae gag gage gager gape gaper gapy gar gayer geophagy gerah gherao goa grape grapey grapy gray hae hag hao hap hare harp harpy hayer heap hoagy hoar hoary hora hoya hypogea oar opah ora pager pah par pare pareo parge pargo payer payor pea peag pear phage prao proa pya rag raggy rah raphe reap repay rhea rya yager yah yap yar yare yea"],
+    ["hospitals", "a", "has also last past hospital pass path sat salt hat tail hospitals tap lap soap ash paths hats sail pal slap oath spa postal halt hail lasts", "ail ails ais ait aits alist alit alp alphosis alps als alt altho alto altos alts aphis apish apostil apostils apsis apt asp aspis aspish asps assoil atop hails halo halos halts hao hap haplosis haps hasp hasps hast hila hosta hostas iota iotas laith lapis laps las lash lass lasso lat lath lathi lathis laths lati latish lats litas loath lota lotah lotahs lotas oasis oast oasts oat oaths oats ohia ohias opah opahs opal opals ossa ossia ostia pah pail pails palish pals pas pash pastil pastils pastis pasts pat pathos patio patios patois pats phasis phat phial phials pia pial pias pita pitas plait plaits plash plat plats poisha postals potash psoai psoas sails saith sal salp salps sals saltish salts sap saps sash sati satis sha shalt shat shoal shoals shoat shoats sial sials sisal slaps slash slat slats soaps sola spahi spahis spail spails spait spaits spas spat spats spital spitals splash splat splats staph staphs stash stoa stoai stoas tahsil tahsils tails tali tao taos tapis taps tas tass tola tolas topsail topsails"],
+    ["passenger", "r", "are near press green range agree ran era earn gear ear anger grass passenger ears spare genre peer rap rage agrees ranges eager peers grasp", "ager agers angers aper apers apres ares arpen arpens ars asper asperges aspers asperse eagers eagre eagres earns eger egers egress enrage enrages eras erase erases ere erg ergs ern erne ernes erns ers erses gaper gapers gar gars gasper gaspers gasser gears genera genres gnar gnars gran grans grape grapes grasps grease greases gree greens grees nares nears pager pagers par pare pares pareses parge parges pars parse parses passer pear pears per perea perse perses prang prangs prase prases pree preen preens prees presa presage presages prese rag ragee ragees rages rags ranee ranees rang raps ras rase rases rasp rasps reap reaps ree rees reg reges regna regs rep repass repeg repegs reps res sager saner sanger sangers saree sarees sarge sarges sarsen sear sears seer seers ser sera serape serapes sere seres serge serges sers snare snares sneer sneers spar spares sparge sparges spars sparse spear spears speer speers sprag sprags sprang sprangs spree sprees"],
+    ["transport", "p", "part top stop post past parts spot port sport transport pants pot pan trap tap snap soap rap pastor ports span tops spa opt", "aport apron aprons apt asp atop nap naps ops opts pans pant panto pantos par parr parrot parrots parrs pars parson parton partons pas pat patron patrons pats pons pots prao praos prat prats pro proa proas pros prost raps rapt raptor raptors rasp sap sapor sop spar spat sporran sprat stopt strap strop taps tarp tarpon tarpons tarps traps trapt trop"],
+    ["pineapple", "p", "plan pain app apple plane panel plain pan pen pin pipe pie lap pile lip pine pale pal plea leap pineapple", "alp alpine ape appel elapine lapin lippen nap nape nappe nappie neap neep nip nipa pail palp palpi pane panpipe pap pappi pea peal pean peel peen peep pein pele penal penial penile pep pepla pia pial pian pilea pina pineal pip pipal plena plie"],
+    ["brilliant", "a", "all air art ball train bar brain ran trial rain ban brilliant tall trail lab rail tail bat nail rat tribal liar bail tan barn tab", "abri ail ain airn airt ait alb alibi alit alt ani anil ant anti arb aril bairn bait bal bani biali binal blain blat bra brail bran brant brat ilia ilial inia lain lair lar lari lat lati libra lira litai nab rani rant ratlin ria rial riant tain tali tar tarn tibia tibial trinal"],
+    ["fantastic", "t", "its fact act fast fit sit fat cast cat facts fantastic acts sat cats saint fits static tin tan intact", "acta actin actins aft ait aits ant anta antas anti antic antics antifat antis ants astatic att attain attains attic attics caftan caftans canst cant cants casita cist faint faints fanatic fanatics fantast fats fiat fiats fist nastic nit nits sancta satanic sati satin scant scat scatt sift snit stain stat stint tacit tact tacts tafia tafias tain tains taint taints tanist tans tas tat tats tic tics tinct tincts tins tint tints tis titan titans"],
+    ["aeroplane", "r", "are real area near learn role ran nor era earn ear arena opera oral pearl peer rap ore rope polar prone aeroplane", "aero alar anear aper apron areae areal areola areolae areole arpen earl earlap eloper enrol ere ern erne lar laree leaner leaper lear leer leper loaner loner loper loran lore lorn nerol oar opener ora orle paler par para pare pareo parle parol parole parolee pear per perea pereon peroneal planar planer poler pore prao preanal pree preen pro proa prolan prole rale ranee reap ree reel reloan renal reopen rep repanel repeal repel replan repo roan roe"],
+    ["apartment", "r", "are part area matter art near term rate ran apart treat arm era apartment rent parent pattern earn ear tear arena trap ram rat rap", "anear antra antre aper apter armet arpen arpent attar enrapt entrap ern maar mantra mantrap mar mare mart marten mater namer natter par para parament pare partan pater patter pear peart per perm pert praam pram prat prate preman ramate ramenta ramet ramp rampant rant rapt ratan rattan ratten ream reap reata rem reman remap rep reptant ret tamer tamper tantra taper tar tare tarn tarp tarpan tart tartan tatar tater tern tetra tram tramp trapan trapt trepan tret"],
+    ["furniture", "t", "true future turn return ten fit unit net rent fruit tie furniture tune tier nut tin tire unite", "eft etui feint fet fret frit fruiter inert inter nit nite niter nitre nurture refit reft ret rift rite runt runtier rut rutin tern tine tref trier trine triune truer tui tun tuner turf turfier turner unfit uniter untie untrue untruer uteri"],
+    ["motorbike", "t", "time too took bit term met bet item motor tie kit root bite robot boot tier tribe riot merit toe orbit tire timber trek trio motorbike", "betook biter boite bootie bort bot brit brookite emit keto kite kiter koto metro mite miter mitre moot mooter mort mot mote obit omit oot ort reboot reitbok remit ret retook rite rot rote roti roto tike timbre timer tiro toke toker tom tomb tome toom tor tore tori toro trike trim troke"],
+    ["president", "p", "president present step deep spent despite speed spend trip tips tip print pride pet printed pen spin pretend priest pin pit rip spider trips pie peer pine pets prints dip spite peers steep sprint spine", "deeps dipnet dipnets dips dipt drip drips dript erepsin espied esprit inept instep neep neeps nip nips ped pedes peds peen peens pein peined peins peise peised pend pends pens penster pent per perdie peri peris perse pert pes pest pester pestier peter peters pied pier piers pies pinder pinders pined pines pins pint pints pirn pirns pis piste pits pree preed preedit preedits preen preens prees prese preset preside prest pretends prides pried pries priested prise prised psi pterin pterins redip redips redipt rep repent repents repin repine repined repines repins reps respite respited ripe riped ripen ripened ripens ripes ripest rips seep sept serpent sip sipe siped snip snipe sniped sniper sped speer speir speired spender spied spier spiered spined spinet spire spired spirt spirted spit spited spree sprent sprinted sprit sprite stipe stiped stipend stirp strep strip stripe striped tepid trepid tripe tripes"],
+    ["scientist", "t", "its set site test sent ten sit cities cent net sites sets tests tie cents ties scientist sits nest tent insist tin insects", "cesti cist cists cite cites etic iciest incests incite incites insect inset insets inti intis neist nests nets nett netts nicest nit nite nites nits scent scents sect sects seniti senti sett setts sitten snit snits stein steins stet stets sties stint stints tens tents testis tet tets tic tics tinct tincts tine tines tiniest tins tint tints tis titi titis"],
+    ["timetable", "l", "let able late title table battle male lie metal mail email blame mile meal belt lab elite tail tale lit tablet lamb bail melt lame albeit timetable", "abele ail alb albite ale alee alit alme alt amble atilt bailee bal bale balm bel belie betel bile bimetal blae blam blat blate bleat blet blite eel elate elemi elm embattle ilea lam lambie lat lati latte lea lee leet lei lib lima limb limba limbate lime lite maile malt mealie mel mettle mil milt tael tali teal teel tel tela telae tele telia til tile tilt timbal timbale"],
+    ["something", "g", "get got something things thing might night song gets goes gone sign eight sight sing nights ghost hosting ego sigh", "egis egoism egoist egos egotism eights emoting eng engs gem gemot gemots gems gen genom genoms gens gent gents gest ghi ghis gie gien gies gin gins gismo gist git gits gnome gnomes gnomish gnomist gosh hinge hinges histogen hoeing hog hogs hogtie hogties homing hong hongs hosing ingest ingot ingots meshing meting mig mights migs mitogen mitogens mog mogs mongst neigh neighs nigh nighest nighs nog nogs ohing seg segni segno sego sengi shoeing shog signet singe smog snog soigne sting stingo stogie teg tegs thegn thegns theming thong thongs tigon tigons ting tinge tinges tings toeing tog togs tong tongs"],
+    ["paintings", "a", "past pain gas gain sat giant painting paint pants gap tag saint pan giants tap gains snap paintings sang span tan spa", "agin agist ain ains ais ait aits angst ani anis ant anti anting antings antis ants aping apt asp gainst gait gaits gan gaps gasp gast gat gats gnat gnats inapt inia inspan isatin nag nags nan nans nap naps nipa nipas paining pains paints pang pangs pans pant panting pas pasting pat patin patining patins pats pia pian pianist pians pias pina pinang pinangs pinas pinna pinnas pinta pintas pita pitas ptisan sag sain saining sainting saning sap sati satin sating snag spait spang spat stag staig stain staining stang staning tags tain tains tang tangs tans taping tapis taps tas"],
+    ["pollution", "o", "not out into too lot top point upon oil option onto pool plot tool pilot pot poll loop ton lion pollution ion toll opt", "lino lintol loin loo loon loot lop loti lotion loup lout noil nolo noo olio oot outpoll pinot pinto pion piton pluton poi poilu pol polio polo pontil poon potion poult pout punto puton toil tolu toluol toon topi topoi unto upo"],
+    ["waterfall", "l", "all well left let real tell later law late fall felt wall fell flat tall alert tale leaf flew wallet fatal alter waterfall", "aal ala alae alar alate ale alef alfa alt altar areal artal artel awl earl elf ell faller falter farl farle feal fella feral fetal flare flatware flaw flea lar lat lateral lea leal lear rale ratal ratel refall tael tala talar taler taller teal tel tela trawl wale waler walla weal welt"],
+    ["notebooks", "t", "not too best set took sent ten note notes stone bet onto net tone tons boost boots ton boot nest toe bent toes notebooks", "beknot beknots bents besot beton betons betook bets bosket boston bot bots kent keto knot knots koto kotos nets notebook onset oot oots seton snoot snot soot sot steno stob stoke stook tens toke token tokens tokes tones toon toons tsk"],
+    ["keyboards", "o", "does body board road boy okay boys broke rose roads broad rob boards bored dose oak keyboard ore soda sore sober bore rode keyboards", "abo abode abodes abos ado adobe adobes adore adores ados adsorb aero arkose arose boa boar boars boas bod bode bodes bods bora boras bores bos bosk bosker bosky boyar boyard boyards boyars bro broads bros brose brosy byroad byroads desorb dobra dobras doby doe doer doers dor dore dork dorks dorky dors dorsa dory dos doser drosky eros kayo kayoed kayoes kayos koa koas kob kobs kor kore kors kos oaks oar oared oars obe obes obey obeys ode odea odes ods oes oka okas okayed okays oke okes okra okras ora orad orb orbed orbs orby oread oreads ores ors osar ose oyer oyers oyes rebody redo redos resoak resod robe robed robes robs rod rods roe roes rosebay rosed rosy sarod sarode soak soaked soaker soar soared sob sod soke sora sorb sorbed sord soy soya sybo yob yobs yod yods yok yoke yoked yokes yoks yore yores"],
+    ["character", "t", "the rather heart act art rate eat character hate earth catch heat cat tea teach chat hat chart tear ate charter trace rat react cheat cart", "aceta acta arhat cachet carat carate caret carte carter catarrh catcher cate cater chaeta chert cratch crate crater eath errata eta etch eth haet hart hater het rachet ratch rater rath rathe reata rechart recta ret retch tace tach tache tae tahr tar tare tarre terra thae theca tracer trachea"],
+    ["surprised", "r", "sure red press super sir ride rise users dress surprise user surprised pure rid pride rip rude spider rises rides rider riders purse reds", "derris dire direr drier driers dries drip drips drupe drupes druse druses duper dupers dure dures duress durr durrie durries durrs err errs ers ire ired ires issuer per perdu perdus peri peris pier piers prides pried prier priers pries prise prised prises priss prissed prude prudes pur purer puri puris purr purred purrs purs pursed purser pursers purses pursier pussier redip redips rei reis rep reps res resid resids rids ripe riped riper ripes rips riser risers risus ruder rue rued ruer ruers rues ruse ruses ser sers sieur sieurs sire sired sires sirs sirup sirups speir speirs spiders spier spiers spire spired spires sprier sprue sprues spur spurred spurries spurs sri sris sudser sudsier suer suers supers surd surds surer suspire suspired updries uprise upriser uprisers uprises urd urds"],
+    ["dinosaurs", "r", "our around run air road round sir radio ran runs nor iron rain roads rid ruin rounds raid ours drain ruins dinosaurs", "adorn adorns airn airns airs arid aroid aroids ars arsino arsis arson arsons auris darn darns dinar dinars dinosaur diuron diurons dor dors dorsa dour doura douras drains dross dura duras durian durians durion durions durn durns duro duros inro inroad inroads irons nadir nadirs nard nards naris noir noirs nori noria norias noris nurd nurds oar oars ora orad ordain ordains ornis ors osar rad radios radius radon radons rads raids rains rand rands rani ranid ranids ranis ras ria rias rids rin rind rinds rins risus roan roans rod rods rosin rosins sadiron sadirons sard sardius sards sari sarin sarins saris sarod sarods saros sirs soar soars sonar sonars sora soras sord sords sori sorn sorns sorus souari souaris sour sours sri sris sudor sudors sura suras surd surds urd urds urn urns ursa"],
+    ["lunchtime", "i", "time him until line hit nice mine ice minute unit lie mile item client tie inch thin ethnic lit mice hint tin chin mint unite lunchtime", "ceil chi chiel chile chime chine chit cine cite clime cline culti cumin cutie cutin cutline elhi elint emic emit ethic etic etui heil helium hemic hemin hic hie hilt hilum hin huic humic ich ileum incult inhume inlet itch lectin lei lentic leucin lice lich lichen licht lien lieu lime limen limn lin linecut lint linum lite lithe litu luetic lutein melic miche mien mil milch milt mince minuet mite mucin muni mutine neumic niche nil nim nit nite nuclei telic telium thein thine tic til tile tine tui tunic tunicle unci unlit untie utile"],
+    ["classmate", "m", "same team came met teams male mass metal meat mess mate calm steam meal stem males meals slam mates melt lame metals scam classmate", "acme acmes alma almas alme almes alms ama amas amass atma atmas calmest calms cam camas camases camass camel camels cames camlet camlets cams clam clams elm elms ems lactam lactams lam lama lamas lames lamest lams mac mace maces macle macles macs mae maes malate malates malt maltase maltases malts mas massa masse mast masts mat matless mats meatal meats mel mels melts mesa mesas mescal mescals meta samlet samlets satem scams seam seams slams smalt smalts smelt smelts steams stems tam tamal tamale tamales tamals tame tames tams"],
+    ["snowboard", "s", "was saw soon son words sad snow wars roads doors bars woods sand bands sword ads brands boards bonds owns draws soda downs sworn snowboard", "abos abs adobos adorns ados adsorb ands arbs ars arson aswoon awns bads bans bards barns barons bas bawds boars boas bods boons boors boos boras borons bos boson bows bradoons brads brans bras brawns braws broads broods broos bros browns brows dabs darbs darns dawns daws dobras dobson donas donors dons dors dorsa dos dows drabs drowns nabs naos nards nobs nods nos nows oars odors ods ons onwards orbs ordos ors osar radons rads rands ras raws roans robands robs rods rondos roods rowans rows sab sard sarod sawn snaw snob snood soar sob sod sonar sora sorb sord sorn sow sowar sown swab swan sward swob swoon wabs wads wands wans wards warns woads wons woos wos"],
+    ["housework", "r", "her our work sure hours works hour worse rose horse user hero row shower rush shore wore ours ore euro sore hers housework", "eros ers euros heros hoer hoers hooker hookers houser husker kor kore kors kosher kouros ores ors res resh reshow resow rho rhos rhus roe roes rook rooks roose roue roues rouse rows rue rues ruse rusk ser serow shoer shrew sour sower suer swore usher wooer wooers workhouse"],
+    ["sunflower", "n", "one new now own run news fun son won ones sun runs owner nor snow owners nose nurse worn owns lens lone sworn sunflower", "enol enols enow enows enrol enrols ens ensoul eon eons ern erns felon felons fen fens fern ferns flown fon fons frons frown frowns funs leno lenos loner loners lorn lown lune lunes nerol nerols noel noels noes nos nous nows nurl nurls nus ons onus owsen reflown resown rewon rouen rouens rowen rowens rune runes sen senor sewn snore sone sorn sown sulfone swoun uns unsew unswore urn urns wen wens wons worsen wren wrens"],
+    ["daughters", "u", "use used sure true due daughter huge hurt thus shut guard user sugar guest rush argue dust argued guards hurts daughters rude usage urge hug argues gut urged rushed sued", "adust ague agues argus auger augers aught aughts aures daut dauts degust desugar draught draughts drug drugs druse dues duet duets dug dugs dura duras dure dures durst duster dustrag eau gaud gauds gaur gaurs ghaut ghauts gradus grue grues guar guars gude gudes gursh gush gushed gusher gust gusted guts haut haute hue hued hues huger hugest hugs hurds hurst hut huts rhus rudest rue rued rues rug ruga rugae rugate rugs ruse rust rusted rut ruth ruths ruts sadhu sau sauger saugh saute sauted shrug shute shuted stud sue suer suet sugared sugh sughed sura surah surd surge surged sutra tau taus tegua teguas teugh thru thud thuds thug thugs tragus trudge trudges trued trues trug trugs tug tugs tush tushed ugh ughs urase urate urates urd urds urea ureas urges ursa ursae usher uta utas uts"],
+    ["neighbour", "n", "one being enough run bring gone born region begin ring nor iron burn ignore bone boring begun ruin bin hung ion horn hunger reign neighbour", "ben bighorn bine binge binger bingo biogen boing boner bonier borne bourn bourne bren brin brine bruin bun bung burgeon burin burnie ebon eng eon eringo ern gen genro genu gien gin girn giron gnu goner gorhen grin groin gun hen hern heron hin hinge hinger hoeing hon hone honer hong hun inro inure irone neb neigh neighbor nib nigh nigher nob nog noh noir nori nub ohing orbing rehung rein renig rhino rin robin robing rouen roughen ruing rune rung unbe unrig unrobe urn"],
+    ["microwave", "a", "are care came war car air race via wear arm warm era cream wave raw aim ear arc cave ram ace acre microwave", "acme aero aimer aiver ami amice amie amir arco areic arvo ave aver avo avow avower awe cam cameo carom carve caver cavie caw ceria ciao coma comae coremia coria cram crave craw erica mac mace macer macro mae mair mar marc mare mavie maw miaow mica micra moa moira mora morae oar oca ocrea ora orca ova rami ramie rave ream reavow ria roam vac vair var vaw vera vicar vomica vomicae wae wair waive waiver wame ware waver wavier womera"],
+    ["landscape", "d", "and end deal land lead led send spend dance placed sad ends leads deals sand lands landscape ads scandal salad den pad lend lad", "aced acned aland alands alcade alcades ands aped ascend cad cade cades cads calends canaled candela candelas candle candles caned caped cased clad clade clades clads clasped dace daces dal dale dales dals dances dap daps dean deans decal decals decanal del dels dens eland elands eld elds laced lade laden ladens lades lads lanced lapsed lased lends nada nadas naled naleds paced padle padles pads palaced paled panda pandas paned ped pedal pedals peds pend pends planed plead pleads pled sade sandal saned scad scalade scald scaled scalped scaped scend sedan sendal sled sned spaced spade spaed sped"],
+    ["equipment", "t", "time put quite meet met ten minute unit equipment net quiet item tip quit tie pet input teen pit tune nut tin mint unite", "emetin emit etui impute inept mete minuet mite mut mute mutine nit nite pent pinetum pint piquet pitmen punt quieten quint quinte tee teem temp tempi tine tui tump tun tup umpteen unmeet unmet untie uptime"],
+    ["documents", "c", "come second once comes cost cut code cent count cute documents document custom cuts cents counts codes costume counted scout consumed", "cento centos centum centums cod coden codens cods coed coeds comet comets comte comtes con cone coned cones cons consume conte contes contuse contused conus cos coset costed costumed cot cote coted cotes cots coude cud cuds cue cued cues cutes deco decos doc docent docents docs douce duce duces duct ducts dunce dunces ecu ecus educt educts escot escudo moc mocs mucose ounce ounces scend scent scone scot scouted scud scudo scum scut scute sec sect secund socmen unco uncos"],
+    ["invention", "n", "not one into ten note none nine net tone invite ton ion inn oven invention tin", "envoi eon inion inti intine intone invent neon nevi ninon nit nite niton nonet ovine tenon tine tonne vein venin vent vine vino"],
+    ["postcards", "c", "car act across cost card cross costs cars coast cast cat cards actor acts cap cats cops actors cop coat arc caps crop crops cart cord scrap postcards", "arco arcs ascot ascots cad cads capo capos captor captors carp carps cartop carts castor castors casts coapt coapts coasts coats cod coda codas cods copra copras cor cords corps cos coss costa costar costard costards costars cot cots crass doc docs oca ocas octad octads orc orca orcas orcs pac pacs pact pacts postcard roc rocs sac sacs scad scads scar scarp scarps scars scart scarts scat scats scop scops scot scots scraps scrod scrods scrota taco tacos taroc tarocs torc torcs"],
+    ["secretary", "c", "care case car act race career create secretary secret carry cars cast cat acts cry cats cares races scary creates arc trace acres react ace careers scare cease cart acre", "aces arcs carer carers caret carets carr carrs carse carte carter carters cartes carts caste caster cate cater caterer caterers caters cates cay cays cee cees cerate cerates cere ceres certes cesta cete cetes crate crater craters crates crease creaser creasy crest cyst ecarte ecartes erect erects escar racer racers racy reacts rec recast recrate recrates recs recta resect retrace retraces sac scar scarer scarey scarry scart scat scree scry sec sect sectary serac syce sycee tace taces terce terces terrace terraces tracer tracers tracery traces"],
+    ["necessary", "c", "can care case car race cases scene necessary cars screen cry scenes cares races scary arc acres ace scan scare cease screens acre crane", "aces acne acnes ancress arcs cane caner caners canes cans careen careens caress carn carney carneys carns carny carse carses casern caserne casernes caserns cay cays ceases cee cees cense censer censers censes cere ceres cess cranes crases crass crease creases creasy cress cyan cyans cyeses encase encases escar escars nacre nacres narc narcs racy rance rances rec recane recanes recess recs sac sacs scans scar scares scarey scars scena scenas scenery scree screes scry seance seances sec secern secerns secs seneca senecas serac seracs syce sycee sycees syces sync syncs"],
+    ["tradition", "r", "air art road radio train ran nor iron rain rid tradition ratio dirt raid rat riot torn drain trio", "adorn adroit airn airt antiriot arid aroid aroint attorn darn dart diatron dinar dinitro dor drat droit indri inro inroad intort intro introit irid nadir nard nitrid nitro noir nori noria oar ora orad ordain ort ottar rad radii radon rand rani ranid rant ration rato ratton ria riant rin rind roan rod rot rota roti tar tardo tarn taro tarot tart tiro tor tora tori torii tort trad trait triad triton trod trona trot"],
+    ["celebrity", "e", "let yet eye ice tree lie bet rice tie belt elite bye liberty bite celebrity rely tier tribe bee rebel elect tire", "beer beery beet bel belie belier belter beret beryl betel bey beylic bice bier bile birle biter blet blite bree brie byre byte cee ceil ceiler cel celeb celerity celery celt cere cerite cete cire cite citer creel eel eely eerily eery ere erect erectly etic eyer eyre eyrie ire lee leer leery leet lei ley liber lice lier lire lite liter litre lycee lye lyre reb rebec rec recite recti ree reel rei relet relic relict relit ret rete reticle retie retile riblet riel rile riley rite rye tee teel tel tele telic terbic terce tercel terebic tierce tiercel tile tiler treble trebly trey trice tye tyee tyer tyre yeti"],
+    ["cafeteria", "t", "after fact act art rate eat create feet fit fat tree cat tea tie fate tear ate craft trace rat react tier tire feat cart cafeteria", "acerate aceta acierate acta aerate afreet afrit aft airt ait arete atria carat carate caret carte cate cater cerate cerite cete cite citer crate eater ecarte eft erect eta etic facet facete facetiae feater fet feta fete fiat fracti frat fret frit irate raft ratafee reata recite recta recti refect refit reft ret rete retia retie riata rift rite tace tae tafia tar tare tee terai terce tiara tic tierce tref triac trice"]
+  ];
+
+  const WEDGES = ["#A8D5CB", "#F2D9A6", "#F4B5A0", "#C9C3EA", "#A9CCEB", "#F0C2D3", "#C7DE9F", "#C9C3EA"];
+  const NS = "http://www.w3.org/2000/svg";
+  const $ = id => document.getElementById(id);
+  const input = $("word"), wheel = $("wheel");
+  const counts = s => [...s].reduce((m, l) => (m[l] = (m[l] || 0) + 1, m), {});
+  const HOW_MANY = ["", "one", "two", "three", "four"];
+
+  function shuffled(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /* ---------- Draw the wheel once: 8 wedges and the middle ---------- */
+  const at = (r, deg) => {
+    const a = (deg - 90) * Math.PI / 180;
+    return [(150 + r * Math.cos(a)).toFixed(2), (150 + r * Math.sin(a)).toFixed(2)];
+  };
+  function makeCell(shape, x, y, extra) {
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "cell" + (extra || ""));
+    g.setAttribute("role", "button");
+    g.setAttribute("tabindex", "0");
+    shape.setAttribute("class", "shape");
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("dy", "0.35em");
+    g.append(shape, t);
+    wheel.appendChild(g);
+    const press = () => tapCell(g);
+    g.addEventListener("click", press);
+    g.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); press(); }
+    });
+    return g;
+  }
+  const outerCells = WEDGES.map((colour, i) => {
+    const a0 = i * 45 - 22.5, a1 = a0 + 45;
+    const [x0, y0] = at(147, a0), [x1, y1] = at(147, a1), [x2, y2] = at(60, a1), [x3, y3] = at(60, a0);
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", `M${x0} ${y0} A147 147 0 0 1 ${x1} ${y1} L${x2} ${y2} A60 60 0 0 0 ${x3} ${y3} Z`);
+    p.setAttribute("fill", colour);
+    const [tx, ty] = at(104, i * 45);
+    return makeCell(p, tx, ty);
+  });
+  const mid = document.createElementNS(NS, "circle");
+  mid.setAttribute("cx", 150); mid.setAttribute("cy", 150); mid.setAttribute("r", 55);
+  const middleCell = makeCell(mid, 150, 150, " middle");
+
+  /* ---------- The round ---------- */
+  let deck = [], puzzle = null, found = [], revealed = false, hint = null;
+
+  function newWheel() {
+    if (!deck.length) deck = shuffled(PUZZLES);
+    const [word, centre, everyday, other] = deck.pop();
+    const outer = [...word];
+    outer.splice(outer.indexOf(centre), 1);
+    puzzle = {
+      word, centre, have: counts(word),
+      everyday: everyday.split(" "),
+      all: new Set((everyday + " " + other).split(" ")),
+      outer: shuffled(outer)
+    };
+    found = []; revealed = false; hint = null;
+    input.value = "";
+    $("answers").hidden = true;
+    say("");
+    lock(false);
+    drawLetters(); drawFound(); markUsed();
+  }
+
+  function drawLetters() {
+    puzzle.outer.forEach((l, i) => {
+      outerCells[i].dataset.letter = l;
+      outerCells[i].lastChild.textContent = l.toUpperCase();
+      outerCells[i].setAttribute("aria-label", "Letter " + l.toUpperCase());
+    });
+    middleCell.dataset.letter = puzzle.centre;
+    middleCell.lastChild.textContent = puzzle.centre.toUpperCase();
+    middleCell.setAttribute("aria-label", "Middle letter " + puzzle.centre.toUpperCase());
+  }
+
+  /* Fade the letters that are already in the word being typed */
+  function markUsed() {
+    const cells = [middleCell, ...outerCells];
+    cells.forEach(c => c.classList.remove("used"));
+    for (const l of input.value) {
+      const free = cells.find(c => c.dataset.letter === l && !c.classList.contains("used"));
+      if (free) free.classList.add("used");
+    }
+  }
+
+  function tapCell(cell) {
+    if (revealed || cell.classList.contains("used") || input.value.length >= 9) return;
+    input.value += cell.dataset.letter;
+    markUsed();
+  }
+
+  function say(text, html) {
+    if (html) $("result").innerHTML = text; else $("result").textContent = text;
+  }
+  function refuse(text) {
+    say(text);
+    const e = $("entry");
+    e.classList.remove("bad"); void e.offsetWidth; e.classList.add("bad");
+  }
+
+  /* ---------- Checking a word ---------- */
+  function addWord() {
+    if (revealed) return;
+    const w = input.value;
+    if (!w) return;
+    const W = w.toUpperCase(), need = counts(w);
+    for (const l of Object.keys(need)) {
+      const L = l.toUpperCase();
+      if (!puzzle.have[l]) return refuse(`There is no ${L} in the wheel.`);
+      if (need[l] > puzzle.have[l]) return refuse(`There is only ${HOW_MANY[puzzle.have[l]]} ${L} in the wheel.`);
+    }
+    if (w.length < MIN) return refuse(`Words need ${MIN} letters or more.`);
+    if (!w.includes(puzzle.centre)) return refuse(`Every word needs the middle letter, ${puzzle.centre.toUpperCase()}.`);
+    if (found.includes(w)) return refuse(`You already have ${W}.`);
+    if (!puzzle.all.has(w)) return refuse(`${W} is not in the word list.`);
+
+    found.push(w);
+    if (hint && hint.word === w) hint = null;
+    input.value = "";
+    markUsed(); drawFound(w);
+
+    const left = puzzle.everyday.filter(x => !found.includes(x)).length;
+    if (w.length === 9) say("You found the 9-letter word!");
+    else if (found.length === TARGET) say(`${TARGET} words! ${left} more everyday words to find.`);
+    else if (found.length < TARGET) say(`Good. ${TARGET - found.length} to go.`);
+    else say("Good.");
+
+    if (found.length === TARGET) wellDone();
+  }
+
+  /* ---------- Well done! The tenth word brings up the sign ---------- */
+  function wellDone() {
+    const gotNine = found.some(x => x.length === 9);
+    $("doneText").textContent = gotNine
+      ? `You found ${TARGET} words, and the 9-letter word is one of them.`
+      : `You found ${TARGET} words. The 9-letter word is still hiding.`;
+    const d = $("done");
+    d.returnValue = "";
+    d.showModal();
+  }
+  /* "End challenge" shows the answers; "Find more words" (or Escape) carries on */
+  $("done").addEventListener("close", () => {
+    if ($("done").returnValue === "end") reveal();
+  });
+
+  function drawFound(fresh) {
+    const slots = $("slots");
+    slots.innerHTML = "";
+    const n = Math.max(TARGET, found.length);
+    const cols = Math.min(4, Math.max(2, Math.ceil(n / 5)));
+    slots.style.setProperty("--cols", cols);
+    slots.dataset.cols = cols;
+    for (let i = 0; i < n; i++) {
+      const li = document.createElement("li");
+      const w = found[i];
+      if (w) {
+        li.textContent = w;
+        li.className = "got" + (w.length === 9 ? " nine" : "") + (w === fresh ? " fresh" : "");
+      } else {
+        li.innerHTML = '<span class="sr">empty</span>';
+      }
+      slots.appendChild(li);
+    }
+    $("count").textContent = found.length;
+
+    const long = found.find(x => x.length === 9);
+    const nine = $("nine");
+    nine.className = "nine" + (long ? " found" : revealed ? " shown" : "");
+    nine.innerHTML = "";
+    const letters = long || (revealed ? puzzle.word : "");
+    for (let i = 0; i < 9; i++) {
+      const li = document.createElement("li");
+      li.textContent = letters ? letters[i].toUpperCase() : "";
+      nine.appendChild(li);
+    }
+    nine.setAttribute("aria-label", "The 9-letter word" + (letters ? ": " + letters : ", not found yet"));
+  }
+
+  /* ---------- Hint: the most common word not found yet, one more letter each press ---------- */
+  function giveHint() {
+    if (revealed) return;
+    if (!hint || found.includes(hint.word)) {
+      const left = puzzle.everyday.filter(x => !found.includes(x));
+      const next = left.find(x => x.length < 9) || left[0];
+      if (!next) return say("You have found all the everyday words.");
+      hint = { word: next, shown: 0 };
+    }
+    hint.shown = Math.min(hint.shown + 1, hint.word.length - 1);
+    const gaps = [...hint.word].map((l, i) => i < hint.shown ? l.toUpperCase() : "_").join("");
+    say(`Try a ${hint.word.length}-letter word: <span class="gaps">${gaps}</span>`, true);
+  }
+
+  /* ---------- Show answers: ends the round ---------- */
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    const left = puzzle.everyday.filter(x => !found.includes(x) && x.length < 9);
+    const a = $("answers");
+    a.innerHTML = left.length
+      ? "<b>Everyday words you did not find</b>" + left.join(", ")
+      : "<b>You found all the everyday words.</b>";
+    a.hidden = false;
+    input.value = "";
+    say("");
+    lock(true);
+    markUsed(); drawFound();
+  }
+  function lock(on) {
+    input.disabled = on;
+    ["add", "del", "hintBtn", "reveal"].forEach(id => $(id).disabled = on);
+  }
+
+  /* ---------- Controls ---------- */
+  input.addEventListener("input", () => {
+    input.value = input.value.toLowerCase().replace(/[^a-z]/g, "").slice(0, 9);
+    markUsed();
+  });
+  input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addWord(); } });
+  $("add").addEventListener("click", addWord);
+  $("del").addEventListener("click", () => { input.value = input.value.slice(0, -1); markUsed(); });
+  $("shuffle").addEventListener("click", () => { puzzle.outer = shuffled(puzzle.outer); drawLetters(); markUsed(); });
+  $("hintBtn").addEventListener("click", giveHint);
+  $("reveal").addEventListener("click", reveal);
+  $("newWheel").addEventListener("click", newWheel);
+
+  /* Typing anywhere on the page goes into the word box */
+  document.addEventListener("keydown", e => {
+    if (revealed || $("done").open || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t === input) return;
+    const onControl = t instanceof HTMLButtonElement || t instanceof HTMLAnchorElement;
+    if (/^[a-zA-Z]$/.test(e.key)) {
+      if (input.value.length < 9) { input.value += e.key.toLowerCase(); markUsed(); }
+    } else if (e.key === "Backspace") {
+      input.value = input.value.slice(0, -1); markUsed();
+    } else if (e.key === "Enter" && !onControl) {
+      e.preventDefault(); addWord();
+    }
+  });
+
+  $("target").textContent = TARGET;
+  newWheel();
+})();
+</script>
+</body>
+</html>
