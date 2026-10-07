@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #EDF3F2;
+    --ink: #10303A;
+    --ink-soft: #456670;
+    --focus: #0B62A4;
+    --board: #C9C3EA;
+    --gap: #F2D9A6;
+    --gap-hover: #EECB85;
+    --warn: #A8324A;
+    --panel: #F9FBFB;
+    --dash: rgba(16, 48, 58, 0.32);
+    --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --big: "Atkinson Hyperlegible", var(--font);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--mist); color: var(--ink); font-family: var(--font); -webkit-text-size-adjust: 100%; }
+
+  .page {
+    height: 100%; max-width: 1400px; margin: 0 auto;
+    padding: clamp(0.75rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2.25rem);
+    display: flex; flex-direction: column; gap: clamp(0.5rem, 1.5vh, 1rem);
+  }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .top h1 { margin: 0; font-size: clamp(1.5rem, 2.8vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .tagline { margin: 0.2rem 0 0; color: var(--ink-soft); font-size: clamp(0.95rem, 1.4vw, 1.1rem); line-height: 1.3; }
+  .back { color: var(--ink-soft); font-size: 0.95rem; text-decoration: none; white-space: nowrap; }
+  .back:hover { text-decoration: underline; }
+  .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* The two games */
+  .tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .tabs button {
+    font: inherit; font-weight: 700; font-size: 1rem; color: var(--ink); cursor: pointer;
+    padding: 0.45em 1.1em; border-radius: 999px; border: 2px solid var(--ink); background: transparent;
+  }
+  .tabs button:hover { background: rgba(16, 48, 58, 0.08); }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: var(--mist); }
+  .tabs button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .board {
+    flex: 1; min-height: 0; background: var(--board); border-radius: 0.9rem;
+    padding: clamp(1rem, 2.5vw, 2rem); display: flex; flex-direction: column;
+  }
+  [hidden] { display: none !important; }
+
+  .controls { margin-top: clamp(0.75rem, 2vh, 1.25rem); display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  button.btn {
+    font: inherit; font-weight: 600; font-size: 1rem; padding: 0.55em 1.1em; border-radius: 0.6rem;
+    border: 2px solid var(--ink); background: var(--ink); color: var(--mist); cursor: pointer;
+  }
+  button.btn.ghost { background: transparent; color: var(--ink); }
+  button.btn:hover { filter: brightness(1.15); }
+  button.btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+  button.btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .controls .end { margin-left: auto; }
+
+  .count { margin: 0.4rem 0 0; font-size: 0.95rem; color: var(--ink-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .count.over { color: var(--warn); }
+
+  /* ================= Tab 1: Disappearing Text ================= */
+  .setup label { display: block; font-weight: 700; font-size: clamp(1.05rem, 1.6vw, 1.3rem); margin-bottom: 0.4rem; }
+  .setup input, .setup textarea {
+    width: 100%; font: inherit; font-size: 1.1rem; color: var(--ink);
+    background: var(--mist); border: 2px solid transparent; border-radius: 0.6rem; padding: 0.6em 0.8em;
+  }
+  .setup input:focus-visible, .setup textarea:focus-visible { outline: none; border-color: var(--focus); }
+  .setup input { margin-bottom: 1rem; max-width: 32rem; }
+  .setup textarea { flex: 1; min-height: 10rem; resize: none; line-height: 1.5; }
+  .setup .field { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  .game-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: clamp(0.5rem, 1.5vh, 1rem); }
+  .game-head h2 { margin: 0; font-size: clamp(1.2rem, 2.2vw, 1.8rem); font-weight: 700; }
+  .hint { margin: 0.15em 0 0; font-size: clamp(0.95rem, 1.4vw, 1.15rem); color: var(--ink-soft); }
+  .progress { font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .passage-wrap { flex: 1; min-height: 0; overflow: hidden; }
+  .passage { margin: 0; line-height: 1.85; }
+  .passage p { margin: 0 0 0.6em; }
+  .word {
+    font: inherit; color: var(--ink); background-color: transparent; border: 0;
+    padding: 0.02em 0.22em; margin: 0; border-radius: 0.55em; cursor: pointer;
+    transition: color 0.35s ease, background-color 0.35s ease, box-shadow 0.35s ease, transform 0.2s ease;
+  }
+  .word:hover { background-color: rgba(16, 48, 58, 0.08); }
+  .word:active { transform: scale(0.96); }
+  .word:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .word.erased {
+    color: transparent;
+    background-color: var(--gap);
+    box-shadow: inset 0 -0.12em 0 rgba(16, 48, 58, 0.12);
+  }
+  .word.erased:hover { background-color: var(--gap-hover); }
+
+  /* ================= Tab 2: Numbered Words ================= */
+  /* A pale board, so the coloured word tiles are the thing you look at */
+  .board.pale { background: var(--panel); overflow: auto; padding-block: clamp(1rem, 3.2vh, 2rem); }
+  .how { margin: 0 0 clamp(0.6rem, 2vh, 1.1rem); display: flex; flex-direction: column; gap: 0.2rem; }
+  .how p { margin: 0; color: var(--ink-soft); font-size: clamp(0.95rem, 1.4vw, 1.1rem); line-height: 1.35; }
+
+  .n-setup { display: flex; flex-direction: column; gap: 0.4rem; max-width: 46rem; }
+  .n-setup label { font-weight: 700; font-size: clamp(1.05rem, 1.6vw, 1.3rem); }
+  .n-setup textarea {
+    width: 100%; min-height: 7.5rem; resize: vertical;
+    font-family: var(--big); font-size: clamp(1.2rem, 2.2vw, 1.5rem); line-height: 1.4; color: var(--ink);
+    background: #fff; border: 2px solid var(--ink); border-radius: 0.6rem; padding: 0.6em 0.75em;
+  }
+  .n-setup textarea::placeholder { color: var(--ink-soft); opacity: 0.75; }
+  .n-setup textarea:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .n-play { flex: 1; display: flex; flex-direction: column; }
+  /* One tile for each word, with its number underneath */
+  .sentence {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+    gap: 0.5em 0.28em;
+    font-family: var(--big); font-weight: 700; font-size: var(--fs, 3rem); line-height: 1.15;
+  }
+  .unit {
+    display: inline-grid; grid-template-columns: auto auto auto; column-gap: 0.04em; row-gap: 0.2em;
+    align-items: center; justify-items: center;
+  }
+  .unit .lead { grid-column: 1; grid-row: 1; }
+  .unit .tile { grid-column: 2; grid-row: 1; }
+  .unit .trail { grid-column: 3; grid-row: 1; }
+  .unit .num { grid-column: 2; grid-row: 2; }
+  .unit .mark { padding: 0.14em 0; border: 2px solid transparent; }
+  .tile {
+    font: inherit; color: var(--ink); cursor: pointer;
+    background: var(--c); border: 2px solid transparent; border-radius: 0.26em;
+    padding: 0.14em 0.3em; max-width: 100%; overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tile:hover { filter: brightness(0.96); }
+  .tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  /* A hidden word keeps its width, so the line does not jump about */
+  .tile.gone { background: var(--mist); border: 2px dashed var(--dash); }
+  .tile.gone span { visibility: hidden; }
+  .tile.gone:hover { filter: none; background: #fff; }
+  .num {
+    display: grid; place-items: center; min-width: 1.75em; height: 1.75em; padding: 0 0.3em;
+    border-radius: 999px; font-family: var(--font); font-weight: 800; color: var(--ink-soft);
+    font-size: max(0.4em, 0.95rem); font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .unit.asked .num { background: var(--ink); color: var(--mist); }
+  .unit.asked .tile { box-shadow: 0 0 0 4px var(--ink); }
+  .ask {
+    margin: clamp(0.5rem, 2vh, 1rem) 0 0; min-height: 1.25em; text-align: center;
+    font-size: clamp(1.5rem, min(3.6vw, 5.5vh), 2.8rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1.2;
+  }
+  .n-play .controls { margin-top: auto; padding-top: clamp(0.5rem, 2vh, 1rem); }
+
+  @media (max-width: 700px) {
+    html, body, .page { height: auto; }
+    .passage-wrap { overflow: visible; }
+    .board.pale { overflow: visible; }
+    .top { flex-direction: column-reverse; align-items: flex-start; gap: 0.4rem; }
+    .controls .end { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .word { transition: none; } .word:active { transform: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <div>
+      <h1>Memory</h1>
+      <p class="tagline">Make words disappear.</p>
+    </div>
+    <a class="back" href="https://coastoflight.github.io/pickers-thinkers/">&larr; Pickers and Thinkers</a>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Memory games">
+    <button type="button" role="tab" id="tab-text" aria-controls="panel-text" aria-selected="true">Disappearing Text</button>
+    <button type="button" role="tab" id="tab-words" aria-controls="panel-words" aria-selected="false" tabindex="-1">Numbered Words</button>
+  </div>
+
+  <!-- ================= Tab 1: Disappearing Text ================= -->
+  <div class="panel" id="panel-text" role="tabpanel" aria-labelledby="tab-text">
+
+    <!-- Step 1: paste a text -->
+    <section class="board setup" id="setup">
+      <label for="title">Title (optional)</label>
+      <input id="title" type="text" maxlength="60" placeholder="My Free Time">
+
+      <div class="field">
+        <label for="text">Paste your text</label>
+        <textarea id="text" placeholder="In my free time, I like playing video games with my brother…"></textarea>
+        <p class="count" id="count">0 / 150 words</p>
+      </div>
+
+      <div class="controls">
+        <button class="btn" type="button" id="start" disabled>Start</button>
+      </div>
+    </section>
+
+    <!-- Step 2: the game -->
+    <section class="board" id="game" hidden>
+      <div class="game-head">
+        <div>
+          <h2 id="gameTitle"></h2>
+          <p class="hint">(tap to make a word disappear)</p>
+        </div>
+        <span class="progress"><span id="erased">0</span> / <span id="total">0</span> erased</span>
+      </div>
+      <div class="passage-wrap" id="wrap">
+        <div class="passage" id="passage"></div>
+      </div>
+      <div class="controls">
+        <button class="btn" type="button" id="showAll">Show all words</button>
+        <button class="btn ghost" type="button" id="edit">Change the text</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= Tab 2: Numbered Words ================= -->
+  <div class="panel" id="panel-words" role="tabpanel" aria-labelledby="tab-words" hidden>
+    <section class="board pale" id="nBoard">
+      <div class="how">
+        <p>Every word in a sentence gets a number. Read and remember the sentence and start to hide the words.</p>
+        <p>With a partner then ask: What was number 4? What was number 7? And so on.</p>
+        <p>Tap the words to hide them, and tap again to bring them back.</p>
+      </div>
+
+      <!-- Step 1: type the sentence -->
+      <div class="n-setup" id="nSetup">
+        <label for="nText">Your sentence</label>
+        <textarea id="nText" placeholder="Type or paste your sentence" autocomplete="off" spellcheck="true"></textarea>
+        <p class="count" id="nCount" aria-live="polite"></p>
+        <div class="controls">
+          <button class="btn" type="button" id="nStart" disabled>Start</button>
+        </div>
+      </div>
+
+      <!-- Step 2: the numbered sentence -->
+      <div class="n-play" id="nPlay" hidden>
+        <div class="sentence" id="sentence" role="group" aria-label="The sentence"></div>
+        <p class="ask" id="ask" aria-live="polite"></p>
+        <div class="controls">
+          <button class="btn" type="button" id="pick">What was number&hellip;?</button>
+          <button class="btn ghost" type="button" id="nHideAll">Hide all</button>
+          <button class="btn ghost" type="button" id="nShowAll">Show all</button>
+          <button class="btn ghost end" type="button" id="nEdit">Change sentence</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SMALL_SCREEN = "(max-width: 700px)";
+
+/* ================= Tab 1: Disappearing Text ================= */
+const disappearing = (function () {
+  const LIMIT = 150;
+  const textEl = $("text"), countEl = $("count"), startBtn = $("start");
+  const passageEl = $("passage"), wrapEl = $("wrap");
+
+  const countWords = t => (t.trim().match(/\S+/g) || []).length;
+
+  function updateCount() {
+    const n = countWords(textEl.value);
+    countEl.textContent = n > LIMIT ? `${n} / ${LIMIT} words. Please make it shorter.` : `${n} / ${LIMIT} words`;
+    countEl.classList.toggle("over", n > LIMIT);
+    startBtn.disabled = n === 0 || n > LIMIT;
+  }
+  textEl.addEventListener("input", updateCount);
+
+  function updateProgress() {
+    $("erased").textContent = passageEl.querySelectorAll(".word.erased").length;
+  }
+
+  // Make the text as big as possible while still fitting the board
+  function fit() {
+    if ($("panel-text").hidden || $("game").hidden) return;
+    if (window.matchMedia(SMALL_SCREEN).matches) { passageEl.style.fontSize = "1.2rem"; return; }
+    let size = 64;
+    passageEl.style.fontSize = size + "px";
+    while (size > 16 && passageEl.scrollHeight > wrapEl.clientHeight) {
+      size -= 2;
+      passageEl.style.fontSize = size + "px";
+    }
+  }
+
+  function start() {
+    const title = $("title").value.trim();
+    $("gameTitle").textContent = title;
+    passageEl.innerHTML = "";
+    let total = 0;
+
+    // Keep the paragraphs from the pasted text
+    textEl.value.trim().split(/\n\s*\n|\n/).filter(p => p.trim()).forEach(para => {
+      const p = document.createElement("p");
+      para.trim().split(/\s+/).forEach(w => {
+        const b = document.createElement("button");
+        b.className = "word"; b.type = "button"; b.textContent = w;
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", () => {
+          const on = b.classList.toggle("erased");
+          b.setAttribute("aria-pressed", String(on));
+          updateProgress();
+        });
+        p.appendChild(b);
+        p.appendChild(document.createTextNode(" "));
+        total++;
+      });
+      passageEl.appendChild(p);
+    });
+
+    $("total").textContent = total;
+    updateProgress();
+    $("setup").hidden = true;
+    $("game").hidden = false;
+    fit();
+  }
+
+  startBtn.addEventListener("click", start);
+  $("showAll").addEventListener("click", () => {
+    passageEl.querySelectorAll(".word.erased").forEach(w => {
+      w.classList.remove("erased"); w.setAttribute("aria-pressed", "false");
+    });
+    updateProgress();
+  });
+  $("edit").addEventListener("click", () => {
+    $("game").hidden = true;
+    $("setup").hidden = false;
+    textEl.focus();
+  });
+
+  updateCount();
+  return { fit };
+})();
+
+/* ================= Tab 2: Numbered Words ================= */
+const numbered = (function () {
+  const MAX = 40;  /* most words allowed */
+  const TILES = ["#A8D5CB", "#F2D9A6", "#F4B5A0", "#C9C3EA", "#A9CCEB", "#F0C2D3", "#C7DE9F"];
+  const text = $("nText"), sentence = $("sentence"), board = $("nBoard");
+
+  /* Split the text into words, keeping punctuation outside the tile */
+  function parse(raw) {
+    return raw.trim().split(/\s+/).filter(Boolean).map(tok => {
+      const m = tok.match(/^([^\p{L}\p{N}]*)(.*?)([^\p{L}\p{N}]*)$/u);
+      return { lead: m[1], word: m[2], trail: m[3] };
+    });
+  }
+  const countWords = raw => parse(raw).filter(t => t.word).length;
+
+  /* ---------- Step 1: typing ---------- */
+  function checkText() {
+    const n = countWords(text.value);
+    const c = $("nCount");
+    c.textContent = n > MAX ? `${n} / ${MAX} words. Please make it shorter.` : `${n} / ${MAX} words`;
+    c.classList.toggle("over", n > MAX);
+    $("nStart").disabled = n === 0 || n > MAX;
+  }
+  text.addEventListener("input", checkText);
+  /* Enter starts; Shift+Enter makes a new line */
+  text.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!$("nStart").disabled) start(); }
+  });
+
+  /* ---------- Step 2: the numbered sentence ---------- */
+  let units = [];     /* one for each numbered word */
+  let asked = [];     /* numbers already asked, so they do not come round again too soon */
+  let current = null;
+
+  function start() {
+    const tokens = parse(text.value);
+    sentence.innerHTML = "";
+    units = []; asked = []; current = null;
+    $("ask").textContent = "";
+
+    let n = 0;
+    tokens.forEach(t => {
+      const unit = document.createElement("span");
+      unit.className = "unit";
+      if (!t.word) {                     /* a dash or other mark on its own: shown, not numbered */
+        const p = document.createElement("span");
+        p.className = "mark"; p.textContent = t.lead + t.trail;
+        unit.appendChild(p);
+        sentence.appendChild(unit);
+        return;
+      }
+      n++;
+      const lead = document.createElement("span"); lead.className = "lead"; lead.textContent = t.lead;
+      const trail = document.createElement("span"); trail.className = "trail"; trail.textContent = t.trail;
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "tile";
+      btn.style.setProperty("--c", TILES[(n - 1) % TILES.length]);
+      const inner = document.createElement("span"); inner.textContent = t.word;
+      btn.appendChild(inner);
+      const num = document.createElement("span"); num.className = "num"; num.textContent = n;
+      num.setAttribute("aria-hidden", "true");
+      unit.append(lead, btn, trail, num);
+      sentence.appendChild(unit);
+
+      const u = { n, word: t.word, unit, btn, gone: false };
+      btn.addEventListener("click", () => setGone(u, !u.gone));
+      units.push(u);
+      label(u);
+    });
+
+    $("nSetup").hidden = true;
+    $("nPlay").hidden = false;
+    fit();
+    $("pick").focus({ preventScroll: true });
+  }
+
+  /* Fewer words, bigger letters. Then shrink a little at a time until it all fits on the board. */
+  function fit() {
+    if ($("panel-words").hidden || $("nPlay").hidden) return;
+    const total = units.length, SMALLEST = 18;
+    const vw = total <= 5 ? 6 : total <= 8 ? 5 : total <= 12 ? 4.1 : total <= 18 ? 3.4 : total <= 26 ? 2.8 : 2.4;
+    let fs = Math.min(80, Math.max(22, window.innerWidth * vw / 100));
+    sentence.style.setProperty("--fs", fs + "px");
+    if (window.matchMedia(SMALL_SCREEN).matches) return;
+    while (board.scrollHeight > board.clientHeight && fs > SMALLEST) {
+      fs = Math.max(SMALLEST, fs * 0.95);
+      sentence.style.setProperty("--fs", fs + "px");
+    }
+  }
+
+  function label(u) {
+    u.btn.setAttribute("aria-pressed", u.gone ? "true" : "false");
+    u.btn.setAttribute("aria-label", u.gone ? `Number ${u.n}, hidden` : `Number ${u.n}: ${u.word}`);
+  }
+  function setGone(u, gone) {
+    u.gone = gone;
+    u.btn.classList.toggle("gone", gone);
+    label(u);
+  }
+
+  /* ---------- What was number...? Asks about hidden words first ---------- */
+  function pick() {
+    if (!units.length) return;
+    let pool = units.filter(u => u.gone);
+    if (!pool.length) pool = units;
+    let fresh = pool.filter(u => !asked.includes(u.n));
+    if (!fresh.length) { asked = []; fresh = pool.filter(u => pool.length === 1 || u !== current); }
+    const u = fresh[Math.floor(Math.random() * fresh.length)];
+    asked.push(u.n);
+    if (current) current.unit.classList.remove("asked");
+    current = u;
+    u.unit.classList.add("asked");
+    $("ask").textContent = `What was number ${u.n}?`;
+  }
+  function clearAsk() {
+    if (current) current.unit.classList.remove("asked");
+    current = null; asked = [];
+    $("ask").textContent = "";
+  }
+
+  $("nStart").addEventListener("click", start);
+  $("pick").addEventListener("click", pick);
+  $("nHideAll").addEventListener("click", () => units.forEach(u => setGone(u, true)));
+  $("nShowAll").addEventListener("click", () => { units.forEach(u => setGone(u, false)); clearAsk(); });
+  $("nEdit").addEventListener("click", () => {
+    $("nPlay").hidden = true;
+    $("nSetup").hidden = false;
+    text.focus(); text.select();
+  });
+
+  checkText();
+  return { fit };
+})();
+
+/* ================= The tabs ================= */
+(function () {
+  const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
+  const HASH = { "tab-text": "#disappearing-text", "tab-words": "#numbered-words" };
+
+  function select(tab, remember) {
+    tabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      $(t.getAttribute("aria-controls")).hidden = !on;
+    });
+    /* A game that was out of sight has to be measured again */
+    disappearing.fit(); numbered.fit();
+    if (remember) { try { history.replaceState(null, "", HASH[tab.id]); } catch (e) {} }
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => select(t, true));
+    t.addEventListener("keydown", e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus(); select(next, true);
+    });
+  });
+
+  /* memory.html#numbered-words opens straight on the second game */
+  const wanted = tabs.find(t => HASH[t.id] === location.hash);
+  if (wanted) select(wanted, false);
+
+  const refit = () => { disappearing.fit(); numbered.fit(); };
+  window.addEventListener("resize", refit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+})();
+</script>
+</body>
+</html>
