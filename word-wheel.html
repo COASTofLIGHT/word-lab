@@ -14,6 +14,8 @@
     --ink-soft: #456670;
     --focus: #0B62A4;
     --panel: #F9FBFB;
+    --paper: #FFFFFF;
+    --slab: #F2D9A6;   /* the block colour, one of the seven site colours */
     --line: rgba(16, 48, 58, 0.14);
     --dash: rgba(16, 48, 58, 0.32);
     --font: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -30,36 +32,48 @@
     font-family: var(--font);
     -webkit-text-size-adjust: 100%;
   }
-  main {
-    max-width: 1040px; margin: 0 auto;
-    padding: clamp(0.6rem, 2vh, 1.5rem) clamp(1rem, 3vw, 2rem);
-    display: flex; flex-direction: column; gap: 0.6rem;
+  /* ---------- Title, tabs and the way back (same as Sentence Builder) ---------- */
+  .page {
+    max-width: 1300px; min-height: 100vh; min-height: 100dvh; margin: 0 auto;
+    padding: clamp(0.85rem, 2.6vw, 2rem);
+    display: flex; flex-direction: column;
   }
-  button { font-family: var(--font); color: var(--ink); }
-  button:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
-  button:disabled { opacity: 0.4; cursor: default; }
-
-  .back { align-self: flex-start; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.2; text-decoration: none; }
+  .top { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: clamp(1rem, 2.5vw, 2rem); }
+  .top h1 { margin: 0 0 0.6rem; font-size: clamp(1.4rem, 2.8vw, 2.1rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .back { margin: 0 0 0.75rem auto; color: var(--ink-soft); font-size: 0.9rem; text-decoration: none; white-space: nowrap; }
   .back:hover { text-decoration: underline; }
   .back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .tabs { display: flex; gap: 0.2rem; }
+  .tab {
+    height: 2.75rem; padding: 0 1.15rem; border: 0; border-radius: 0.7rem 0.7rem 0 0;
+    background: transparent; color: var(--ink-soft); font-size: 1rem; font-weight: 700; white-space: nowrap; cursor: pointer;
+  }
+  .tab:hover { background: rgba(255, 255, 255, 0.55); color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--slab); color: var(--ink); }
+  .tab:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 
-  /* Title and rules share one row so the whole game fits on screen without scrolling */
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1.6rem; }
-  h1 { margin: 0; flex: 0 0 auto; font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
-  .hint { margin: 0; flex: 1 1 24rem; color: var(--ink-soft); font-size: 0.98rem; line-height: 1.3; }
+  /* ---------- The frame: the white block the game sits on ---------- */
+  .frame {
+    flex: 1 0 auto; display: flex; flex-direction: column; gap: 0.7rem;
+    padding: clamp(0.8rem, 2vw, 1.4rem); border-radius: 0.9rem; background: var(--slab);
+  }
+
+  .hint { margin: 0; color: var(--ink); opacity: 0.85; font-size: 0.98rem; line-height: 1.3; }
 
   .play {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: clamp(1rem, 3.5vw, 2.6rem); align-items: start;
   }
-  .side { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  /* Each half of the game sits on its own pale card, like the squares on In a Line */
+  .side { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; background: var(--panel); border-radius: 0.7rem; padding: clamp(0.7rem, 1.6vw, 1.2rem); align-self: stretch; }
+  .slots li, .nine li { background: #fff; }
 
   /* The wheel */
-  /* The wheel shrinks on short screens: 270px is the room everything else in its column needs */
-  .wheel { display: block; width: clamp(220px, calc(100dvh - 270px), 440px); max-width: 100%; height: auto; margin: 0 auto; }
+  /* The wheel shrinks on short screens: 370px is the room everything else in its column needs, with the title row and frame */
+  .wheel { display: block; width: clamp(220px, calc(100dvh - 370px), 440px); max-width: 100%; height: auto; margin: 0 auto; }
   .cell { cursor: pointer; }
   .cell:focus { outline: none; }
-  .cell .shape { stroke: var(--mist); stroke-width: 5; transition: opacity 120ms; }
+  .cell .shape { stroke: var(--panel); stroke-width: 5; transition: opacity 120ms; }
   .cell text {
     font-family: var(--big); font-weight: 700; font-size: 46px; fill: var(--ink);
     text-anchor: middle; pointer-events: none; user-select: none; transition: opacity 120ms;
@@ -170,6 +184,10 @@
   .done .buttons button { min-height: 54px; padding: 8px 24px; font-size: 1.2rem; font-weight: 800; }
   @keyframes sign { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
 
+  @media (max-width: 700px) {
+    .tabs { order: 3; flex-basis: 100%; }
+    .tab { padding: 0 0.8rem; font-size: 0.95rem; }
+  }
   @media (max-width: 760px) {
     .play { grid-template-columns: 1fr; }
     .wheel { width: min(100%, 320px); }
@@ -183,14 +201,14 @@
 </style>
 </head>
 <body>
-<main>
-  <!-- Change this link and label to match the section the page lives in. -->
-  <a class="back" href="./">&larr; Back</a>
-
-  <header>
+<main class="page">
+  <div class="top">
     <h1>Word Wheel</h1>
-    <p class="hint">Make words with 3 letters or more. Every word must use the middle letter. One word uses all 9 letters. Use each letter only as many times as you can see it. Names do not count.</p>
-  </header>
+    <a class="back" href="./">&larr; Word Lab</a>
+  </div>
+
+  <div class="frame">
+  <p class="hint">Make words with 3 letters or more. Every word must use the middle letter. One word uses all 9 letters. Use each letter only as many times as you can see it. Names do not count.</p>
 
   <div class="play">
     <div class="side">
@@ -225,6 +243,7 @@
         <button class="next end" type="button" id="newWheel">New wheel</button>
       </div>
     </div>
+  </div>
   </div>
 </main>
 
