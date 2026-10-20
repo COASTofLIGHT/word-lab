@@ -98,6 +98,9 @@
 
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
   .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .groups { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+  .pick { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .pick-label { font-weight: 600; color: var(--ink-soft); }
   button.btn {
     font: inherit; font-weight: 600; font-size: 1rem; padding: 0.55em 1.1em; border-radius: 0.6rem;
     border: 2px solid var(--ink); background: var(--ink); color: var(--mist); cursor: pointer;
@@ -109,9 +112,9 @@
   .level { display: inline-flex; border: 2px solid var(--ink); border-radius: 0.6rem; overflow: hidden; }
   .level[hidden] { display: none; }
   .lv { font: inherit; font-weight: 700; font-size: 1rem; padding: 0.45em 1em; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+  #how .lv { padding: 0.45em 0.8em; font-variant-numeric: tabular-nums; }
   .lv.on { background: var(--ink); color: var(--mist); }
   .lv:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-  .count { font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
   @media (max-width: 700px) {
     html, body, .page { height: auto; }
@@ -144,12 +147,16 @@
   <div class="bar">
     <div class="controls">
       <button class="btn ghost" id="newLetter">New letter</button>
-      <button class="btn ghost" id="add">Add a sentence</button>
-      <span class="count" id="count"></span>
       <button class="btn ghost" id="ideas">Show ideas</button>
       <button class="btn" id="next">Next</button>
     </div>
-    <div class="level" id="level" role="group" aria-label="Level" hidden></div>
+    <div class="groups">
+      <div class="pick">
+        <span class="pick-label" id="howLabel">Sentences</span>
+        <div class="level" id="how" role="group" aria-labelledby="howLabel"></div>
+      </div>
+      <div class="level" id="level" role="group" aria-label="Level" hidden></div>
+    </div>
   </div>
 
 </div>
@@ -460,7 +467,7 @@
       NEW[from].filter(entry => !entry[2] || LEVELS.indexOf(entry[2]) >= n));
   });
 
-  const MAX = 5;                 // most sentences in one challenge
+  const MAX = 5;                 // most sentences in one round
   const LEVEL_NAMES = { a1: "A1", a2: "A2", b1: "B1", b2: "B2" };
 
   // Turn each entry into { text, byLetter: { P: ["pasta", "pizza"], ... } }
@@ -478,15 +485,16 @@
   const levels = Object.keys(LEVEL_NAMES).filter(lv => frames[lv] && frames[lv].length);
 
   let level = levels[0];
+  let howMany = 1;         // how many sentences each round shows (1 to MAX)
+  try { const saved = parseInt(localStorage.getItem("rc-howMany"), 10); if (saved >= 1 && saved <= MAX) howMany = saved; } catch (e) {}
   let letter = "";
   let shown = [];          // which sentences are on the board (positions in the level's list)
   let showIdeas = false;
-  let lastAdded = -1;
   const decks = {};        // a shuffled pile per level, so sentences don't repeat until all are used
 
   const $ = id => document.getElementById(id);
-  const listEl = $("list"), letterEl = $("letter"), promptEl = $("prompt"), countEl = $("count");
-  const btnLetter = $("newLetter"), btnAdd = $("add"), btnIdeas = $("ideas"), btnNext = $("next");
+  const listEl = $("list"), letterEl = $("letter"), promptEl = $("prompt");
+  const btnLetter = $("newLetter"), btnIdeas = $("ideas"), btnNext = $("next");
 
   const rand = n => Math.floor(Math.random() * n);
   function shuffle(a) {
@@ -504,18 +512,16 @@
     return decks[level].pop();
   }
 
-  // Letters that work for every sentence on the board. Letters with more
-  // possible answers come up a little more often.
-  function lettersFor(list) {
-    const first = frames[level][list[0]].byLetter, out = {};
-    for (const k in first) {
-      let w = 3;
-      for (const i of list) {
-        const a = frames[level][i].byLetter[k];
-        w = Math.min(w, a ? a.length : 0);
-      }
-      if (w > 0) out[k] = w;
+  // Letters for the first sentence that enough other sentences also share,
+  // so the board can always be filled. Letters with more answers come up a little more often.
+  function lettersFor(first) {
+    const need = howMany - 1, out = {};
+    const own = frames[level][first].byLetter;
+    for (const k in own) {
+      const others = frames[level].filter((f, i) => i !== first && f.byLetter[k]).length;
+      if (others >= need) out[k] = Math.min(3, own[k].length);
     }
+    if (!Object.keys(out).length) for (const k in own) out[k] = Math.min(3, own[k].length);
     return out;
   }
   function pickLetter(options, avoid) {
@@ -525,30 +531,38 @@
     for (const k of keys) { r -= options[k]; if (r < 0) return k; }
     return keys[keys.length - 1];
   }
-  const canAdd = () => frames[level]
-    .map((f, i) => i)
-    .filter(i => !shown.includes(i) && frames[level][i].byLetter[letter]);
+
+  // Top the board up to howMany sentences that all work with the current letter.
+  // Takes from the shuffled pile first, so sentences still rotate fairly.
+  function fill(keep) {
+    shown = keep.slice(0, howMany);
+    const deck = decks[level] || [];
+    for (let j = deck.length - 1; j >= 0 && shown.length < howMany; j--) {
+      const i = deck[j];
+      if (!shown.includes(i) && frames[level][i].byLetter[letter]) { shown.push(i); deck.splice(j, 1); }
+    }
+    if (shown.length < howMany) {
+      const rest = shuffle(frames[level].map((_, i) => i)
+        .filter(i => !shown.includes(i) && frames[level][i].byLetter[letter]));
+      while (shown.length < howMany && rest.length) shown.push(rest.pop());
+    }
+  }
 
   function next() {
-    shown = [draw()];
-    letter = pickLetter(lettersFor(shown), letter);
-    showIdeas = false; lastAdded = -1;
+    const first = draw();
+    letter = pickLetter(lettersFor(first), letter);
+    fill([first]);
+    showIdeas = false;
     render(true);
   }
+  // Keeps the sentences that still work with the new letter and swaps the rest.
   function newLetter() {
-    const options = lettersFor(shown);
+    const options = lettersFor(shown[0]);
     if (Object.keys(options).length < 2) return;
     letter = pickLetter(options, letter);
-    showIdeas = false; lastAdded = -1;
+    fill(shown.filter(i => frames[level][i].byLetter[letter]));
+    showIdeas = false;
     render(true);
-  }
-  function add() {
-    if (shown.length >= MAX) return;
-    const options = canAdd();
-    if (!options.length) return;
-    lastAdded = options[rand(options.length)];
-    shown.push(lastAdded);
-    render(false);
   }
 
   function sentenceNode(text) {
@@ -562,11 +576,11 @@
     return p;
   }
 
-  function render(letterChanged) {
+  function render(fresh) {
     document.documentElement.style.setProperty("--board", `var(--${level})`);
 
     letterEl.textContent = letter;
-    if (letterChanged) {
+    if (fresh) {
       letterEl.classList.remove("pop"); void letterEl.offsetWidth; letterEl.classList.add("pop");
     }
 
@@ -574,7 +588,7 @@
     listEl.innerHTML = "";
     shown.forEach(i => {
       const f = frames[level][i], li = document.createElement("li");
-      if (i === lastAdded) li.className = "new";
+      if (fresh) li.className = "new";
       li.append(sentenceNode(f.text));
       if (showIdeas) {
         const p = document.createElement("p");
@@ -584,29 +598,49 @@
       }
       listEl.append(li);
     });
-    lastAdded = -1;
 
     promptEl.textContent = shown.length === 1
       ? "Think of a word that starts with this letter."
       : "Same letter. A different word for each one.";
 
-    countEl.textContent = `${shown.length} / ${MAX}`;
-    btnAdd.disabled = shown.length >= MAX || !canAdd().length;
-    btnLetter.disabled = Object.keys(lettersFor(shown)).length < 2;
+    btnLetter.disabled = Object.keys(lettersFor(shown[0])).length < 2;
     btnIdeas.textContent = showIdeas ? "Hide ideas" : "Show ideas";
   }
 
   btnNext.addEventListener("click", next);
   btnLetter.addEventListener("click", newLetter);
-  btnAdd.addEventListener("click", add);
   btnIdeas.addEventListener("click", () => { showIdeas = !showIdeas; render(false); });
 
-  // Keys: right arrow = Next, L = New letter, + = Add a sentence
+  // How many sentences per round: 1 to 5
+  const howEl = $("how");
+  function setHowMany(n) {
+    howMany = n;
+    try { localStorage.setItem("rc-howMany", String(n)); } catch (e) {}
+    howEl.querySelectorAll(".lv").forEach(b => {
+      const on = Number(b.dataset.n) === n;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on);
+    });
+    // Same letter: keep the sentences already showing, then add or remove to match
+    fill(shown);
+    render(false);
+  }
+  for (let n = 1; n <= MAX; n++) {
+    const b = document.createElement("button");
+    b.className = "lv" + (n === howMany ? " on" : "");
+    b.dataset.n = n;
+    b.textContent = n;
+    b.setAttribute("aria-pressed", n === howMany);
+    b.addEventListener("click", () => setHowMany(n));
+    howEl.append(b);
+  }
+
+  // Keys: right arrow = Next, L = New letter, 1 to 5 = sentences per round
   document.addEventListener("keydown", e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "ArrowRight") next();
     else if (e.key === "l" || e.key === "L") newLetter();
-    else if (e.key === "+" || e.key === "=") add();
+    else if (/^[1-5]$/.test(e.key)) setHowMany(Number(e.key));
   });
 
   // Level buttons appear once there is more than one level in PACKS
