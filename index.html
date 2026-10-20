@@ -104,11 +104,23 @@
     font-size: 1rem;
     line-height: 1.35;
   }
+
+  .site-note {
+    margin: 3rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(16, 48, 58, 0.15);
+    max-width: 46rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .site-note a { color: var(--ink); text-underline-offset: 0.15em; }
+  .site-note a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <main class="page">
-  <a class="back" href="https://coastoflight.github.io/">&larr; COAST of LIGHT</a>
+  <a class="back" href="/">&larr; COAST of LIGHT</a>
 
   <header>
     <h1>Word Lab</h1>
@@ -162,21 +174,23 @@
         <span class="about">3 or 4 or none!</span>
       </a>
     </li>
-    
     <li>
       <a href="revision-categories.html">
         <span class="title">Revision Categories</span>
         <span class="about">Think of the right word.</span>
       </a>
     </li>
-
-     <li>
+    <li>
       <a href="memory.html">
         <span class="title">Memory</span>
         <span class="about">Make words disappear.</span>
       </a>
     </li>
   </ul>
+
+  <footer class="site-note">
+    <p>COAST of LIGHT is a creative project based on the Cádiz coast in Spain. The tools here are original creations unless a page says otherwise. &copy; 2026 COAST of LIGHT. Read <a href="/the-story.html">The Story</a> or visit the <a href="https://coastoflight.blog/">BLOG&nbsp;↗</a> to find out more.</p>
+  </footer>
 </main>
 </body>
 </html>
